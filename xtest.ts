@@ -516,8 +516,10 @@ async function main() {
                                 {
                                     _type: "button",
                                     _text: "Click me",
+                                    _debug: true, //enable debug mode for the button
                                     _on_click: (xobj, event) => {
                                         XUI._o["text-to-test"]._text = "Button clicked"
+                                        xobj.log("Button clicked") //log the button click event
                                     }
                                 }
                             ]),

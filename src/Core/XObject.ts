@@ -81,6 +81,7 @@ export type XObjectData = {
     _process_frame?: boolean
     _process_data?: boolean
     _nano_commands?: XNanoCommandPack
+    _debug?: boolean //debug mode for the XObject
 }
 
 /**
@@ -95,6 +96,7 @@ export class XObject {
     _parent: XObject | null = null
     _name?: string
     _data_source?: string //XData source
+    _debug?: boolean //debug mode for the XObject
     _on: XObjectOnEventIndex = {}
     _once: XObjectOnEventIndex = {}
     _on_create?: string | Function | undefined
@@ -120,7 +122,7 @@ export class XObject {
     protected _xporter: XDataXporter = {
         _ignore_fields: ["_to_xdata_ignore_fields", "_xporter", "_children", "_on", "_once", 
         "_on_create", "_on_mount", "_on_frame", "_on_data", "_process_frame", "_process_data", 
-        "_parent","_event_listeners_ids","_event_parsed"],
+        "_parent","_event_listeners_ids","_event_parsed", "_debug"],
         _instance_xporters: {}
     }
 
@@ -162,6 +164,15 @@ export class XObject {
         // this.init(data, skipParse)
 
 
+    }
+
+
+    log(message?: any, ...optionalParams: any[]){
+        if (this._debug) {
+            if (message) {
+                _xlog.log(this._type + "->" + this._id + "]", message, ...optionalParams)
+            }
+        }
     }
 
     /**
@@ -650,7 +661,6 @@ export class XObject {
     }
 
     /**
-     * Add a child to the XObject
      * @param child - the child to add
      */
     addChild(child: XObject) {

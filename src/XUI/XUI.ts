@@ -105,7 +105,7 @@ export class XUIModule extends XModule {
     append(xobj:XUIObject | XObjectData,parentXobjId:string) {
         const parent = <XUIObject | undefined>this.getObject(parentXobjId)
         if(parent) {
-            parent.append(xobj)
+            return parent.append(xobj)
         } else {
             _xlog.log(`XUI.append| Parent object ${parentXobjId} not found for object ${xobj._id}`)
         }
@@ -285,10 +285,12 @@ export class XUIModule extends XModule {
     /**
      * This method creates a player element and append it to the DOM
      * @param playerId - optional id of the player element
+     * @param cssClass - optional css class to add to the player element
      * @param parentElementId - optional id of the element to append the player to, if not provided the player will be appended to the body
+     * @param setAsMainPlayer - if true the player will be set as the main player element, if there is no main player element it will be set as the main player element anyway
      * @returns HTMLDivElement
      */
-    createPlayer(playerId:string = "xplayer",cssClass?:string,parentElementId?:string): HTMLDivElement {
+    createPlayer(playerId:string = "xplayer",cssClass?:string,parentElementId?:string,setAsMainPlayer?:boolean): HTMLDivElement {
         const dobj = (parentElementId) ? document.getElementById(parentElementId) : document.body
         const div = document.createElement("div")
         div.id = playerId
@@ -301,7 +303,7 @@ export class XUIModule extends XModule {
             div.style.left = "0"
         }
         
-        this._player_element = div
+        if(!this._player_element || setAsMainPlayer) this._player_element = div
         if(dobj) {
             dobj.style.margin = "0"
             dobj.style.padding = "0"

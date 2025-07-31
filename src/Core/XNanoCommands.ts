@@ -38,9 +38,9 @@ export const _xobject_basic_nano_commands:XNanoCommandPack = {
     },
     "fire":(xCommand, xObject ?: XObject) => {
         if (xCommand._params && xCommand._params["1"]) {
-            _xem.fire(<string>xCommand._params["1"])
+            _xem.fire(<string>xCommand._params["1"],<string>xCommand._params["2"])
         } else if (xCommand._params &&  xCommand._params["event"]) {
-            _xem.fire(<string>xCommand._params["event"])
+            _xem.fire(<string>xCommand._params["event"], <string>xCommand._params["data"])
         }
     }
 }

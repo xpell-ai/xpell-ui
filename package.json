@@ -1,6 +1,6 @@
 {
   "name": "xpell-ui",
-  "version": "1.4.9",
+  "version": "1.4.91",
   "description": "Xpell UI JS Framework",
   "files": [
     "dist",
@@ -32,11 +32,6 @@
     "url": "git+https://github.com/AIMEVerse/Xpell"
   },
   "devDependencies": {
-    "@types/node": "^18.0.6",
-    "@types/three": "^0.142.0",
-    "typedoc": "^0.25.12",
-    "typedoc-material-theme": "^1.0.2",
-    "typedoc-plugin-markdown": "^3.17.1",
     "vite": "^3.0.2",
     "vite-plugin-dts": "^3.7.2"
   },

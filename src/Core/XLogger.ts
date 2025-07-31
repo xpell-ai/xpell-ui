@@ -12,15 +12,16 @@ export class _XLogger  {
     /**
      * Enable logger activity if false no logs will be displayed
      */
-    enabled: boolean = true
+    _enabled: boolean = true
     /**
      * Show the date in every log message
      */
-    showDate:boolean = false
+    _show_date:boolean = false
     /**
      * Show the Time in every log message
      */
-    showTime:boolean = true
+    _show_time:boolean = true
+    _debug: boolean = false //debug mode for the logger
 
     constructor() {
     }
@@ -32,8 +33,8 @@ export class _XLogger  {
     private getLogDateTimeSignature():string {
         const d = new Date()
 
-        const getDate = () => {return (this.showDate) ? d.getDate() + '.' + d.getMonth() + '.' + d.getFullYear() + " ": "" }
-        const getTime = () => {return (this.showTime) ?d.getHours() + ':' + d.getMinutes() + ':' + d.getSeconds() + "." + d.getMilliseconds() +"|": "" }
+        const getDate = () => {return (this._show_date) ? d.getDate() + '.' + d.getMonth() + '.' + d.getFullYear() + " ": "" }
+        const getTime = () => {return (this._show_time) ?d.getHours() + ':' + d.getMinutes() + ':' + d.getSeconds() + "." + d.getMilliseconds() +"|": "" }
         return  getDate() + getTime()
     }
 
@@ -43,7 +44,7 @@ export class _XLogger  {
      * @param optionalParams 
      */
     log(message?: any, ...optionalParams: any[]) {
-        if (this.enabled) {
+        if (this._enabled) {
             var args = Array.prototype.slice.call(arguments);
             args.unshift(this.getLogDateTimeSignature());
             console.log.apply(console, args);
@@ -59,8 +60,18 @@ export class _XLogger  {
         var args = Array.prototype.slice.call(arguments);
         args.unshift(this.getLogDateTimeSignature());
         console.error.apply(console, args);
-
     }
+
+    debug(message?: any, ...optionalParams: any[]) {
+        if (this._debug) {
+            var args = Array.prototype.slice.call(arguments);
+            args.unshift(this.getLogDateTimeSignature());
+            console.debug.apply(console, args);
+        }
+    }
+
+
+
 
 }
 

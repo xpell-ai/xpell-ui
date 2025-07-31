@@ -105,18 +105,7 @@ export class XUIObject extends XObject {
 
 
 
-    /**
-     * logs the object to the console
-     */
-    log() {
-        let keys = Object.keys(this);
-        keys.forEach(key => {
-            if (this[key]) {
-                console.log(key + ":" + this[key]);
-            }
-        });
-        console.log(this.getHTML());
-    }
+    
 
     /**
      * Gets the HTML DOM object, if the object is not created yet it will be created
@@ -238,8 +227,9 @@ export class XUIObject extends XObject {
         if (this._dom_object instanceof HTMLElement) {
 
             this._dom_object.appendChild(xObject.dom)
-            //promisify onMount
+            //promisify onMount            
             xObject.onMount()
+            return xObject
             // const dom = xObject.dom
             // xObject.mount(this._id)
 
@@ -355,7 +345,7 @@ export class XUIObject extends XObject {
                 this.addEventListener("animationend", () => { this._dom_object.classList.remove( this._on_show_animation);
                      },{_once: true});
             } 
-            const disp = (this._base_display) ? this._base_display : "block"
+            const disp = (this._base_display) ? this._base_display : "flex"
             this._dom_object.style.display = disp
             this._visible = true
             this.onShow()

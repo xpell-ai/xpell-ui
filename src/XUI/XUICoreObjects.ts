@@ -5,7 +5,7 @@
  * @copyright Aime Technologies 2022, all right reserved
  */
 import XUIObject from "./XUIObject";
-import {_x,XObjectData,XObjectPack ,_xem} from "../Core/Xpell"
+import {_x,XObjectData,XObjectPack ,_xem, _xlog} from "../Core/Xpell"
 
 
 
@@ -15,7 +15,8 @@ export class XView extends XUIObject {
             _type: "view",
             "class":"xview"
         };
-        super(data,defaults);
+         super(data, defaults, true);
+        this.parse(data);
     }
 }
 
@@ -28,7 +29,8 @@ export class XHeader extends XUIObject {
             class:"x" + tag,
             _html_tag:tag
         }
-        super(data,defaults);
+         super(data, defaults, true);
+        this.parse(data);
     }
 }
 
@@ -40,7 +42,8 @@ export class XNavBar extends XUIObject {
             class:"x" + tag,
             _html_tag:"nav"
         }
-        super(data,defaults);
+         super(data, defaults, true);
+        this.parse(data);
     }
 }
 
@@ -52,7 +55,8 @@ export class XForm extends XUIObject {
             class:"x" + tag,
             _html_tag:tag
         }
-        super(data,defaults);
+        super(data,defaults, true);
+        this.parse(data)
     }
 }
 
@@ -67,7 +71,8 @@ export class XImage extends XUIObject {
             class:"x" + XImage.xtype,
             _html_tag:"img"
         }
-        super(data,defaults);
+        super(data,defaults, true);
+        this.parse(data)
     }
 }
 
@@ -79,7 +84,8 @@ export class XVideo extends XUIObject {
             class:"x" + tag,
             _html_tag:tag
         }
-        super(data,defaults);
+        super(data,defaults, true);
+        this.parse(data)
 
     }
 }
@@ -224,6 +230,30 @@ export class XInput extends XUIObject {
     }
 }
 
+export class XTel extends XUIObject {
+    constructor(data:XObjectData) {
+        const tag = "tel"
+        const defaults = {
+            _type : tag,
+            class:"x" + tag,
+            _html_tag:"input",
+            type:"tel"
+        }
+        super(data,defaults,true);
+        if(data._text) {
+            this.value = data._text
+        }
+        this.parse(data)
+    }
+
+    set _text(text:string) {
+        super._text = text     
+        if(this._dom_object) {
+            (<HTMLInputElement>(this.dom)).value = text
+        }
+    }
+}
+
 export class XTextArea extends XUIObject {
     constructor(data:XObjectData) {
         const defaults = {
@@ -255,7 +285,8 @@ export class XLink extends XUIObject {
             class:"x" + tag,
             _html_tag:"a"
         }
-        super(data,defaults);
+         super(data, defaults, true);
+        this.parse(data);
     }
 }
 
@@ -266,7 +297,8 @@ export class XLabel extends XUIObject {
             _html_tag:"label",
             class:"xlabel"
         }
-        super(data,defaults);
+        super(data,defaults, true);
+        this.parse(data)
     }
 }
 
@@ -277,25 +309,137 @@ export class XHTML extends XUIObject {
             _html_tag: (data["_html_tag"]) ?data["_html_tag"] : "div"
 
         }
-        super(data,defaults);
+        super(data,defaults, true);
+        this.parse(data)
     }
 }
 
-export class XSVG extends XUIObject {
-    private _svg_data!: string;    
 
-    constructor(data:XObjectData) {
+
+export class XSVG extends XUIObject {
+
+    static _xtype = "svg";
+
+
+    private _svg_data!: string;
+    _url: string | undefined;
+    src: string | undefined // alias for _url to maintain compatibility with older code for HTML <img> tag
+
+    constructor(data: XObjectData) {
         const defaults = {
-            _type:"svg",
+            _type: XSVG._xtype,
             _html_tag: "svg",
             _svg_data: "",
             _html_ns: "http://www.w3.org/2000/svg",
-            xmlns:"http://www.w3.org/2000/svg"
+            xmlns: "http://www.w3.org/2000/svg"
+        };
+        super(data, defaults, true);
+        this.parse(data);
+        if (this.src && !this._url) {
+            this._url = this.src; // set _url from src
+        }
+
+    }
+
+    async onMount(): Promise<void> {
+        super.onMount();
+        if (this._url) {
+            await this.getFromUrl(this._url);
+        } else if (this._svg_data) {
+            this.getFromData(this._svg_data);
+        }
+    }
+
+
+    async animate(className: string = "fillPulse") {
+
+        //save the current class name
+        if (this._dom_object) {
+            this._prev_class_name = this._dom_object.className.baseVal; // save the previous class name
+            // console.log("Previous class name:", this._prev_class_name);
+
+            // remove the previous class name from the svg element
+            this._dom_object.classList.remove(this._prev_class_name);
+            void this.dom.offsetWidth;
+
+            this._dom_object.classList.add(className);
+        }
+    }
+
+    stopAnimation(): void {
+        if (this._dom_object && this._prev_class_name) {
+            // remove the current class name from the svg element
+            this._dom_object.classList.remove(this._dom_object.className.baseVal);
+            // restore the previous class name
+            // console.log("Restoring previous class name:", this._prev_class_name);
+            void this.dom.offsetWidth;
+
+            this._dom_object.classList.add(this._prev_class_name);
+            delete this._prev_class_name  // reset the previous class name
+        }
+    }
+
+    private getDataFromSVGElement(svgData: string): any {
+        const tempDiv = document.createElement("div");
+        tempDiv.innerHTML = svgData;
+        // copy the viewBox and other attributes from the tempDiv to the _dom_object
+        const tempSvg = tempDiv.querySelector("svg");
+        if (tempSvg) {
+            // Copy attributes from tempSvg to _dom_object
+            const attributes = tempSvg.attributes;
+            const ignoredAttributes = ["class"];
+            for (let i = 0; i < attributes.length; i++) {
+                const attr = attributes[i];
+                if (ignoredAttributes.includes(attr.name)) continue; // skip ignored attributes
+                this._dom_object.setAttribute(attr.name, attr.value);
+            }
+        }
+        //get the svg path from the tempDiv and set it to the _dom_object
+        const svgElement = tempDiv.querySelector("svg");
+        if (svgElement) {
+            this._dom_object.innerHTML = svgElement.innerHTML;
+        }
+    }
+
+    /**
+     * Load SVG content from external URL and inject into the DOM
+     */
+    async getFromUrl(url: string) {
+        if (!this._dom_object) return;
+        try {
+            const response = await fetch(url);
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+            const svgData = await response.text();
+            this._svg_data = svgData;
+            //load svg data into temp object
+            this.getDataFromSVGElement(svgData);
+
+
+            // this.parse(this); // re-parse if needed
+        } catch (error) {
+            _xlog.error("Error fetching SVG:", error);
+        }
+    }
+
+    getFromData(data: string) {
+        this._svg_data = data;
+        if (this._dom_object) {
+            //load svg data into temp object
+            this.getDataFromSVGElement(data);
+
 
         }
-        super(data,defaults);
+    }
+
+    getSVGData(): string {
+        if (this._dom_object) {
+            // return the innerHTML of the svg element
+            return this._dom_object.outerHTML;
+        }
+        return "";
     }
 }
+
 
 
 export class XSVGCircle extends XUIObject {
@@ -309,7 +453,8 @@ export class XSVGCircle extends XUIObject {
             _html_ns: "http://www.w3.org/2000/svg",
 
         }
-        super(data,defaults);
+        super(data, defaults, true);
+        this.parse(data);
     }
 }
 
@@ -324,7 +469,8 @@ export class XSVGEllipse extends XUIObject {
             _html_ns: "http://www.w3.org/2000/svg",
 
         }
-        super(data,defaults);
+        super(data, defaults, true);
+        this.parse(data);
     }
 }
 
@@ -339,7 +485,8 @@ export class XSVGRect extends XUIObject {
             _html_ns: "http://www.w3.org/2000/svg",
 
         }
-        super(data,defaults);
+         super(data, defaults, true);
+        this.parse(data);
     }
 }
 
@@ -354,7 +501,8 @@ export class XSVGLine extends XUIObject {
             _html_ns: "http://www.w3.org/2000/svg",
 
         }
-        super(data,defaults);
+         super(data, defaults, true);
+        this.parse(data);
     }
 }
 
@@ -369,7 +517,8 @@ export class XSVGPolyline extends XUIObject {
             _html_ns: "http://www.w3.org/2000/svg",
 
         }
-        super(data,defaults);
+         super(data, defaults, true);
+        this.parse(data);
     }
 }
 
@@ -384,7 +533,8 @@ export class XSVGPolygon extends XUIObject {
             _html_ns: "http://www.w3.org/2000/svg",
 
         }
-        super(data,defaults);
+         super(data, defaults, true);
+        this.parse(data);
     }
 }
 
@@ -399,7 +549,8 @@ export class XSVGPath extends XUIObject {
             _html_ns: "http://www.w3.org/2000/svg",
 
         }
-        super(data,defaults);
+         super(data, defaults, true);
+        this.parse(data);
     }
 }
 

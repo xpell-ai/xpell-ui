@@ -3,13 +3,13 @@
 Xpell is a real-time user interface (UI) framework for frontend application development. It provides granular control over multiple modules, including DOM management, 3D engine, and AI engine, to ensure that applications can run at high FPS rates.
 
 
-# Xpell.js
+# Xpell-ui
 
-This package is an implementation of Xpell engine for web applications (/Typescript/Javascript/HTML), the engine supports native HTML DOM manipulation engine (XUI) engine for browsers based on THREE.JS and WebGL.
+This package is an implementation of Xpell engine for web applications (/Typescript/Javascript/HTML), the engine supports native HTML DOM manipulation engine (XUI) engine for browsers based on THREE-ui and WebGL.
 
 
 
-# Xpell.js Base Module
+# Xpell-ui Base Module
 
 - XUI - User Interface (HTML & CSS) module
 - XAI - AI Module Manager
@@ -25,7 +25,7 @@ npm install xpell
 ```
 
 
-# Compiling Xpell.js
+# Compiling Xpell-ui
 npm run build:types
 npx api-extractor run --local
 npm run build

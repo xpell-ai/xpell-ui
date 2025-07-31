@@ -71,7 +71,7 @@ export class XpellEngine {
         this.parser = XParser
         this.#_modules = {}
         XEM.fire("xpell-init")
-        _xlog.enabled = false
+        _xlog._enabled = false
         //this.load()
     }
 
@@ -80,7 +80,7 @@ export class XpellEngine {
      * Enable Xpell logs to console
      */
     set verbose(val : boolean){
-        _xlog.enabled=true
+        _xlog._enabled=true
     }
 
 
