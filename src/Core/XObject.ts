@@ -191,15 +191,16 @@ export class XObject {
         if (!this._event_parsed) {
             if (!options) options = this._xem_options
             Object.keys(this._on).forEach(eventName => {
-                if (typeof this._on[eventName] === "function") {
-                    this.addEventListener(eventName, this._on[eventName], options)
-                }
-                // else if(typeof this._on[eventName] === "string") {
-                //     console.error("string event handler not supported yet")
+                this.addEventListener(eventName, this._on[eventName], options)
+                // if (typeof this._on[eventName] === "function") {
                 // }
-                else {
-                    throw new Error("event handler must be a function " + eventName)
-                }
+                // else if(typeof this._on[eventName] === "string") {
+                //     // console.error("string event handler not supported yet")
+                //     _xlog.log("try string event handler " + eventName)
+                // }
+                // else {
+                //     throw new Error("event handler must be a function " + eventName)
+                // }
             })
 
             const onceOptions: XEventListenerOptions = {}
@@ -207,26 +208,34 @@ export class XObject {
             onceOptions._once = true
 
             Object.keys(this._once).forEach(eventName => {
-                if (typeof this._once[eventName] === "function") {
-                    this.addEventListener(eventName, this._once[eventName], onceOptions)
-                }
-                // else if(typeof this._on[eventName] === "string") {
-                //     console.error("string event handler not supported yet")
-                // }
-                else {
-                    throw new Error("event handler must be a function")
-                }
+                this.addEventListener(eventName, this._once[eventName], onceOptions)
+                
             })
             this._event_parsed = true
         }
     }
 
 
-    addEventListener(eventName: string, handler: XObjectOnEventHandler, options?: XEventListenerOptions) {
+    addEventListener(eventName: string, handler: XObjectOnEventHandler | string, options?: XEventListenerOptions) {
         if (!options) {
             options = this._xem_options
         }
-        const event_listener_id = _xem.on(eventName, (eventData: any) => { handler(this, eventData) }, options,this)
+        let _final_handler: any;
+        if (typeof handler === "function") {
+            _final_handler = async (eventData?: any) => {
+                handler(this, eventData)
+            }
+        }
+        else if(typeof handler === "string") {
+            _final_handler = async (eventData?: any) => {
+                const _final_xscript = this._id + " " + handler + " event-data='" + JSON.stringify(eventData).replace(/'/g, "\\'") +"'"
+                await this.run(_final_xscript) //run the nano command
+            }
+        }
+        else {
+            throw new Error("event handler must be a function")
+        }
+        const event_listener_id = _xem.on(eventName, _final_handler, options, this)
         this._event_listeners_ids[eventName] = event_listener_id
     }
 

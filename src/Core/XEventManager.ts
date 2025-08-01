@@ -56,6 +56,7 @@ export type XEventListenerOptions = {
 export interface XEventListener {
     _id?: string
     _callback?: Function
+    _nano_command?: string,
     _options?: XEventListenerOptions
     // _object?: any
 }

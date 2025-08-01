@@ -1,5 +1,5 @@
 
-import { _x, _xd, _xem, _xu } from "./src/Core/Xpell"
+import { _x, _xd, _xem, _xlog, _xu } from "./src/Core/Xpell"
 import { XUI } from "./src/XUI/XUI"
 import "./public/xtest.css"
 
@@ -515,11 +515,16 @@ async function main() {
                                 },
                                 {
                                     _type: "button",
-                                    _text: "Click me",
+                                    _text: "Click me NC",
                                     _debug: true, //enable debug mode for the button
-                                    _on_click: (xobj, event) => {
-                                        XUI._o["text-to-test"]._text = "Button clicked"
-                                        xobj.log("Button clicked") //log the button click event
+                                    _nano_commands: {
+                                        "set-text-from-click": async (xobj, event) => {
+                                            xobj._text = "Button clicked"
+                                            _xlog.log("Button clicked") //log the button click event
+                                        }
+                                    },
+                                    _on: {
+                                        "click": "set-text-from-click"
                                     }
                                 }
                             ]),

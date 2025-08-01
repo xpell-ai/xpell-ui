@@ -10,3 +10,4 @@ Xpell Release Notes
 - XObject _debug property: allows enabling debug mode for the XObject, which logs messages
 - XObject log method: logs messages if _debug is true, includes type and id of the XObject
 - Xlogger debug method: added debug method to XLogger for logging debug messages
+- XObject support nano commands in HTML event handlers
