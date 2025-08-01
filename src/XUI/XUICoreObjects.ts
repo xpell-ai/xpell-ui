@@ -10,24 +10,28 @@ import {_x,XObjectData,XObjectPack ,_xem, _xlog} from "../Core/Xpell"
 
 
 export class XView extends XUIObject {
+
+    static _xtype = "view"
+
     constructor(data:XObjectData) {
         const defaults =  {
-            _type: "view",
-            "class":"xview"
+            _type: XView._xtype,
+            "class":"xview",
+            _html_tag: "div"
         };
-         super(data, defaults, true);
+        super(data, defaults, true);
         this.parse(data);
     }
 }
 
 
 export class XHeader extends XUIObject {
+    static _xtype = "header"
     constructor(data:XObjectData) {
-        const tag = "header"
         const defaults = {
-            _type: tag,
-            class:"x" + tag,
-            _html_tag:tag
+            _type: XHeader._xtype,
+            class:"x" + XHeader._xtype,
+            _html_tag:"header"
         }
          super(data, defaults, true);
         this.parse(data);
@@ -35,11 +39,12 @@ export class XHeader extends XUIObject {
 }
 
 export class XNavBar extends XUIObject {
+    static _xtype = "navbar"
     constructor(data:XObjectData) {
-        const tag = "navbar"
+        
         const defaults = {
-            _type: tag,
-            class:"x" + tag,
+            _type: XNavBar._xtype,
+            class:"x" + XNavBar._xtype,
             _html_tag:"nav"
         }
          super(data, defaults, true);
@@ -48,6 +53,7 @@ export class XNavBar extends XUIObject {
 }
 
 export class XForm extends XUIObject {
+    static _xtype = "form"
     constructor(data:XObjectData) {
         const tag = "form"
         const defaults = {
@@ -63,12 +69,12 @@ export class XForm extends XUIObject {
 
 export class XImage extends XUIObject {
    
-    static xtype = "image"
+    static _xtype = "image"
 
     constructor(data:XObjectData) {
         const defaults = {
-            _type: XImage.xtype,
-            class:"x" + XImage.xtype,
+            _type: XImage._xtype,
+            class:"x" + XImage._xtype,
             _html_tag:"img"
         }
         super(data,defaults, true);
@@ -77,12 +83,12 @@ export class XImage extends XUIObject {
 }
 
 export class XVideo extends XUIObject {
+    static _xtype = "video"
     constructor(data:XObjectData) {
-        const tag = "video"
         const defaults = {
-            _type: tag,
-            class:"x" + tag,
-            _html_tag:tag
+            _type: XVideo._xtype,
+            class:"x" + XVideo._xtype,
+            _html_tag:"video"
         }
         super(data,defaults, true);
         this.parse(data)
@@ -90,16 +96,17 @@ export class XVideo extends XUIObject {
     }
 }
 
+
 export class XWebcam extends XUIObject {
+    static _xtype = "webcam"
     autoplay: boolean;
     muted: boolean;
     _video_constraints: { video: boolean; width: number; height: number; };
     
     constructor(data:XObjectData) {
-        const tag = "webcam"
         const defaults = {
-            _type: tag,
-            class:"x" + tag,
+            _type: XWebcam._xtype,
+            class:"x" + XWebcam._xtype,
             _html_tag:"video"
         }
         super(data,defaults,true)
@@ -154,11 +161,12 @@ export class XWebcam extends XUIObject {
 
 
 export class XTextField extends XUIObject {
+    static _xtype = "text"
+    type: string = "text" //default type is text
     constructor(data:XObjectData) {
-        const tag = "text"
         const defaults = {
-            _type : tag,
-            class:"x" + tag,
+            _type : XTextField._xtype,
+            class:"x" + XTextField._xtype,
             _html_tag:"input"
         }
         super(data,defaults,true);
@@ -166,8 +174,6 @@ export class XTextField extends XUIObject {
             this.value = data._text
         }
         this.parse(data)
-        
-        
     }
 
     set _text(text:string) {
@@ -179,10 +185,12 @@ export class XTextField extends XUIObject {
 }
 
 export class XPassword extends XUIObject {
+    static _xtype = "password"
+    type: string = "password" //default type is password
     constructor(data:XObjectData) {
-        const tag = "text"
+        const tag = "password"
         const defaults = {
-            _type : tag,
+            _type : XPassword._xtype,
             type:"password",
             class:"x" + tag,
             _html_tag:"input"
@@ -206,11 +214,13 @@ export class XPassword extends XUIObject {
 
 
 export class XInput extends XUIObject {
+    static _xtype = "input"
+    type: string = "text" //default type is text
     constructor(data:XObjectData) {
         const tag = "input"
         const defaults = {
-            _type : tag,
-            class:"x" + tag,
+            _type : XInput._xtype,
+            class:"x" + XInput._xtype,
             _html_tag:"input"
         }
         super(data,defaults,true);
@@ -228,37 +238,26 @@ export class XInput extends XUIObject {
             (<HTMLInputElement>(this.dom)).value = text
         }
     }
-}
 
-export class XTel extends XUIObject {
-    constructor(data:XObjectData) {
-        const tag = "tel"
-        const defaults = {
-            _type : tag,
-            class:"x" + tag,
-            _html_tag:"input",
-            type:"tel"
-        }
-        super(data,defaults,true);
-        if(data._text) {
-            this.value = data._text
-        }
-        this.parse(data)
-    }
-
-    set _text(text:string) {
-        super._text = text     
+    set _input_type(type:string) {
+        this.type = type;
         if(this._dom_object) {
-            (<HTMLInputElement>(this.dom)).value = text
+            (<HTMLInputElement>(this.dom)).type = type
         }
     }
+
+    get _input_type() {
+        return this.dom.getAttribute("type") || "text";
+    }
 }
+
 
 export class XTextArea extends XUIObject {
+    static _xtype = "textarea"
     constructor(data:XObjectData) {
         const defaults = {
-            _type:"textarea",
-            "class":"form-control",
+            _type:XTextArea._xtype,
+            "class":"x" + XTextArea._xtype,
             "_html_tag":"textarea"
         }
         super(data,defaults,true);
@@ -267,22 +266,23 @@ export class XTextArea extends XUIObject {
         
     }
 
-    // set _text(text:string) {
-    //     super._text = text     
-    //     if(this._dom_object) {
-    //         (<HTMLInputElement>(this.dom)).value = text
-    //     }
-    // }
+    set _text(text:string) {
+        super._text = text     
+        if(this._dom_object) {
+            (<HTMLInputElement>(this.dom)).value = text
+        }
+    }
 
 }
 
 export class XLink extends XUIObject {
+    static _xtype = "link"
     
     constructor(data:XObjectData) {
         const tag = "link"
         const defaults = {
-            _type : tag,
-            class:"x" + tag,
+            _type : XLink._xtype,
+            class:"x" + XLink._xtype,
             _html_tag:"a"
         }
          super(data, defaults, true);
@@ -291,9 +291,10 @@ export class XLink extends XUIObject {
 }
 
 export class XLabel extends XUIObject {    
+    static _xtype = "label"
     constructor(data:XObjectData) {
         const defaults = {
-            _type:"label",
+            _type:XLabel._xtype,
             _html_tag:"label",
             class:"xlabel"
         }
@@ -303,14 +304,60 @@ export class XLabel extends XUIObject {
 }
 
 export class XHTML extends XUIObject {    
+    static _xtype = "xhtml"
     constructor(data:XObjectData) {
         const defaults = {
-            _type:"xhtml",
+            _type:XHTML._xtype,
             _html_tag: (data["_html_tag"]) ?data["_html_tag"] : "div"
 
         }
         super(data,defaults, true);
         this.parse(data)
+    }
+}
+
+
+
+
+
+export class XButton extends XUIObject {
+    static _xtype = "button"
+
+    constructor(data:XObjectData) {
+        const defs = {
+            _type : XButton._xtype,
+            class:"xbutton",
+            _html_tag :"button"
+        }
+        super(data,defs);        
+    }
+    
+    setOnclick(fun:CallableFunction)
+    {
+        this._on_click = fun;
+    }
+}
+
+
+export class XList extends XUIObject {
+    static _xtype = "list";
+    _items: any;
+    constructor(data:XObjectData) {
+    
+        const defaults = {
+            _type:XList._xtype,
+            _html_tag:"div",
+            class:"xlist",
+            _items:[]
+        }
+        super(data,defaults,true);
+        super.parse(data)
+        if(this._items.length>0) {
+            this._items.forEach((item:any) => {
+                const si = new XView(item)
+                this.append(si)
+            });
+        }
     }
 }
 
@@ -443,11 +490,11 @@ export class XSVG extends XUIObject {
 
 
 export class XSVGCircle extends XUIObject {
-    private _svg_data!: string;    
+    static _xtype = "circle"
 
     constructor(data:XObjectData) {
         const defaults = {
-            _type:"circle",
+            _type:XSVGCircle._xtype,
             _html_tag: "circle",
             _svg_data: "",
             _html_ns: "http://www.w3.org/2000/svg",
@@ -459,11 +506,11 @@ export class XSVGCircle extends XUIObject {
 }
 
 export class XSVGEllipse extends XUIObject {
-    private _svg_data!: string;    
+    static _xtype = "ellipse"
 
     constructor(data:XObjectData) {
         const defaults = {
-            _type:"ellipse",
+            _type:XSVGEllipse._xtype,
             _html_tag: "ellipse",
             _svg_data: "",
             _html_ns: "http://www.w3.org/2000/svg",
@@ -475,11 +522,11 @@ export class XSVGEllipse extends XUIObject {
 }
 
 export class XSVGRect extends XUIObject {
-    private _svg_data!: string;    
+    static _xtype = "rect"
 
     constructor(data:XObjectData) {
         const defaults = {
-            _type:"rect",
+            _type:XSVGRect._xtype,
             _html_tag: "rect",
             _svg_data: "",
             _html_ns: "http://www.w3.org/2000/svg",
@@ -491,11 +538,11 @@ export class XSVGRect extends XUIObject {
 }
 
 export class XSVGLine extends XUIObject {
-    private _svg_data!: string;    
+    static _xtype = "line"
 
     constructor(data:XObjectData) {
         const defaults = {
-            _type:"line",
+            _type:XSVGLine._xtype,
             _html_tag: "line",
             _svg_data: "",
             _html_ns: "http://www.w3.org/2000/svg",
@@ -507,11 +554,11 @@ export class XSVGLine extends XUIObject {
 }
 
 export class XSVGPolyline extends XUIObject {
-    private _svg_data!: string;    
+    static _xtype = "polyline" 
 
     constructor(data:XObjectData) {
         const defaults = {
-            _type:"polyline",
+            _type: XSVGPolyline._xtype,
             _html_tag: "polyline",
             _svg_data: "",
             _html_ns: "http://www.w3.org/2000/svg",
@@ -523,11 +570,11 @@ export class XSVGPolyline extends XUIObject {
 }
 
 export class XSVGPolygon extends XUIObject {
-    private _svg_data!: string;    
+    static _xtype = "polygon"
 
     constructor(data:XObjectData) {
         const defaults = {
-            _type:"polygon",
+            _type:XSVGPolygon._xtype,
             _html_tag: "polygon",
             _svg_data: "",
             _html_ns: "http://www.w3.org/2000/svg",
@@ -539,11 +586,11 @@ export class XSVGPolygon extends XUIObject {
 }
 
 export class XSVGPath extends XUIObject {
-    private _svg_data!: string;    
+    static _xtype = "path"
 
     constructor(data:XObjectData) {
         const defaults = {
-            _type:"path",
+            _type:XSVGPath._xtype,
             _html_tag: "path",
             _svg_data: "",
             _html_ns: "http://www.w3.org/2000/svg",
@@ -554,74 +601,32 @@ export class XSVGPath extends XUIObject {
     }
 }
 
-
-export class XButton extends XUIObject {
-    constructor(data:XObjectData) {
-        const defs = {
-            _type : "button",
-            class:"xbutton",
-            _html_tag :"button"
-        }
-        super(data,defs);        
-    }
-    
-    setOnclick(fun:CallableFunction)
-    {
-        this._on_click = fun;
-    }
-}
-
-
-export class XList extends XUIObject {
-    _items: any;
-    constructor(data:XObjectData) {
-    
-        const defaults = {
-            _type:"list",
-            _html_tag:"div",
-            class:"xlist",
-            _items:[]
-        }
-        super(data,defaults,true);
-        super.parse(data)
-        if(this._items.length>0) {
-            this._items.forEach((item:any) => {
-                const si = new XView(item)
-                this.append(si)
-            });
-        }
-    }
-}
-
-
-
-
 export class XUIObjects extends XObjectPack {
     static getObjects() {
         return {
-            "view":XView,
-            "div":XView,
-            "label":XLabel,
-            "link" :XLink,
-            "button" :XButton,
-            "text" : XTextField,
-            "password" : XPassword,
-            "input":XInput,
-            "textarea":XTextArea,
-            "video" : XVideo,
-            "image" : XImage,
-            "list": XList,
-            "form":XForm,
-            "webcam":XWebcam,
-            "xhtml":XHTML,
-            "svg":XSVG,
-            "circle":XSVGCircle,
-            "rect":XSVGRect,
-            "ellipse":XSVGEllipse,
-            "line":XSVGLine,
-            "polyline":XSVGPolyline,
-            "polygon":XSVGPolygon,
-            "path":XSVGPath,
+            [XView._xtype]:XView,
+            "div":XView, //alias for XView
+            [XLabel._xtype]:XLabel,
+            [XLink._xtype]:XLink,
+            [XButton._xtype]:XButton,
+            [XTextField._xtype]:XTextField,
+            [XPassword._xtype]:XPassword,
+            [XInput._xtype]:XInput,
+            [XTextArea._xtype]:XTextArea,
+            [XVideo._xtype]:XVideo,
+            [XImage._xtype]:XImage,
+            [XList._xtype]:XList,
+            [XForm._xtype]:XForm,
+            [XWebcam._xtype]:XWebcam,
+            [XHTML._xtype]:XHTML,
+            [XSVG._xtype]:XSVG,
+            [XSVGCircle._xtype]:XSVGCircle,
+            [XSVGRect._xtype]:XSVGRect,
+            [XSVGEllipse._xtype]:XSVGEllipse,
+            [XSVGLine._xtype]:XSVGLine,
+            [XSVGPolyline._xtype]:XSVGPolyline,
+            [XSVGPolygon._xtype]:XSVGPolygon,
+            [XSVGPath._xtype]:XSVGPath,
             // "grid" : TO-DO,
             // "table": TO-DO,
         }
