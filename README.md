@@ -38,7 +38,7 @@ npm run build
 
  Author: Fridman Fridman <fridman.tamir@gmail.com>
 
- License:  GPL-3 
+ License:  MIT  
 
  First Release: 22/07/2022
 
