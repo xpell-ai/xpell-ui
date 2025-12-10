@@ -19,7 +19,7 @@ import {
     _xem,
     XUtils as _xu,
     XModule
-} from "../Core/Xpell"
+} from "xpell-core"
 
 export const WormholeEvents = {
     WormholeOpen: "wormhole-open",

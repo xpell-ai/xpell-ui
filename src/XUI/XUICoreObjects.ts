@@ -5,7 +5,7 @@
  * @copyright Aime Technologies 2022, all right reserved
  */
 import XUIObject from "./XUIObject";
-import {_x,XObjectData,XObjectPack ,_xem, _xlog} from "../Core/Xpell"
+import {_x,XObjectData,XObjectPack ,_xem, _xlog} from "xpell-core";
 
 
 
@@ -601,7 +601,7 @@ export class XSVGPath extends XUIObject {
     }
 }
 
-export class XUIObjects extends XObjectPack {
+export class XUIObjectPack extends XObjectPack {
     static getObjects() {
         return {
             [XView._xtype]:XView,
@@ -637,6 +637,6 @@ export class XUIObjects extends XObjectPack {
 
 
 
-export default XUIObjects
+export default XUIObjectPack
 
 

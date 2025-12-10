@@ -2,7 +2,7 @@
  * This file contains all the Basic Nano Commands of the Xobject
 */
 
-import { XNanoCommandPack, XCommand, _xlog, XObject, _xem, _xd } from "../Core/Xpell"
+import { XNanoCommandPack, XCommand, _xlog, XObject, _xem, _xd } from "xpell-core"
 // import { _xem } from "../XEM/XEventManager"
 import XUIObject from "./XUIObject"
 

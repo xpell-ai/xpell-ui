@@ -1,41 +1,45 @@
 {
   "name": "xpell-ui",
-  "version": "1.4.91",
+  "version": "1.9.91",
   "description": "Xpell UI JS Framework",
   "files": [
     "dist",
-    "src",
     "types",
     "docs"
   ],
-  "types": "./dist/index.d.ts",
+  "types": "./types/index.d.ts",
   "module": "./dist/xpell-ui.es.js",
   "main": "./dist/xpell-ui.cjs.js",
   "exports": {
     ".": {
+      "types": "./types/index.d.ts",
       "import": "./dist/xpell-ui.es.js",
-      "require": "./dist/xpell-ui.umd.js"
+      "require": "./dist/xpell-ui.cjs.js"
     }
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "vite .",
-    "docs": "typedoc --options ./typedoc.json --tsconfig ./",
-    "types": "npx -p typescript tsc index.ts -t es2021 --declaration --allowJs --emitDeclarationOnly -moduleResolution node --outDir types",
+    "dev": "vite",
     "build": "vite build",
-    "build:types": "vite build && tsc --project tsconfig.types.json"
+    "docs": "typedoc --options ./typedoc.json --tsconfig ./"
   },
-  "author": "Tamir Fridman <fridman.tamir@gmail.com> (https://github.com/fridman-tamir)",
-  "license": "GPL-3",
+  "author": "Tamir Fridman <fridman.tamir@gmail.com>",
+  "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/AIMEVerse/Xpell"
+    "url": "git+https://github.com/xpell-ai/xpell-ui.git"
   },
-  "devDependencies": {
-    "vite": "^3.0.2",
-    "vite-plugin-dts": "^3.7.2"
+  "peerDependencies": {
+    "xpell-core": ">=1.0.0"
   },
   "dependencies": {
-    "animate.css": "^4.1.1"
+    "animate.css": "^4.1.1",
+    "xpell-core": "workspace:*"
+  },
+  "devDependencies": {
+    "typedoc": "^0.25.13",
+    "typescript": "^5.9.3",
+    "vite": "^5.4.21",
+    "vite-plugin-dts": "^3.9.1",
+    "xpell-core": "workspace:*"
   }
 }

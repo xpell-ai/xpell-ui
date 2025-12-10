@@ -1,359 +1,359 @@
-
 /**
  * XUI Module - Xpell User Interface Module for HTML and CSS
- * @description Universal User Interface (UI) HTML Engine  for Javascript supporting devices & browsers
- * @author Tamir Fridman <fridman.tamir@gmail.com>
- * 
+ * @description Universal User Interface (UI) HTML Engine for Javascript supporting devices & browsers
+ * @author 
+ *   Tamir Fridman <fridman.tamir@gmail.com>
  */
 
-import XUIObject from "./XUIObject"
-import {XViewManager,XViewsPack} from "./XViewManager"
-import { _xlog,XParser,_xem,XModule,XModuleData, XObjectData, _x, _xu } from "../Core/Xpell"
+import XUIObject from "./XUIObject";
+import { XViewManager, XViewsPack } from "./XViewManager";
+import { XVM, _xvm } from "./XVM"; // NEW: modern view manager API
 
-import XUICoreObjects from "./XUICoreObjects"
-import "./Style/xui.css"
+import {
+  _xlog,
+  XParser,
+  _xem,
+  XModule,
+  type XModuleData,
+  type XObjectData,
+} from "xpell-core";
 
+import XUICoreObjects from "./XUICoreObjects";
+import "./Style/xui.css";
 
 /**
  * XUIApp is the Xpell UI Application object, it can hold views and controls
  */
 export type XUIApp = {
-    xpell?: {
-        version?: number //minimum xpell version for the app
-    }
-    _views?:XViewsPack,
-    _controls?:{
-        _parent_element:string |{} , //id of the controls (static objects) html tag 
-        [k:string] : {} | string
-    }
-}
-export const FIRST_USER_GESTURE = "first-user-gesture"
+  xpell?: {
+    version?: number; // minimum xpell version for the app
+  };
+  _views?: XViewsPack;
+  _controls?: {
+    _parent_element: string | {}; // id of the controls (static objects) html tag
+    [k: string]: {} | string;
+  };
+};
+
+export const FIRST_USER_GESTURE = "first-user-gesture";
 
 /**
  * XUI Module - Xpell User Interface Module for HTML and CSS
  */
 export class XUIModule extends XModule {
-    vm: XViewManager
-    _first_gesture_occurred : boolean
-    
+  /**
+   * @deprecated Use XVM / _xvm instead for new code.
+   */
+  vm: XViewManager;
 
-    _events = {
-        _loaded: "xui-loaded",
+  _first_gesture_occurred: boolean;
+
+  _events = {
+    _loaded: "xui-loaded",
+  };
+
+  private _controls_element!: string;
+  private _player_element!: HTMLElement | null;
+
+  /**
+   * @fires "xui-loaded" event
+   * @param data module data
+   */
+  constructor(data: XModuleData) {
+    super(data);
+
+    // Legacy view manager (kept for backward compatibility)
+    this.vm = new XViewManager();
+
+    // Register default objects
+    this.importObjectPack(XUICoreObjects);
+    this._first_gesture_occurred = false;
+    this._player_element = null;
+
+    _xem.fire(this._events._loaded);
+  }
+
+  /**
+   * Create a XUIObject and mount it to the DOM parent element.
+   * If xData._parent_element is not provided the object will be appended
+   * to the player element or to the document body if player element is not provided.
+   *
+   * @param data - the XUIObject data
+   * @returns XUIObject
+   */
+  add(xData: XObjectData): XUIObject {
+    const xobj = this.create(xData);
+    const ctrl = xobj.getDOMObject();
+
+    if (xobj._parent_element) {
+      const hobj = document.querySelector<HTMLElement>("#" + xobj._parent_element);
+      if (hobj) {
+        hobj.appendChild(ctrl);
+      } else {
+        _xlog.log(
+          `XUI.add | Parent object ${xobj._parent_element} not found for object ${xobj._id}`
+        );
+      }
+    } else if (this._player_element) {
+      this._player_element.appendChild(ctrl);
+    } else {
+      this._player_element = document.body;
+      this._player_element.appendChild(ctrl);
     }
 
-    private _controls_element!: string
-    private _player_element!: any
-
-    /**
-     * @fires "xui-loaded" event
-     * @param data module data
-     */
-    constructor(data: XModuleData) {
-
-        super(data)
-        //this.engine = SpellUI
-        this.vm = new XViewManager()
-        //register default objects
-        this.importObjectPack(XUICoreObjects)
-        this._first_gesture_occurred = false
-        _xem.fire(this._events._loaded)
-
-
-    }
-    
-
-
-
-    /**
-     * Create a XUIObject and mount it to the DOM parent element.
-     * if xData._parent_element is not provided the object will be appended to the player element or to the document body if player element is not provided
-     * @param data - the XUIObject data
-     * @returns XUIObject
-     * 
-     */
-    add(xData:XObjectData) {
-        const xobj = this.create(xData)
-        const ctrl = xobj.getDOMObject()
-        if (xobj._parent_element) {
-            const hobj = document.querySelector("#" + xobj._parent_element)
-            if(hobj) hobj.appendChild(ctrl)
-            else {
-                _xlog.log(`XUI.add| Parent object ${xobj._parent_element} not found for object ${xobj._id}`)
-            }
-        } else if (this._player_element) {
-            this._player_element.appendChild(ctrl)
-        } else {
-            this._player_element = document.body
-            this._player_element.appendChild(ctrl)
-        }
-        
-        if (xobj.onMount && typeof xobj.onMount === 'function') {
-            xobj.onMount()
-        }
-
-        if(xobj.onShow && typeof xobj.onShow === 'function') {
-            xobj.onShow()
-        }
-        return xobj
+    if (xobj.onMount && typeof xobj.onMount === "function") {
+      xobj.onMount();
     }
 
-    /**
-     * Append XUIObject to the parent XUI Object
-     * @param xobj - XUIObject to append
-     * @param parentXobjId - the parent XUIObject id
-     */
-    append(xobj:XUIObject | XObjectData,parentXobjId:string) {
-        const parent = <XUIObject | undefined>this.getObject(parentXobjId)
-        if(parent) {
-            return parent.append(xobj)
-        } else {
-            _xlog.log(`XUI.append| Parent object ${parentXobjId} not found for object ${xobj._id}`)
-        }
+    if (xobj.onShow && typeof xobj.onShow === "function") {
+      xobj.onShow();
     }
 
+    return xobj;
+  }
 
-    /**
-     * Create a XUIObject
-     * @param data - XOjectData representing the XUIObject
-     * @returns XUIObject
-     */
-    create(data?: XObjectData) {
-        if(!data) {
-            data = { _type: "view",_children:[]}
-        }
-        else if(!data.hasOwnProperty("_type")) {
-            data._type = "view"
-        }
-        return super.create(data)
+  /**
+   * Append XUIObject to the parent XUI Object
+   * @param xobj - XUIObject or raw XObjectData to append
+   * @param parentXobjId - the parent XUIObject id
+   */
+  append(xobj: XUIObject | XObjectData, parentXobjId: string) {
+    const parent = this.getObject(parentXobjId) as XUIObject | undefined;
+    if (parent) {
+      return parent.append(xobj);
+    } else {
+      _xlog.log(
+        `XUI.append | Parent object ${parentXobjId} not found for object ${
+          (xobj as any)._id ?? "[no-id]"
+        }`
+      );
+    }
+  }
+
+  /**
+   * Create a XUIObject
+   * @param data - XObjectData representing the XUIObject
+   * @returns XUIObject
+   */
+  create(data?: XObjectData): XUIObject {
+    if (!data) {
+      data = { _type: "view", _children: [] };
+    } else if (!data.hasOwnProperty("_type")) {
+      data._type = "view";
+    }
+    // XModule.create returns XObject – in XUI context that is always XUIObject
+    return super.create(data) as XUIObject;
+  }
+
+  /**
+   * Wraps an array of XObjectData objects with a wrapper object and returns the wrapper 
+   * with the wrapped objects as children
+   */
+  wrap(xObjects: XObjectData[], wrapper?: XObjectData): XObjectData {
+    if (!wrapper) {
+      wrapper = { _type: "view", class: "xflex", _children: [] };
+    } else {
+      if (!wrapper._children) wrapper._children = [];
+      if (!wrapper.class) wrapper.class = "xflex";
+      else wrapper.class += " xflex";
+      if (!wrapper._type) wrapper._type = "view";
     }
 
+    xObjects.forEach((xobj) => {
+      wrapper!._children!.push(xobj);
+    });
 
-    
+    return wrapper;
+  }
 
-    /**
-     * Wraps an array of XObjectData objects with a wrapper object and returns the wrapper 
-     * with the wrapped objects as children
-     * @param xObjects - array of XObjectData objects to wrap
-     * @param wrapper - the wrapper object to use, if not provided a default wrapper will be created
-     * @returns - XObjectData
-     */
-    wrap(xObjects: (XObjectData)[], wrapper?:XObjectData) : XObjectData{
-        if (!wrapper) {
-            wrapper = { _type: "view", class: "xflex",_children:[]}
-        } else {
-            if (!wrapper._children) wrapper._children = []
-            if (!wrapper.class) wrapper.class = "xflex"
-            else wrapper.class += " xflex"
-            if (!wrapper._type) wrapper._type = "view"
-        }
-        xObjects.forEach(xobj => {
-            (<XObjectData>wrapper)._children?.push(xobj)
-        })
-        return wrapper
+  /**
+   * Loads Xpell application object 
+   */
+  loadApp(xuiApp: XUIApp) {
+    if (xuiApp._views) {
+      // Legacy view pack support
+      this.vm.addViewPack(xuiApp._views);
+    }
+    if (xuiApp._controls) {
+      this.addControlsPack(xuiApp._controls);
+    }
+    _xem.fire("xui-app-loaded");
+  }
+
+  /**
+   * Navigate the browser to new url
+   */
+  openUrl(url: string, newWindow?: boolean) {
+    if (!newWindow) {
+      document.location.href = url;
+    } else {
+      window.open(url);
+    }
+  }
+
+  /**
+   * Removes the XUIObject from the DOM by ID and from the Object Manager
+   * @override
+   */
+  remove(objectId: string) {
+    if ((this as any)._log_rules?.removeObject) {
+      _xlog.log("XUI remove object " + objectId);
+    }
+    document.getElementById(objectId)?.remove();
+    super.remove(objectId);
+  }
+
+  addControlsPack(controls: { [name: string]: {} }) {
+    Object.keys(controls).forEach((ctrl) => {
+      if (ctrl === "_parent_element") {
+        this._controls_element = controls[ctrl] as string;
+      } else {
+        this.loadControl(controls[ctrl] as any);
+      }
+    });
+  }
+
+  /**
+   * @deprecated use XUI.add instead
+   */
+  loadControl(data: XObjectData): XUIObject {
+    const xobj = this.create(data);
+    const ctrl = xobj.getDOMObject();
+
+    const pe = xobj._parent_element ?? this._controls_element;
+
+    document.querySelector("#" + pe)?.append(ctrl);
+
+    if (xobj.onMount && typeof xobj.onMount === "function") {
+      xobj.onMount();
     }
 
-    /**
-     * Loads Xpell application object 
-     * @param xuiApp 
-     */
-    loadApp(xuiApp:XUIApp) {
-        if(xuiApp._views){
-            this.vm.addViewPack(xuiApp._views);
-        }
-        if(xuiApp._controls){
-            this.addControlsPack(xuiApp._controls)
-        }
-        _xem.fire("xui-app-loaded")
+    return xobj;
+  }
+
+  /**
+   * @deprecated use XUI.add instead
+   */
+  loadObject(data: XObjectData): XUIObject {
+    const xobj = this.create(data);
+    const ctrl = xobj.getDOMObject();
+
+    if (xobj._parent_element) {
+      document.querySelector("#" + xobj._parent_element)?.append(ctrl);
+    } else if (this._player_element) {
+      this._player_element.appendChild(ctrl);
+    } else {
+      throw new Error("No parent element for the object");
     }
 
-
-    
-    /**
-     * 
-     * @param url navigate the browser to new url
-     * @param newWindow - if provided and true the url will be opened in a new window/tab
-     */
-    openUrl(url:string, newWindow?:boolean) {
-        if (!newWindow) {
-            document.location = url;
-        }
-        else {
-            window.open(url);
-        }
+    if (xobj.onMount && typeof xobj.onMount === "function") {
+      xobj.onMount();
     }
 
-
-    /**
-     * Removes the XUIObject from the DOM by ID and from the Object Manager
-     * @param objectId the XUIObject id to remove
-     * @override
-     */
-    remove(objectId:string) {
-        if (this._log_rules.removeObject) {
-            _xlog.log("X3D remove object " + objectId)
-        }
-        document.getElementById(objectId)?.remove()
-        super.remove(objectId)
+    if (xobj.onShow && typeof xobj.onShow === "function") {
+      xobj.onShow();
     }
 
+    return xobj;
+  }
 
+  createFromTemplate(xpell2json: { [k: string]: any }) {
+    return this.create(XParser.xpellify(xpell2json));
+  }
 
-    addControlsPack(controls: {[name:string]:{}}) {
-        Object.keys(controls).forEach(ctrl => {
-            if(ctrl == "_parent_element") {this._controls_element = <string>controls[ctrl]}
-            else {
-                this.loadControl(<any>controls[ctrl])
-            }
-        })
+  /**
+   * The method fires "first-user-gesture" event 
+   * This method is for all Web API that requires User Gesture event.
+   */
+  enableFirstUserGestureEvent() {
+    const vstyle =
+      "position:absolute;z-index: 10000;width: 100%;height: 100vh;top:0;left: 0;background-color: transparent;";
+
+    const obj = XUI.create({
+      _type: "view",
+      _id: "first-gesture-overlay",
+      style: vstyle,
+    });
+
+    obj.onClick = `document.dispatchEvent(new CustomEvent("${FIRST_USER_GESTURE}"));`;
+    document.body.appendChild(obj.getDOMObject());
+
+    document.addEventListener(FIRST_USER_GESTURE, () => {
+      XUI.remove("first-gesture-overlay");
+      XUI._first_gesture_occurred = true;
+    });
+  }
+
+  /**
+   * This method creates a player element and appends it to the DOM
+   */
+  createPlayer(
+    playerId?: string,
+    cssClass?: string,
+    parentElementId?: string,
+    setAsMainPlayer?: boolean
+  ): HTMLDivElement {
+    if (!playerId) playerId = "xplayer";
+
+    const dobj =
+      parentElementId != null
+        ? document.getElementById(parentElementId)
+        : document.body;
+
+    const div = document.createElement("div");
+    div.id = playerId;
+    div.className = cssClass ?? playerId;
+
+    if (!cssClass) {
+      div.style.width = "100%";
+      div.style.height = "100%";
+      div.style.position = "absolute";
+      div.style.top = "0";
+      div.style.left = "0";
     }
 
-    /**
-     * Create a XUIObject and mount it to the DOM parent element
-     * @param data - the XUIObject data
-     * @returns XUIObject
-     * @deprecated use XUI.add instead
-     */
-    loadControl(data:XObjectData): XUIObject {
-        const xobj = this.create(data)
-        const ctrl = xobj.getDOMObject()
-        
-        
-        const pe = (xobj._parent_element) ? xobj._parent_element : this._controls_element;
-        
-        document.querySelector("#" + pe)?.append(ctrl)
-        if (xobj.onMount && typeof xobj.onMount === 'function') {
-            xobj.onMount()
-        }
-        return xobj
+    if (!this._player_element || setAsMainPlayer) {
+      this._player_element = div;
     }
 
-    /**
-     * Create a XUIObject and mount it to the DOM parent element
-     * @param data - the XUIObject data
-     * @returns XUIObject
-     * @deprecated use XUI.add instead
-     */
-    loadObject(data:XObjectData): XUIObject {
-        const xobj = this.create(data)
-        const ctrl = xobj.getDOMObject()
-        if (xobj._parent_element) {
-            document.querySelector("#" + xobj._parent_element)?.append(ctrl)
-        } else if (this._player_element) {
-            this._player_element.appendChild(ctrl)
-        } else {
-            throw "No parent element for the object"
-        }
-        
-        if (xobj.onMount && typeof xobj.onMount === 'function') {
-            xobj.onMount()
-        }
-
-        if(xobj.onShow && typeof xobj.onShow === 'function') {
-            xobj.onShow()
-        }
-
-
-        return xobj
+    if (dobj) {
+      (dobj as HTMLElement).style.margin = "0";
+      (dobj as HTMLElement).style.padding = "0";
+      dobj.appendChild(div);
     }
 
-    createFromTemplate(xpell2json:{[k:string]:any}) {
-        const s = this.create(XParser.xpellify(xpell2json))
-        return s
+    return div;
+  }
+
+  show(objectId: string) {
+    const obj = this.getObject(objectId);
+    if (obj) {
+      (obj as XUIObject).show();
     }
+  }
 
-    /**
-     * The method fires "first-user-gesture" event 
-     * This method is for all Web API that requires User Gesture event.
-     * @fire "first-user-gesture"
-     */
-    enableFirstUserGestureEvent() {
-        const vstyle = "position:absolute;z-index: 10000;width: 100%;height: 100vh;top:0;left: 0;background-color: transparent;"
-        const obj = XUI.create({ _type: "view", _id: "first-gesture-overlay", style: vstyle })
-        obj.onClick = `document.dispatchEvent(new CustomEvent("${FIRST_USER_GESTURE}"));`
-        document.body.appendChild(obj.getDOMObject())
-        document.addEventListener("first-user-gesture", (e) => {
-            XUI.remove("first-gesture-overlay")
-            XUI._first_gesture_occurred = true
-        })
-
+  hide(objectId: string) {
+    const obj = this.getObject(objectId);
+    if (obj) {
+      (obj as XUIObject).hide();
     }
+  }
 
-    // async onFrame(frameNumber:number) {
-    //     super.onFrame(frameNumber) //bubble event to all the active objects in the object manager (om)
-    // }
-
-    /**
-     * This method creates a player element and append it to the DOM
-     * @param playerId - optional id of the player element
-     * @param cssClass - optional css class to add to the player element
-     * @param parentElementId - optional id of the element to append the player to, if not provided the player will be appended to the body
-     * @param setAsMainPlayer - if true the player will be set as the main player element, if there is no main player element it will be set as the main player element anyway
-     * @returns HTMLDivElement
-     */
-    createPlayer(playerId:string = "xplayer",cssClass?:string,parentElementId?:string,setAsMainPlayer?:boolean): HTMLDivElement {
-        const dobj = (parentElementId) ? document.getElementById(parentElementId) : document.body
-        const div = document.createElement("div")
-        div.id = playerId
-        div.className = (cssClass) ? cssClass : playerId
-        if(!cssClass) {
-            div.style.width = "100%"
-            div.style.height = "100%"
-            div.style.position = "absolute"
-            div.style.top = "0"
-            div.style.left = "0"
-        }
-        
-        if(!this._player_element || setAsMainPlayer) this._player_element = div
-        if(dobj) {
-            dobj.style.margin = "0"
-            dobj.style.padding = "0"
-            dobj.appendChild(div)
-        }
-        return div
+  toggle(objectId: string) {
+    const obj = this.getObject(objectId);
+    if (obj) {
+      (obj as XUIObject).toggle();
     }
-
-    /**
-     * Show's XUIObject that was loaded into the XUI Object Manager
-     * @param objectId - the XUIObject id to show
-     */
-    show(objectId:string) {
-        const obj = this.getObject(objectId)
-        if(obj) {
-            (<XUIObject>obj)?.show()
-        }
-    }
-
-    /**
-     * Hide's XUIObject that was loaded into the XUI Object Manager
-     * @param objectId - the XUIObject id to hide
-     */
-    hide(objectId:string) {
-        const obj = this.getObject(objectId)
-        if(obj) {
-            (<XUIObject>obj)?.hide()
-        }
-    }
-
-    /**
-     * Toggle's XUIObject that was loaded into the XUI Object Manager
-     * @param objectId - the XUIObject id to toggle
-     */
-    toggle(objectId:string) {
-        const obj = this.getObject(objectId)
-        if(obj) {
-            (<XUIObject>obj)?.toggle()
-        }
-    }
-
-
+  }
 }
 
-export const XUI = new XUIModule({ _name: "xui" })
+export const XUI = new XUIModule({ _name: "xui" });
 
-
-export default XUI
+export default XUI;
 export {
-    XUIObject,
-    XUICoreObjects,
-    XViewManager
-}
+  XUIObject,
+  XUICoreObjects,
+  XViewManager, // legacy
+  XVM,          // NEW
+  _xvm,         // NEW
+};

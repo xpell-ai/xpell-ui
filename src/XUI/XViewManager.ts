@@ -3,9 +3,10 @@
 /**
  * @class XViewManager
  * @description manage views activities
+ * @deprecated use XVM.ts instead
  * */
 
-import {_x,_xlog,_xu,XObjectData,_xem} from "../Core/Xpell"
+import {_x,_xlog,_xu,XObjectData,_xem} from "xpell-core"
 // import  _xem from "../XEM/XEventManager"
 import XUI from "./XUI"
 import XView from "./XUICoreObjects"

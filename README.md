@@ -1,50 +1,53 @@
-# Xpell - Real-Time User Interface (UI) Engine
+# Xpell – Real-Time User Interface Engine
 
-Xpell is a real-time user interface (UI) framework for frontend application development. It provides granular control over multiple modules, including DOM management, 3D engine, and AI engine, to ensure that applications can run at high FPS rates.
+Xpell is a **real-time UI framework** designed for high-performance frontend applications.  
+It provides low-level, real-time control over UI rendering, communication, and AI-driven logic—allowing applications to run smoothly with dynamic, reactive behavior.
 
+---
 
-# Xpell-ui
+# Xpell-UI
 
-This package is an implementation of Xpell engine for web applications (/Typescript/Javascript/HTML), the engine supports native HTML DOM manipulation engine (XUI) engine for browsers based on THREE-ui and WebGL.
+**Xpell-UI** is the web implementation of the Xpell engine.  
+It provides a powerful UI runtime for **TypeScript / JavaScript / HTML** applications and includes:
 
+- A native DOM manipulation engine (`XUI`)
+- Real-time communication and data sync
+- A built-in database layer for app state
+- Optional AI-assisted logic and dynamic UI generation
 
+Xpell-UI is ideal for dashboards, tools, web apps, AI-driven interfaces, and any application that benefits from real-time UI updates.
 
-# Xpell-ui Base Module
+---
 
-- XUI - User Interface (HTML & CSS) module
-- XAI - AI Module Manager
-- XDB - Database Module Manager
-- Wormholes - Xpell Communication Module
+# Core Modules
+
+### **XUI – User Interface Engine**
+A component-based HTML/CSS UI engine that manages DOM elements with granular, real-time updates.
+
+### **XAI – AI Module Manager**
+Integrates Xpell with AI agents, enabling dynamic UI generation, semantic search, contextual logic, and more.
+
+### **XDB – Database Module Manager**
+A lightweight in-memory data layer designed for real-time state management and entity-driven architecture.
+
+### **Wormholes – Communication Module**
+A high-performance communication layer using WebSocket and REST for seamless server–client sync.
+
+---
 
 # Getting Started
-To begin using Xpell, install the framework and import it into your frontend application. From there, you can utilize its various modules to create a high-performance, real-time UI.
 
+Install Xpell into your project:
 
+```bash
+npm install xpell-ui
 ```
-npm install xpell
-```
-
-
-# Compiling Xpell-ui
-npm run build:types
-npx api-extractor run --local
-npm run build
-
-
 
 # Credits & License
 
- ---
+Author: Tamir Fridman
+Email: fridman.tamir@gmail.com
 
- Author: Fridman Fridman <fridman.tamir@gmail.com>
-
- License:  MIT  
-
- First Release: 22/07/2022
-
- Copyright Aime Technologies 2022, all right reserved
-
-
-
-
- 
+First Release: 22/07/2022
+License: MIT
+Copyright: © Aime Technologies, 2022–Present

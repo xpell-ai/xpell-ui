@@ -6,37 +6,47 @@ export default defineConfig({
   server: {
     port: 3001
   },
+
   build: {
     lib: {
-      entry: "./src/index.ts", // Entry file for your library
-      name: 'Xpell',         // Name of the global variable for UMD builds
-      formats: ['es', 'umd', 'cjs'], // Output formats
-      fileName: format => `xpell-ui.${format}.js` // File name format for different builds
+      entry: "./src/index.ts",
+      name: "XpellUI",
+      formats: ["es", "cjs", "umd"],
+      fileName: (format) => `xpell-ui.${format}.js`
     },
-    target: 'modules',
-    minify: true, // Minify the output
-    outDir: "dist", // Output directory
+
+    target: "modules",
+    minify: true,
+    outDir: "dist",
+
     rollupOptions: {
+      external: ["xpell-core", "animate.css"], // externalized dependencies
       output: {
-        globals: {},  // Add any external libraries here if needed
-        exports: 'named', // Export all named exports
+        globals: {
+          "xpell-core": "XpellCore",
+          "animate.css": "animateCSS"
+        },
+        exports: "named"
       }
     }
   },
+
   resolve: {
     alias: {
-      'xpell': resolve(__dirname, 'node_modules/xpell-ui') // Alias for internal use
+      // Internal dev import convenience
+      "xpell-ui": resolve(__dirname, "src")
     }
   },
+
   plugins: [
     dts({
-      outputDir: ['types'], // Output directory for type definitions
-      exclude: ['src/ignore', 'public'], // Exclude certain directories from typings
+      outputDir: "types",
+      insertTypesEntry: true,
+      rollupTypes: false,        // ⬅️ turn OFF rollup / api-extractor integration
       staticImport: true,
       skipDiagnostics: false,
       logDiagnostics: true,
-      rollupTypes: true,
-      insertTypesEntry: true
+      exclude: ["public"]
     })
   ]
 });

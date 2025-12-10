@@ -1,5 +1,14 @@
 Xpell Release Notes
 
+Xpell UI Module - Version 2.0.0 - Released on 
+
+- NO XAI Module (removed to seperate package)
+- xpell-core instead of "/core" folder
+- XVM - XViewManager replacement
+- XUIObject changes to support XVM
+- Deprecate XViewManager
+
+
 - Bi-directional Wormholes
 - add XNanoCommands for firing events + data example:
   - fire event: "myEvent" data: "myData"

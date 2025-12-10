@@ -7,13 +7,14 @@
  * @copyright Aime Technologies 2022, all right reserved
  */
 
-import { XUtils, _xd, XObject, XObjectData, _xem, XEventListenerOptions ,_xlog, XObjectOnEventIndex, XNanoCommand} from "../Core/Xpell"
+import { XUtils, _xd, XObject, XObjectData, _xem, 
+    XEventListenerOptions ,_xlog, XObjectOnEventIndex, 
+    XNanoCommand,XDataXporter} from "xpell-core"
 import XUI from "./XUI";
 import _xuiobject_basic_nano_commands from "./XUINanoCommands"
 const reservedWords = { _children: "child objects" }
 const xpellObjectHtmlFieldsMapping: { [k: string]: string } = { "_id": "id", "css-class": "class", "animation": "xyz", "input-type": "type" };
 import {XUIAnimate} from "./XUIAnimations"
-import { XDataXporter } from "../Core/XObject";
 
 /**
  *   ADD On Event support
@@ -25,8 +26,8 @@ export class XUIObject extends XObject {
 
     declare _id: string;
     declare _type: string;
-    declare _children: Array<XObject | XObjectData>
-    declare _parent: XObject | null 
+    declare _children: Array<XUIObject | XObjectData>;
+    declare _parent: XUIObject | null 
     declare _name?: string
     declare _data_source?: string //XData source
     declare _on: XObjectOnEventIndex 
@@ -44,7 +45,6 @@ export class XUIObject extends XObject {
     declare protected _cache_jcmd?: any;
     declare protected _event_listeners_ids: { [eventName: string]: string } 
     declare protected _xporter: XDataXporter 
-
 
 
     // [k:string]: string | null | [] | undefined | Function | boolean | {}
