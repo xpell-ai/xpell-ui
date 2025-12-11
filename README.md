@@ -1,53 +1,91 @@
-# Xpell – Real-Time User Interface Engine
+# Xpell-UI — Real-Time UI Engine for the Web
 
-Xpell is a **real-time UI framework** designed for high-performance frontend applications.  
-It provides low-level, real-time control over UI rendering, communication, and AI-driven logic—allowing applications to run smoothly with dynamic, reactive behavior.
+**Xpell-UI** is the web implementation of the **Xpell real-time application framework**.  
+It provides a high-performance UI engine built for interactive, dynamic, and AI-driven web applications using **TypeScript, JavaScript, and HTML**.
 
----
+Xpell-UI is designed for applications that require:
 
-# Xpell-UI
+- real-time UI updates  
+- smooth animations  
+- high FPS rendering  
+- AI-assisted behavior  
+- dynamic and reactive interfaces  
 
-**Xpell-UI** is the web implementation of the Xpell engine.  
-It provides a powerful UI runtime for **TypeScript / JavaScript / HTML** applications and includes:
+It powers dashboards, tools, visual editors, 3D UI layers, and next-generation AI user experiences.
 
-- A native DOM manipulation engine (`XUI`)
-- Real-time communication and data sync
-- A built-in database layer for app state
-- Optional AI-assisted logic and dynamic UI generation
+## What Xpell-UI Includes
 
-Xpell-UI is ideal for dashboards, tools, web apps, AI-driven interfaces, and any application that benefits from real-time UI updates.
+### ⚡ XUI — Real-Time UI Engine
+Low-level component system that updates DOM elements continuously and efficiently.
 
----
+### 🗄️ XDB — Data Layer for UI State
+A lightweight in-memory database designed for live app state and reactive UIs.
 
-# Core Modules
+### 🔌 Wormholes — Real-Time Communication
+Server–client sync via WebSocket and REST, enabling multi-user, collaborative, or AI-powered workflows.
 
-### **XUI – User Interface Engine**
-A component-based HTML/CSS UI engine that manages DOM elements with granular, real-time updates.
+### 🤖 Optional AI-Driven Logic
+Xpell-UI can integrate with AI agents (like AIME) to dynamically create, modify, or drive UI behavior.
 
-### **XAI – AI Module Manager**
-Integrates Xpell with AI agents, enabling dynamic UI generation, semantic search, contextual logic, and more.
+## Installation
 
-### **XDB – Database Module Manager**
-A lightweight in-memory data layer designed for real-time state management and entity-driven architecture.
+    npm install xpell-ui
 
-### **Wormholes – Communication Module**
-A high-performance communication layer using WebSocket and REST for seamless server–client sync.
+or
 
----
+    pnpm add xpell-ui
 
-# Getting Started
+## Getting Started
 
-Install Xpell into your project:
+A minimal example that starts the Xpell engine, loads the XUI module, and renders a simple label on screen:
 
-```bash
-npm install xpell-ui
-```
+    import { Xpell,XUI } from "xpell-ui";
 
-# Credits & License
+    // Start the Xpell frame engine
+    Xpell.start();
 
-Author: Tamir Fridman
-Email: fridman.tamir@gmail.com
+    // Load the UI module
+    Xpell.loadModule(XUI);
 
-First Release: 22/07/2022
-License: MIT
-Copyright: © Aime Technologies, 2022–Present
+    // Create a main player div and attach it to <body>
+    XUI.createPlayer("xplayer");
+
+    // Add a label element to the UI
+    XUI.add({
+      _type: "label",
+      _id: "hello-label",
+      style: "position:absolute;top:10px;left:10px;color:white;",
+      _text: "hello world..."
+    });
+
+## When to Use Xpell-UI
+
+Use Xpell-UI when building:
+
+- dashboards  
+- admin tools  
+- real-time control panels  
+- creative web applications  
+- AI-driven interfaces  
+- data visualizations  
+- applications requiring continuous UI updates  
+
+For a complete framework including UI, 3D, AI, and real-time sync, install:
+
+    npm install xpell
+
+## Related Packages
+
+- **xpell-core** – Xpell engine and runtime loop  
+- **xpell-ui** – the UI engine (this package)  
+- **xpell-3d** – 3D/WebGL visual engine  
+- **xpell** – unified entry point bundling all modules  
+
+## License & Credits
+
+MIT License  
+Author: Tamir Fridman  
+Email: fridman.tamir@gmail.com  
+First Release: 22/07/2022  
+© Aime Technologies, 2022–Present
+https://xpell.ai

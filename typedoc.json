@@ -1,0 +1,16 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "entryPointStrategy": "expand",
+  "entryPoints": ["src/index.ts"],
+  "out": "docs/api",
+  "includeVersion": true,
+  "tsconfig": "./tsconfig.json",
+  "excludePrivate": true,
+  "excludeProtected": false,
+  "excludeInternal": true,
+  "excludeExternals": false,
+  "readme": "none",
+  "categorizeByGroup": true,
+  "sort": ["kind", "alphabetical"],
+  "plugin": ["typedoc-plugin-markdown"]
+}

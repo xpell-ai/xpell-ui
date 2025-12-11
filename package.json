@@ -1,6 +1,6 @@
 {
   "name": "xpell-ui",
-  "version": "1.9.91",
+  "version": "2.0.0-alpha.1",
   "description": "Xpell UI JS Framework",
   "files": [
     "dist",
@@ -29,17 +29,17 @@
     "url": "git+https://github.com/xpell-ai/xpell-ui.git"
   },
   "peerDependencies": {
-    "xpell-core": ">=1.0.0"
+    "xpell-core": "^1.0.0"
   },
   "dependencies": {
-    "animate.css": "^4.1.1",
-    "xpell-core": "workspace:*"
+    "animate.css": "^4.1.1"
   },
   "devDependencies": {
     "typedoc": "^0.25.13",
+    "typedoc-plugin-markdown": "^3.17.1",
     "typescript": "^5.9.3",
     "vite": "^5.4.21",
     "vite-plugin-dts": "^3.9.1",
-    "xpell-core": "workspace:*"
+    "xpell-core": "^1.0.0"
   }
 }
