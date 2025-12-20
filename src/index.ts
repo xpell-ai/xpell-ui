@@ -1,49 +1,93 @@
 /**
- * Xpell - Real-Time User Interface Platform
- * Typescript Edition
- * Library Entry Point
- * 
- * @description Universal User Interface (UI) Engine for Javascript supporting devices & browsers
- * @author Fridman Fridman <fridman.tamir@gmail.com>
- * @since  22/07/2022
- * @Copyright Aime Technologies 2022, all right reserved
+ * Xpell — Real-Time User Interface Platform
+ * TypeScript Edition
  *
- *      This program is free software; you can redistribute it and/or
- *		modify it under the terms of the GNU General Public License
- *		as published by the Free Software Foundation; either version
- *		3 of the License, or (at your option) any later version.
+ * Library entry point for the Xpell runtime core.
  *
+ * Xpell is a universal real-time UI engine for JavaScript,
+ * designed to run across browsers and devices with a
+ * component-based, event-driven architecture.
+ *
+ * @packageDocumentation
+ * @author Tamir Fridman
+ * @since 2022-07-22
+ * @copyright
+ * © 2022–present Aime Technologies. All rights reserved.
  */
 
 
-
-/**
- * Xpell Core exports
- */
+/* -------------------------------------------------------------------------- */
+/* Core exports                                                               */
+/* -------------------------------------------------------------------------- */
 
 export * from "xpell-core";
 export { default } from "xpell-core";
 
-export {Wormholes,Wormholes as _wh,WormholeEvents,type MessageType} from "./Wormholes/Wormholes"
+/* -------------------------------------------------------------------------- */
+/* Wormholes                                                                  */
+/* -------------------------------------------------------------------------- */
 
+export {
+  Wormholes,
+  Wormholes as _wh,
+  WormholeEvents,
+  type MessageType,
+} from "./Wormholes/Wormholes";
 
-export {XUI,type XUIApp,XUIModule} from "./XUI/XUI"
+/* -------------------------------------------------------------------------- */
+/* XUI (renderer)                                                             */
+/* -------------------------------------------------------------------------- */
 
-export {XUIObject} from "./XUI/XUIObject"
+export { XUI, XUI as _xui, XUIModule } from "./XUI/XUI";
+export { XUIObject } from "./XUI/XUIObject";
 
-export {XUIObjectPack as XUIObjects,XView,XButton,XForm,XHeader,XImage,XLabel,XLink,XList,XNavBar,
-    XTextArea,XTextField,XVideo,XWebcam,
-    XHTML,XInput,XSVG,XPassword,XSVGCircle,
-    XSVGEllipse,XSVGLine,XSVGPolygon,XSVGRect,XSVGPolyline,XSVGPath
-} from "./XUI/XUICoreObjects"
+export {
+  XUIObjectPack as XUIObjects,
+  XView,
+  XButton,
+  XForm,
+  XImage,
+  XLabel,
+  XLink,
+  XList,
+  XTextArea,
+  XTextField,
+  XVideo,
+  XWebcam,
+  XHTML,
+  XInput,
+  XSVG,
+  XPassword,
+  XSVGCircle,
+  XSVGEllipse,
+  XSVGLine,
+  XSVGPolygon,
+  XSVGRect,
+  XSVGPolyline,
+  XSVGPath,
+} from "./XUI/XUICoreObjects";
 
+export { XUIAnimate, _AnimateCSS } from "./XUI/XUIAnimations";
 
-export {XViewManager,type XViewsPack} from "./XUI/XViewManager"
+/* -------------------------------------------------------------------------- */
+/* XVM (SPA runtime) - explicit exports (no wildcard)                         */
+/* -------------------------------------------------------------------------- */
 
+export { XVM, _xvm } from "./XUI/XVM";
+export type {
+  XVMApp,
+  XVMRouteSpec,
+  XVMRegionSpec,
+  XVMContainerSpec,
+  XVMViewFactory,
+  RegionConfig,
+  NavigateOptions,
+  ShowOptions,
+  CloseOptions,
+} from "./XUI/XVM";
 
-export {XDB,XDB as _xdb,_XDataBase} from "./XDB/XDB"
+/* -------------------------------------------------------------------------- */
+/* XDB                                                                        */
+/* -------------------------------------------------------------------------- */
 
-
-export {XUIAnimate,_AnimateCSS} from "./XUI/XUIAnimations"
-export *  from "./XUI/XVM"
-
+export { XDB, XDB as _xdb, _XDataBase } from "./XDB/XDB";

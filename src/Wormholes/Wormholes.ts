@@ -1,15 +1,33 @@
-/*
- Web Wormholes Client - manages wormholes session with Wormholes server
- Author       : Tamir Fridman
- Date Created : 03/05/2022
- Copyright  Fridman Tamir  2022, all right reserved
-
- 
- *      This program is free software; you can redistribute it and/or
- *		modify it under the terms of the GNU General Public License
- *		as published by the Free Software Foundation; either version
- *		3 of the License, or (at your option) any later version.
-  */
+/**
+ * Wormholes — Web Client
+ *
+ * Real-time communication client for the Xpell runtime.
+ *
+ * Manages a Wormholes session with a Wormholes server, providing a
+ * persistent bi-directional channel (typically WebSocket) used to
+ * transport Xpell commands, events, entity updates, and streaming data
+ * between client and server runtimes.
+ *
+ * ---
+ *
+ * ## Responsibilities
+ *
+ * - Establish and maintain a Wormholes connection/session
+ * - Send and receive Xpell commands (request/response + push events)
+ * - Handle reconnect/backoff and session continuity (when supported)
+ * - Provide message routing/dispatch to Xpell modules
+ *
+ * ---
+ *
+ * ## Architectural Role
+ *
+ * Wormholes is transport and session orchestration.
+ * It is UI-agnostic (XUI) and navigation-agnostic (XVM).
+ *
+ * @packageDocumentation
+ * @since 2022-05-03
+ * @author Tamir Fridman
+ */
 
 //import WebSocket from WebSocket;
 

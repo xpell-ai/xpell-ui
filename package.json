@@ -1,6 +1,6 @@
 {
   "name": "xpell-ui",
-  "version": "2.0.0-alpha.1",
+  "version": "2.0.0-alpha.2",
   "description": "Xpell UI JS Framework",
   "files": [
     "dist",
@@ -20,7 +20,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "docs": "typedoc --options ./typedoc.json --tsconfig ./"
+    "docs": "typedoc --options ./typedoc.json --tsconfig ./",
+    "publish-alpha-next": "pnpm version prerelease --preid=alpha --no-git-tag-version && pnpm publish --tag alpha"
   },
   "author": "Tamir Fridman <fridman.tamir@gmail.com>",
   "license": "MIT",
@@ -29,7 +30,7 @@
     "url": "git+https://github.com/xpell-ai/xpell-ui.git"
   },
   "peerDependencies": {
-    "xpell-core": "^1.0.0"
+    "xpell-core": "^2.0.0-alpha"
   },
   "dependencies": {
     "animate.css": "^4.1.1"
@@ -40,6 +41,6 @@
     "typescript": "^5.9.3",
     "vite": "^5.4.21",
     "vite-plugin-dts": "^3.9.1",
-    "xpell-core": "^1.0.0"
+    "xpell-core": "../xpell-core"
   }
 }

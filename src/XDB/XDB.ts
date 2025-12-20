@@ -1,3 +1,62 @@
+/**
+ * XDB — Xpell Data Engine
+ *
+ * Core data layer of the Xpell runtime.
+ *
+ * XDB provides a unified in-memory data engine for structured objects,
+ * graph-like relationships, and semantic (vector-based) representations.
+ * It serves as the authoritative runtime store for entities used by UI,
+ * AI, and application logic.
+ *
+ * ---
+ *
+ * ## Responsibilities
+ *
+ * - Manage XObject-based entities and their lifecycle
+ * - Store and resolve structured data and relationships
+ * - Support semantic fields and vectorized content
+ * - Provide fast in-memory access for real-time systems
+ * - Act as the data bridge between UI, AI, and runtime logic
+ *
+ * ---
+ *
+ * ## Architectural Role
+ *
+ * - **XDB** owns data and semantics
+ * - **XUI** renders data
+ * - **XVM** orchestrates application flow
+ *
+ * XDB itself is UI- and navigation-agnostic.
+ *
+ * ---
+ *
+ * ## Entity Model
+ *
+ * - Entities are instances of `XObject`
+ * - Each entity is identified by `_id` and `_type`
+ * - Types may be predefined or dynamically registered
+ * - Objects may include semantic/vector fields for AI retrieval
+ *
+ * ---
+ *
+ * ## Performance Model
+ *
+ * - Primary store is in-memory for low-latency access
+ * - Vector operations may be offloaded to a Matrix Processor (MAT)
+ * - Designed for high-frequency reads and real-time mutation
+ *
+ * ---
+ *
+ * XDB is not a database adapter.
+ * It is a runtime data engine designed for AI-first applications.
+ *
+ * @packageDocumentation
+ * @since 2022-07-22
+ * @author Tamir Fridman
+ * @copyright
+ * © 2022–present Aime Technologies. All rights reserved.
+ */
+
 import { Xpell, XUtils, XData, _xlog } from "xpell-core"
 
 

@@ -1,6 +1,6 @@
 /**
  * XUI Animations
- * @description XUI Animations are a set of animations that can be applied to XUI objects
+ * XUI Animations are a set of animations that can be applied to XUI objects
  * The animations are css based and are applied to the style property of the XUI object
  * @author Kylie Koshet 
  * @since  02/07/2024

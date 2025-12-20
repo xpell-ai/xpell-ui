@@ -1,20 +1,48 @@
 /**
- * XUIObject - XUI Object is the base class for all XUI objects
+ * XUIObject — Base Class for Xpell UI Objects
+ *
+ * The foundational UI node in the XUI layer.
+ * `XUIObject` represents a UI element/component (DOM-backed in browser runtimes)
+ * and provides the common lifecycle, parsing, state, styling, and event hooks
+ * shared by all XUI components (e.g. `XView`, `XLabel`, `XButton`, `XInput`, etc.).
+ *
+ * ---
+ *
+ * ## Responsibilities
+ *
+ * - Normalize and store UI data (`XObjectData`) + defaults
+ * - Parse/resolve properties into a runtime-ready object
+ * - Manage lifecycle hooks (create/mount/unmount/destroy)
+ * - Provide event wiring and update/render triggers
+ * - Expose platform-specific bindings (e.g. DOM element reference)
+ *
+ * ---
+ *
+ * ## Architectural Rule
+ *
+ * XUIObject is responsible for **structure** and **binding**.
+ * Visibility and navigation are orchestrated by **XVM** (not XUIObject).
+ *
  * @class XUIObject
  * @extends XObject
+ * @since 2022-07-22
  * @author Tamir Fridman
- * @since  22/07/2022
- * @copyright Aime Technologies 2022, all right reserved
+ * @packageDocumentation
+ * @copyright
+ * © 2022–present Aime Technologies. All rights reserved.
  */
 
-import { XUtils, _xd, XObject, XObjectData, _xem, 
-    XEventListenerOptions ,_xlog, XObjectOnEventIndex, 
-    XNanoCommand,XDataXporter} from "xpell-core"
+
+import {
+    XUtils, _xd, XObject, XObjectData, _xem,
+    XEventListenerOptions, _xlog, XObjectOnEventIndex,
+    XNanoCommand, XDataXporter
+} from "xpell-core"
 import XUI from "./XUI";
 import _xuiobject_basic_nano_commands from "./XUINanoCommands"
 const reservedWords = { _children: "child objects" }
 const xpellObjectHtmlFieldsMapping: { [k: string]: string } = { "_id": "id", "css-class": "class", "animation": "xyz", "input-type": "type" };
-import {XUIAnimate} from "./XUIAnimations"
+import { XUIAnimate } from "./XUIAnimations"
 
 /**
  *   ADD On Event support
@@ -27,24 +55,24 @@ export class XUIObject extends XObject {
     declare _id: string;
     declare _type: string;
     declare _children: Array<XUIObject | XObjectData>;
-    declare _parent: XUIObject | null 
+    declare _parent: XUIObject | null
     declare _name?: string
     declare _data_source?: string //XData source
-    declare _on: XObjectOnEventIndex 
-    declare _once: XObjectOnEventIndex 
+    declare _on: XObjectOnEventIndex
+    declare _once: XObjectOnEventIndex
     declare _on_create?: string | Function | undefined
     declare _on_mount?: string | Function | undefined
     declare _on_frame?: string | Function | undefined
     declare _on_data?: string | Function | undefined
     declare _on_event?: string | Function | undefined
     declare _process_frame: boolean
-    declare _process_data: boolean 
+    declare _process_data: boolean
     declare protected _xem_options: XEventListenerOptions
     declare protected _nano_commands: { [k: string]: XNanoCommand }
     declare protected _cache_cmd_txt?: string;
     declare protected _cache_jcmd?: any;
-    declare protected _event_listeners_ids: { [eventName: string]: string } 
-    declare protected _xporter: XDataXporter 
+    declare protected _event_listeners_ids: { [eventName: string]: string }
+    declare protected _xporter: XDataXporter
 
 
     // [k:string]: string | null | [] | undefined | Function | boolean | {}
@@ -61,8 +89,8 @@ export class XUIObject extends XObject {
     _on_click?: Function | string
     _on_show?: Function | string
     _on_hide?: Function | string
-    _on_show_animation?: string ;
-    _on_hide_animation?: string ;
+    _on_show_animation?: string;
+    _on_hide_animation?: string;
 
 
 
@@ -77,10 +105,10 @@ export class XUIObject extends XObject {
         this._children = [];
         this._visible = true
         this._xem_options = <XEventListenerOptions>{ _once: false, _support_html: true }
-        this.addXporterDataIgnoreFields(["_dom_object", "_html", "_xem_options", "_on_click","#_text"])
+        this.addXporterDataIgnoreFields(["_dom_object", "_html", "_xem_options", "_on_click", "#_text"])
         super.addNanoCommandPack(_xuiobject_basic_nano_commands)
-        
-        if(!skipParse && data) this.parse(data, reservedWords); 
+
+        if (!skipParse && data) this.parse(data, reservedWords);
     }
 
 
@@ -103,60 +131,85 @@ export class XUIObject extends XObject {
     }
 
 
+    /**
+     * Removes the HTML DOM object from the document
+     */
+    remove() {
+        if (this._dom_object instanceof HTMLElement) {
+            this._dom_object.remove(); // removes subtree too
+            this._dom_object = null;   // optional: prevent stale refs
+        }
+    }
 
 
-    
+
 
     /**
      * Gets the HTML DOM object, if the object is not created yet it will be created
      * @returns the HTML DOM object
      */
+
+
     getDOMObject(): HTMLElement {
         if (!this._dom_object) {
-            let dom_object = (this._html_ns)
+            const dom_object = (this._html_ns)
                 ? document.createElementNS(this._html_ns, this._html_tag)
-                : document.createElement(this._html_tag)
-            let fields = Object.keys(this);
+                : document.createElement(this._html_tag);
 
-            fields.forEach(field => {
-                if (this[field] && this.hasOwnProperty(field)) {
-                    let f_out = field;
-                    if (xpellObjectHtmlFieldsMapping.hasOwnProperty(field)) {
-                        f_out = xpellObjectHtmlFieldsMapping[field];
-                    }
-                    if (!f_out.startsWith("_")) {
-                        dom_object.setAttribute(f_out, <string>this[field]);
-                    }
+            // 1) apply attributes
+            for (const field of Object.keys(this)) {
+                if (!this.hasOwnProperty(field)) continue;
+                const val = (this as any)[field];
+                if (val == null) continue;
+
+                let outName = field;
+                if (xpellObjectHtmlFieldsMapping.hasOwnProperty(field)) {
+                    outName = xpellObjectHtmlFieldsMapping[field];
                 }
-            });
 
-
-            if (this["_text"] && (<string>this["_text"]).length > 0) {
-                this.#_text = <string>this["_text"]
-                dom_object.textContent = <string>this["_text"];
+                if (!outName.startsWith("_")) {
+                    dom_object.setAttribute(outName, String(val));
+                }
             }
 
+            // 2) text
+            if ((this as any)["_text"] && String((this as any)["_text"]).length > 0) {
+                this.#_text = String((this as any)["_text"]);
+                dom_object.textContent = this.#_text;
+            }
 
-            //--> change to support text content and children
+            // 3) children
             if (this._children.length > 0) {
                 this._children.forEach((child: any) => {
-                    const coo = child.getDOMObject()
-                    dom_object.appendChild(coo);
-                })
+                    dom_object.appendChild(child.getDOMObject());
+                });
             }
 
-            //check style visibility
-            // (<HTMLElement>dom_object).style.display = (this._visible) ? "block" : "none"
-            // if (this._visible) {
-            if ((<HTMLElement>dom_object).style.display == "none") {
-                this._visible = false
+            // ✅ 4) initial visibility detection (INLINE ONLY)
+            //    This now works because "style" attribute (if provided) was already set.
+            const el = dom_object as HTMLElement;
+
+            if (el.hasAttribute("hidden") || el.style.display === "none") {
+                this._visible = false;
+                // keep it consistent if "hidden" was used:
+                if (el.hasAttribute("hidden") && el.style.display !== "none") {
+                    el.style.display = "none";
+                }
+            } else {
+                this._visible = true;
+
+                // cache base display only if it exists inline and isn't none
+                // (DO NOT default to "block" here)
+                if (!this._base_display && el.style.display && el.style.display !== "none") {
+                    this._base_display = el.style.display;
+                }
             }
 
             this._dom_object = dom_object;
-            // this.onCreate()
         }
         return this._dom_object;
     }
+
 
 
     /**
@@ -170,7 +223,7 @@ export class XUIObject extends XObject {
 
     set _text(text: string) {
         this.#_text = text
-        if(this._dom_object instanceof HTMLElement) {
+        if (this._dom_object instanceof HTMLElement) {
             this._dom_object.textContent = text
         }
     }
@@ -228,7 +281,7 @@ export class XUIObject extends XObject {
 
             this._dom_object.appendChild(xObject.dom)
             //promisify onMount            
-            xObject.onMount()
+            if (!(xObject as any)._mounted) xObject.onMount();
             return xObject
             // const dom = xObject.dom
             // xObject.mount(this._id)
@@ -324,84 +377,95 @@ export class XUIObject extends XObject {
         }
     }
 
-    
-
-
-    
-
-   
- 
-   
-
-
 
     /**
-     * This method is used to show the object and trigger the onShow event
+     * Show the object and trigger onShow (only if visibility actually changes)
      */
     show() {
-        if (this._dom_object instanceof HTMLElement) {
-            if(this._on_show_animation){
-                this._dom_object.classList.add(XUIAnimate._animation_base_class , this._on_show_animation);
-                this.addEventListener("animationend", () => { this._dom_object.classList.remove( this._on_show_animation);
-                     },{_once: true});
-            } 
-            const disp = (this._base_display) ? this._base_display : "flex"
-            this._dom_object.style.display = disp
-            this._visible = true
-            this.onShow()
-        }
-    }
+        const el = this.getDOMObject(); // ensure DOM exists
+        if (!(el instanceof HTMLElement)) return;
 
-    /**
-     * This method is used to hide the object and trigger the onHide event
-     */
+        const currentDisplay = getComputedStyle(el).getPropertyValue("display");
+        if (currentDisplay && currentDisplay !== "none") {
+            this._visible = true;
+            return;
+        }
+
+        if (!this._base_display || this._base_display === "none") {
+            this._base_display = "block";
+        }
+
+        if (this._on_show_animation) {
+            el.classList.add(XUIAnimate._animation_base_class, this._on_show_animation);
+            this.addEventListener(
+                "animationend",
+                () => el.classList.remove(this._on_show_animation as string),
+                { _once: true }
+            );
+        }
+
+        el.style.display = this._base_display;
+        this._visible = true;
+        this.onShow();
+    }
 
     hide() {
+        const el = this.getDOMObject(); // ensure DOM exists
+        if (!(el instanceof HTMLElement)) return;
 
-        if (this._dom_object instanceof HTMLElement) {
-            if (!this._base_display) {
-                const cs = getComputedStyle(this._dom_object).getPropertyValue("display")
-                if (!cs || cs == "none") this._base_display = "block"
-                else this._base_display = cs
-            }
-            this._visible = false
-
-            if(this._on_hide_animation){
-                this._dom_object.classList.add(XUIAnimate._animation_base_class, this._on_hide_animation);
-                this.addEventListener("animationend", () => { 
-                    this._dom_object.classList.remove( this._on_hide_animation);
-                    this._dom_object.style.display = "none"
-                    this.onHide() 
-                },{_once: true});
-            } else {
-                this._dom_object.style.display = "none"
-                this.onHide()
-            }
+        const computedDisplay = getComputedStyle(el).getPropertyValue("display");
+        if (computedDisplay === "none") {
+            this._visible = false;
+            return;
         }
+
+        if (!this._base_display || this._base_display === "none") {
+            this._base_display = computedDisplay || "block";
+        }
+
+        this._visible = false;
+
+        if (this._on_hide_animation) {
+            el.classList.add(XUIAnimate._animation_base_class, this._on_hide_animation);
+            this.addEventListener(
+                "animationend",
+                () => {
+                    el.classList.remove(this._on_hide_animation as string);
+                    el.style.display = "none";
+                    this.onHide();
+                },
+                { _once: true }
+            );
+            return;
+        }
+
+        el.style.display = "none";
+        this.onHide();
     }
 
 
-    async animate(animation: string,infinite:boolean = false) {
+
+    async animate(animation: string, infinite: boolean = false) {
         if (this._dom_object instanceof HTMLElement) {
             return new Promise((resolve, reject) => {
                 this._dom_object.classList.add(XUIAnimate._animation_base_class, animation);
-                if(infinite) {
+                if (infinite) {
                     this._dom_object.classList.add("animate__infinite")
                     this["_active_animation"] = animation
                     resolve(true)
                 } else {
-                    this.addEventListener("animationend", () => { 
-                        this._dom_object.classList.remove( animation);
+                    this.addEventListener("animationend", () => {
+                        this._dom_object.classList.remove(animation);
                         resolve(true)
-                    },{_once: true});
-                }   
+                    }, { _once: true });
+                }
             })
         }
     }
 
     stopAnimation() {
         if (this._dom_object instanceof HTMLElement && this["_active_animation"]) {
-            this._dom_object.classList.remove( <any>this["active-animation"],"animate__infinite");
+            this._dom_object.classList.remove(<any>this["active-animation"], "animate__infinite");
             delete this["_active_animation"]
         }
     }
@@ -411,9 +475,15 @@ export class XUIObject extends XObject {
      * This method is used to toggle the object visibility
      */
     toggle() {
-        if (this._visible) this.hide()
-        else this.show()
+        const el = this._dom_object;
+        if (el instanceof HTMLElement) {
+            const cs = getComputedStyle(el).getPropertyValue("display");
+            this._visible = cs !== "none";
+        }
+        if (this._visible) this.hide();
+        else this.show();
     }
+
 
 
     click() {
@@ -423,7 +493,7 @@ export class XUIObject extends XObject {
     }
 
 
-    
+
 
     /**
      * this method triggered after the HTML DOM object has been mounted by the super
@@ -432,39 +502,45 @@ export class XUIObject extends XObject {
      */
 
     async onMount() {
-        if (!this._mounted) {
-            let needShow = false
-            
-            if (this._on_click) {
+        if (this._mounted) return;
 
-                if (typeof this._on_click === 'function') {
-                    this.addEventListener("click", (e) => { (<Function>this._on_click)(this, e) })
-                    // this.dom.addEventListener("click", (e) => { (<Function>this._on_click)(this,e) })
-                } else if (typeof this._on_click === 'string') {
-                    this.addEventListener("click", (e) => { 
-                        this.checkAndRunInternalFunction(this._on_click) })
-                }
+        // bind click handler (supports function or nano-command string)
+        if (this._on_click) {
+            if (typeof this._on_click === "function") {
+                this.addEventListener("click", (e) => (this._on_click as any)(this, e));
+            } else if (typeof this._on_click === "string") {
+                this.addEventListener("click", () => {
+                    this.checkAndRunInternalFunction(this._on_click);
+                });
             }
-
-            await super.onMount()
-            try {
-                // _base_display uses to show the element if it was hidden
-                
-                const computedStyle = getComputedStyle(this._dom_object).getPropertyValue("display")
-                if (!this._base_display) {
-                    if (!computedStyle || computedStyle == "none") this._base_display = "block"
-                    else this._base_display = computedStyle
-                }
-                needShow = (computedStyle != "none")          
-            } catch (error) {
-                this._base_display = "block"
-            }
-            if (needShow) this.show()
-
-            
         }
 
+        // base lifecycle
+        await super.onMount();
+
+        // observe DOM state only (no forcing)
+        const el = this._dom_object;
+        if (el instanceof HTMLElement) {
+            try {
+                const cs = getComputedStyle(el).getPropertyValue("display");
+                this._visible = cs !== "none";
+
+                // cache only if currently visible
+                if (!this._base_display && cs && cs !== "none") {
+                    this._base_display = cs;
+                }
+            } catch {
+                // don't guess base_display here
+                this._visible = true;
+            }
+        } else {
+            this._visible = true;
+        }
+
+        this._mounted = true;
     }
+
+
 
 
 

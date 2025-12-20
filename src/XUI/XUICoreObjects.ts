@@ -1,11 +1,38 @@
 /**
- * XUI Core Objects 
- * @description XUI Core Objects are the basic building blocks of the XUI Framework
- * @since  22/07/2022
- * @copyright Aime Technologies 2022, all right reserved
+ * XUI Core Objects
+ *
+ * Object-pack registry for the built-in XUI primitives.
+ *
+ * This module defines the default mapping between `_type` / HTML tag aliases
+ * and their corresponding XUI classes. It is used by the Xpell runtime to
+ * materialize UI nodes from JSON/UI schemas (e.g. `XDB.create({ _type })`,
+ * view factories, manifests, or dynamic UI generation).
+ *
+ * ---
+ *
+ * ## What this pack provides
+ *
+ * - Canonical XUI primitives (`XView`, `XLabel`, `XButton`, `XInput`, ...)
+ * - HTML tag aliases mapped to `XHTML` (e.g. `header`, `section`, `p`, `li`, ...)
+ * - Convenience alias: `"div"` → `XView`
+ * - SVG primitives (`XSVG`, `XSVGCircle`, `XSVGPath`, ...)
+ *
+ * ---
+ *
+ * ## Contract
+ *
+ * - Keys are `_type` values (or HTML tag aliases)
+ * - Values are XUI classes that extend `XUIObject`
+ * - Registration order must remain stable to keep `_type` resolution deterministic
+ *
+ * @packageDocumentation
+ * @since 2022-07-22
+ * @copyright
+ * © 2022–present Aime Technologies. All rights reserved.
  */
+
 import XUIObject from "./XUIObject";
-import {_x,XObjectData,XObjectPack ,_xem, _xlog} from "xpell-core";
+import {_x,XObjectData,XObjectPack ,_xem, _xlog, XObject} from "xpell-core";
 
 
 
@@ -25,32 +52,7 @@ export class XView extends XUIObject {
 }
 
 
-export class XHeader extends XUIObject {
-    static _xtype = "header"
-    constructor(data:XObjectData) {
-        const defaults = {
-            _type: XHeader._xtype,
-            class:"x" + XHeader._xtype,
-            _html_tag:"header"
-        }
-         super(data, defaults, true);
-        this.parse(data);
-    }
-}
 
-export class XNavBar extends XUIObject {
-    static _xtype = "navbar"
-    constructor(data:XObjectData) {
-        
-        const defaults = {
-            _type: XNavBar._xtype,
-            class:"x" + XNavBar._xtype,
-            _html_tag:"nav"
-        }
-         super(data, defaults, true);
-        this.parse(data);
-    }
-}
 
 export class XForm extends XUIObject {
     static _xtype = "form"
@@ -269,7 +271,7 @@ export class XTextArea extends XUIObject {
     set _text(text:string) {
         super._text = text     
         if(this._dom_object) {
-            (<HTMLInputElement>(this.dom)).value = text
+            (<HTMLTextAreaElement>this.dom).value = text;
         }
     }
 
@@ -288,6 +290,8 @@ export class XLink extends XUIObject {
          super(data, defaults, true);
         this.parse(data);
     }
+
+    
 }
 
 export class XLabel extends XUIObject {    
@@ -300,19 +304,9 @@ export class XLabel extends XUIObject {
         }
         super(data,defaults, true);
         this.parse(data)
-    }
-}
-
-export class XHTML extends XUIObject {    
-    static _xtype = "xhtml"
-    constructor(data:XObjectData) {
-        const defaults = {
-            _type:XHTML._xtype,
-            _html_tag: (data["_html_tag"]) ?data["_html_tag"] : "div"
-
-        }
-        super(data,defaults, true);
-        this.parse(data)
+        this.addNanoCommand("text",(xCommand, xObject?: XObject) => {
+                (<any>xObject)._text = xCommand._params?.text || ""
+            }) 
     }
 }
 
@@ -329,7 +323,8 @@ export class XButton extends XUIObject {
             class:"xbutton",
             _html_tag :"button"
         }
-        super(data,defs);        
+        super(data,defs,true);     
+        this.parse(data)   
     }
     
     setOnclick(fun:CallableFunction)
@@ -601,11 +596,48 @@ export class XSVGPath extends XUIObject {
     }
 }
 
+
+
+export class XHTML extends XUIObject {
+  static _xtype = "xhtml";
+
+  
+
+  constructor(data: XObjectData) {
+    const t = (data?._type ?? "").toString();
+
+    const defaults = {
+      _type: XHTML._xtype,
+      _html_tag: data["_html_tag"]
+        ? data["_html_tag"]
+        : (t && t !== XHTML._xtype ? t : "div"),
+    };
+
+    super(data, defaults, true);
+    this.parse(data);
+  }
+}
+
+
 export class XUIObjectPack extends XObjectPack {
     static getObjects() {
         return {
             [XView._xtype]:XView,
             "div":XView, //alias for XView
+            "header": XHTML,
+            "aside": XHTML,
+            "main": XHTML,
+            "section": XHTML,
+            "article": XHTML,
+            "nav": XHTML,
+            "footer": XHTML,
+            "span": XHTML,
+            "p": XHTML,
+            "a": XLink,
+            "ul": XHTML,
+            "ol": XHTML,
+            "li": XHTML,
+            "h1": XHTML, "h2": XHTML, "h3": XHTML, "h4": XHTML, "h5": XHTML, "h6": XHTML,
             [XLabel._xtype]:XLabel,
             [XLink._xtype]:XLink,
             [XButton._xtype]:XButton,
