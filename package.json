@@ -4,18 +4,20 @@
   "description": "Xpell UI JS Framework",
   "files": [
     "dist",
-    "types",
-    "docs"
+    "docs",
+    "README.md",
+    "LICENSE","CHANGELOG.md"
   ],
-  "types": "./types/index.d.ts",
   "module": "./dist/xpell-ui.es.js",
   "main": "./dist/xpell-ui.cjs.js",
+  "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "types": "./types/index.d.ts",
+      "types": "./dist/index.d.ts",
       "import": "./dist/xpell-ui.es.js",
       "require": "./dist/xpell-ui.cjs.js"
-    }
+    },
+    "./package.json": "./package.json"
   },
   "scripts": {
     "dev": "vite",
@@ -30,7 +32,7 @@
     "url": "git+https://github.com/xpell-ai/xpell-ui.git"
   },
   "peerDependencies": {
-    "xpell-core": "^2.0.0-alpha"
+    "xpell-core": "workspace:*"
   },
   "dependencies": {
     "animate.css": "^4.1.1"
@@ -41,6 +43,6 @@
     "typescript": "^5.9.3",
     "vite": "^5.4.21",
     "vite-plugin-dts": "^3.9.1",
-    "xpell-core": "../xpell-core"
+    "xpell-core": "workspace:*"
   }
 }

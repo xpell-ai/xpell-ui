@@ -70,7 +70,9 @@
  */
 
 
-import { XModule, _xlog, _xd, _xem, type XObjectData, XParams } from "xpell-core";
+import { XModule, _xlog, _xd, type XObjectData, XParams } from "xpell-core";
+import {_xem} from "../XEM/XEventManager"
+
 import { XUI } from "./XUI";
 import { XUIObject } from "./XUIObject";
 
@@ -371,7 +373,7 @@ class _XVM extends XModule {
     const activeId = this._active[containerId];
     if (!activeId) return;
 
-    const activeObj = XUI.getObject(activeId) as XUIObject | undefined;
+    const activeObj = XUI.getObject(activeId) as unknown as XUIObject | undefined;
 
     if (activeObj) {
       // try hide (optional)
@@ -429,7 +431,7 @@ class _XVM extends XModule {
     } else if (typeof view === "string") {
       const existing = XUI.getObject(view);
       if (!existing) throw new Error("XVM.add: view not found by ID: " + view);
-      xView = existing as XUIObject;
+      xView = existing as unknown as XUIObject;
       this.detachFromParent(xView);
     } else {
       xView = XUI.create(view as any) as XUIObject;
@@ -485,7 +487,7 @@ class _XVM extends XModule {
       return v;
     }
 
-    const fromXUI = XUI.getObject(viewId) as XUIObject | undefined;
+    const fromXUI = XUI.getObject(viewId) as unknown as XUIObject | undefined;
     if (fromXUI) return fromXUI;
 
     if (opts.allowCreateFromRaw !== false && this._rawViews[viewId]) {
@@ -527,7 +529,7 @@ class _XVM extends XModule {
     const hist = this.ensureHistory(containerId);
 
     if (pushCurrent && policy.history && currentId && currentId !== view._id) {
-      const curObj = XUI.getObject(currentId) as XUIObject | undefined;
+      const curObj = XUI.getObject(currentId) as unknown as XUIObject | undefined;
       if (curObj) hist.push(curObj);
       this.log("Pushed to history:", currentId, "container:", containerId);
     }

@@ -1,154 +1,136 @@
-/**
- * XUIObject — Base Class for Xpell UI Objects
- *
- * The foundational UI node in the XUI layer.
- * `XUIObject` represents a UI element/component (DOM-backed in browser runtimes)
- * and provides the common lifecycle, parsing, state, styling, and event hooks
- * shared by all XUI components (e.g. `XView`, `XLabel`, `XButton`, `XInput`, etc.).
- *
- * ---
- *
- * ## Responsibilities
- *
- * - Normalize and store UI data (`XObjectData`) + defaults
- * - Parse/resolve properties into a runtime-ready object
- * - Manage lifecycle hooks (create/mount/unmount/destroy)
- * - Provide event wiring and update/render triggers
- * - Expose platform-specific bindings (e.g. DOM element reference)
- *
- * ---
- *
- * ## Architectural Rule
- *
- * XUIObject is responsible for **structure** and **binding**.
- * Visibility and navigation are orchestrated by **XVM** (not XUIObject).
- *
- * @class XUIObject
- * @extends XObject
- * @since 2022-07-22
- * @author Tamir Fridman
- * @packageDocumentation
- * @copyright
- * © 2022–present Aime Technologies. All rights reserved.
- */
-
+// ============================================================================
+// xpell-ui/src/XUI/XUIObject.ts
+// PATCH: make XUIObject overrides compatible with XObject (TS5 strict)
+// - Do NOT override base fields with incompatible types
+// - Keep UI convenience by casting where needed (runtime unchanged)
+// ============================================================================
 
 import {
-    XUtils, _xd, XObject, XObjectData, _xem,
-    XEventListenerOptions, _xlog, XObjectOnEventIndex,
-    XNanoCommand, XDataXporter
-} from "xpell-core"
-import XUI from "./XUI";
-import _xuiobject_basic_nano_commands from "./XUINanoCommands"
-const reservedWords = { _children: "child objects" }
-const xpellObjectHtmlFieldsMapping: { [k: string]: string } = { "_id": "id", "css-class": "class", "animation": "xyz", "input-type": "type" };
-import { XUIAnimate } from "./XUIAnimations"
+    _xd, XObject, type XObjectData,
+    type XEventListenerOptions, _xlog, type XObjectOnEventIndex,
+    type XNanoCommand, type XDataXporter
+} from "xpell-core";
 
-/**
- *   ADD On Event support
- *  - override addEventListener to add html event listener if object exist
- *  - override removeEventListener to remove html event listener
- *  - check for events in getDOMObject and add them to the object
-*/
+import { _xem } from "../XEM/XEventManager"
+
+import XUI from "./XUI";
+import _xuiobject_basic_nano_commands from "./XUINanoCommands";
+import { XUIAnimate } from "./XUIAnimations";
+
+const reservedWords = { _children: "child objects" };
+const xpellObjectHtmlFieldsMapping: { [k: string]: string } = { "_id": "id", "css-class": "class", "animation": "xyz", "input-type": "type" };
+
+export type XUIHandler = Function | string;
+
+
+export interface XUIObjectData extends XObjectData {
+    _html_tag?: string;
+    _html_ns?: string | null;
+    _html?: string;
+    _visible?: boolean;
+    _parent_element?: string;
+    _on_click?: Function | string;
+    _on_show?: Function | string;
+    _on_hide?: Function | string;
+    _on_show_animation?: string;
+    _on_hide_animation?: string;
+}
+
 export class XUIObject extends XObject {
 
     declare _id: string;
     declare _type: string;
-    declare _children: Array<XUIObject | XObjectData>;
-    declare _parent: XUIObject | null
-    declare _name?: string
-    declare _data_source?: string //XData source
-    declare _on: XObjectOnEventIndex
-    declare _once: XObjectOnEventIndex
-    declare _on_create?: string | Function | undefined
-    declare _on_mount?: string | Function | undefined
-    declare _on_frame?: string | Function | undefined
-    declare _on_data?: string | Function | undefined
-    declare _on_event?: string | Function | undefined
-    declare _process_frame: boolean
-    declare _process_data: boolean
-    declare protected _xem_options: XEventListenerOptions
-    declare protected _nano_commands: { [k: string]: XNanoCommand }
+
+    // ✅ MUST match base XObject contract (TS override compatibility)
+    declare _children: Array<XObject | XObjectData>;
+    declare _parent: XObject | null;
+
+    declare _name?: string;
+    declare _data_source?: string;
+    declare _on: XObjectOnEventIndex;
+    declare _once: XObjectOnEventIndex;
+    declare _on_create?: string | Function | undefined;
+    declare _on_mount?: string | Function | undefined;
+    declare _on_frame?: string | Function | undefined;
+    declare _on_data?: string | Function | undefined;
+    declare _on_event?: string | Function | undefined;
+    declare _process_frame: boolean;
+    declare _process_data: boolean;
+
+    declare protected _xem_options: XEventListenerOptions;
+    declare protected _nano_commands: { [k: string]: XNanoCommand };
     declare protected _cache_cmd_txt?: string;
     declare protected _cache_jcmd?: any;
-    declare protected _event_listeners_ids: { [eventName: string]: string }
-    declare protected _xporter: XDataXporter
 
+    // ✅ MUST match base XObject contract (string[] not string)
+    declare protected _event_listeners_ids: { [eventName: string]: string[] };
 
-    // [k:string]: string | null | [] | undefined | Function | boolean | {}
-    _html_tag: string
-    _html_ns?: string | null
-    protected _dom_object: any
-    _html?: string | undefined
-    _base_display?: string | undefined | null
-    // text: string //depracted
-    // _text?: string
-    #_text: string = ""
-    _visible: boolean
-    _parent_element?: string //used for mount parent HTML element id
-    _on_click?: Function | string
-    _on_show?: Function | string
-    _on_hide?: Function | string
+    declare protected _xporter: XDataXporter;
+
+    _html_tag: string;
+    _html_ns?: string | null;
+    protected _dom_object: any;
+    _html?: string | undefined;
+    _base_display?: string | undefined | null;
+    #_text: string = "";
+    _visible: boolean;
+    _parent_element?: string;
+    _on_click?: Function | string;
+    _on_show?: Function | string;
+    _on_hide?: Function | string;
     _on_show_animation?: string;
     _on_hide_animation?: string;
 
-
-
-
-    constructor(data: XObjectData, defaults: XObjectData, skipParse?: boolean) {
-        super(data, defaults, true)
+    constructor(data: XUIObjectData, defaults: XUIObjectData, skipParse?: boolean) {
+        super(data, defaults, true);
         this._html_tag = "div";
-        this._html_ns = null
+        this._html_ns = null;
         this._dom_object = null;
         this._type = "view";
         this._html = "";
         this._children = [];
-        this._visible = true
-        this._xem_options = <XEventListenerOptions>{ _once: false, _support_html: true }
-        this.addXporterDataIgnoreFields(["_dom_object", "_html", "_xem_options", "_on_click", "#_text"])
-        super.addNanoCommandPack(_xuiobject_basic_nano_commands)
+        this._visible = true;
+
+        // NOTE: _support_html is UI-only. If core typings don't have it, keep cast.
+        this._xem_options = <any>{ _once: false, _support_html: true };
+
+        this.addXporterDataIgnoreFields(["_dom_object", "_html", "_xem_options", "_on_click", "#_text"]);
+        super.addNanoCommandPack(_xuiobject_basic_nano_commands);
 
         if (!skipParse && data) this.parse(data, reservedWords);
     }
 
-
-
-
-    /**
-     * Dispose all object memory (destructor)
-     */
-    async dispose() {
-
-        this._dom_object = undefined
-        this._html = undefined
-        this._base_display = undefined
-        this.#_text = ""
-        this._on_click = undefined
-        this._on_show = undefined
-        this._on_hide = undefined
-
-        super.dispose()
+    // --------------------------------------------------------------------------
+    // UI convenience typed accessors (DO NOT change base field types)
+    // --------------------------------------------------------------------------
+    get ui_parent(): XUIObject | null {
+        return (this._parent as any) as XUIObject | null;
     }
 
+    get ui_children(): XUIObject[] {
+        return this._children.filter((c: any) => c instanceof XUIObject) as any;
+    }
 
-    /**
-     * Removes the HTML DOM object from the document
-     */
+    // --------------------------------------------------------------------------
+
+    async dispose() {
+        this._dom_object = undefined;
+        this._html = undefined;
+        this._base_display = undefined;
+        this.#_text = "";
+        this._on_click = undefined;
+        this._on_show = undefined;
+        this._on_hide = undefined;
+
+        super.dispose();
+    }
+
     remove() {
         if (this._dom_object instanceof HTMLElement) {
-            this._dom_object.remove(); // removes subtree too
-            this._dom_object = null;   // optional: prevent stale refs
+            this._dom_object.remove();
+            this._dom_object = null;
         }
     }
-
-
-
-
-    /**
-     * Gets the HTML DOM object, if the object is not created yet it will be created
-     * @returns the HTML DOM object
-     */
-
 
     getDOMObject(): HTMLElement {
         if (!this._dom_object) {
@@ -156,7 +138,6 @@ export class XUIObject extends XObject {
                 ? document.createElementNS(this._html_ns, this._html_tag)
                 : document.createElement(this._html_tag);
 
-            // 1) apply attributes
             for (const field of Object.keys(this)) {
                 if (!this.hasOwnProperty(field)) continue;
                 const val = (this as any)[field];
@@ -172,34 +153,26 @@ export class XUIObject extends XObject {
                 }
             }
 
-            // 2) text
             if ((this as any)["_text"] && String((this as any)["_text"]).length > 0) {
                 this.#_text = String((this as any)["_text"]);
                 dom_object.textContent = this.#_text;
             }
 
-            // 3) children
             if (this._children.length > 0) {
                 this._children.forEach((child: any) => {
                     dom_object.appendChild(child.getDOMObject());
                 });
             }
 
-            // ✅ 4) initial visibility detection (INLINE ONLY)
-            //    This now works because "style" attribute (if provided) was already set.
             const el = dom_object as HTMLElement;
 
             if (el.hasAttribute("hidden") || el.style.display === "none") {
                 this._visible = false;
-                // keep it consistent if "hidden" was used:
                 if (el.hasAttribute("hidden") && el.style.display !== "none") {
                     el.style.display = "none";
                 }
             } else {
                 this._visible = true;
-
-                // cache base display only if it exists inline and isn't none
-                // (DO NOT default to "block" here)
                 if (!this._base_display && el.style.display && el.style.display !== "none") {
                     this._base_display = el.style.display;
                 }
@@ -210,179 +183,212 @@ export class XUIObject extends XObject {
         return this._dom_object;
     }
 
-
-
-    /**
-     * DOM Getter 
-     * @returns the HTML DOM object same as getDOMObject()
-     */
     get dom() {
-        return this.getDOMObject()
+        return this.getDOMObject();
     }
 
-
     set _text(text: string) {
-        this.#_text = text
+        this.#_text = text;
         if (this._dom_object instanceof HTMLElement) {
-            this._dom_object.textContent = text
+            this._dom_object.textContent = text;
         }
     }
 
     get _text() {
-        return this.#_text
+        return this.#_text;
     }
 
-    /**
-     * Gets the HTML representation of the object
-     * @returns the HTML representation of the object
-     */
     getHTML() {
-        const dom = this.getDOMObject()
+        const dom = this.getDOMObject();
         this._html = dom?.outerHTML;
         return this._html;
     }
 
-    /**
-     * Attach the object to HTML element
-     * @param parentElementId 
-     * @deprecated use "mount" function instead
-     */
     attach(parentElementId: string) {
-        document.getElementById(parentElementId)?.append(this.getDOMObject())
-        this.onMount()
+        document.getElementById(parentElementId)?.append(this.getDOMObject());
+        this.onMount();
     }
 
-    /**
-     * Mount the object to HTML element
-     * @param parentElementId 
-     * 
-     */
     mount(parentElementId: string) {
-        const obj = document.getElementById(parentElementId)
+        const obj = document.getElementById(parentElementId);
         if (obj) {
-            obj.appendChild(this.getDOMObject())
-            this.onMount()
+            obj.appendChild(this.getDOMObject());
+            this.onMount();
         }
     }
 
-
-    /**
-     * Append a child object to the XUIObject, if the object is not XUIObject it will be created
-     * @param xObject - the child object to append can be XUIObject or XObjectData
-     * @returns 
-     */
     append(xObject: XUIObject | XObjectData | any) {
         if (!(xObject instanceof XUIObject)) {
-            xObject = XUI.create(xObject)
+            xObject = XUI.create(xObject);
         }
-        //this._children.push(<XUIObject>xObject)
-        super.append(xObject)
+
+        super.append(xObject); // base handles _children/_parent types
+
         if (this._dom_object instanceof HTMLElement) {
-
-            this._dom_object.appendChild(xObject.dom)
-            //promisify onMount            
-            if (!(xObject as any)._mounted) xObject.onMount();
-            return xObject
-            // const dom = xObject.dom
-            // xObject.mount(this._id)
-
+            this._dom_object.appendChild((xObject as XUIObject).dom);
+            if (!(xObject as any)._mounted) (xObject as XUIObject).onMount();
+            return xObject;
         }
-        else {
 
-            return xObject
+        return xObject;
+    }
+
+    /**
+   * UI override: bind DOM events via UI XEventManager adapter.
+   * This keeps legacy behavior:
+   * - addEventListener("click", ...) binds to DOM when possible
+   * - listener ids are tracked in _event_listeners_ids[eventName] as string[]
+   */
+    addEventListener(eventName: string, handler: any, options: XEventListenerOptions = {} as any): string {
+        const id = (_xem as any).on(eventName, handler, { ...(options as any), _support_html: true }, this);
+
+        if (!this._event_listeners_ids) (this as any)._event_listeners_ids = {};
+        if (!this._event_listeners_ids[eventName]) this._event_listeners_ids[eventName] = [];
+        this._event_listeners_ids[eventName].push(id);
+
+        return id;
+    }
+
+    /**
+     * UI override: remove a specific listener id (both DOM + bus) via UI _xem.
+     */
+    removeEventListener(listenerId: string): void {
+        try {
+            (_xem as any).remove(listenerId);
+        } catch (e) {
+            // ignore
+        }
+
+        // cleanup index
+        if (!this._event_listeners_ids) return;
+        for (const [ev, ids] of Object.entries(this._event_listeners_ids)) {
+            const idx = (ids as string[]).indexOf(listenerId);
+            if (idx >= 0) (ids as string[]).splice(idx, 1);
+            if ((ids as string[]).length === 0) delete this._event_listeners_ids[ev];
         }
     }
 
     /**
-     * Removes a child object from the XUIObject
-     * @param xObject - the child object to remove
+     * UI override convenience: remove ALL listeners for an eventName.
      */
-    removeChild(xObject: XUIObject) {
-        if (this._dom_object instanceof HTMLElement) {
-            try {
+    removeAllEventListeners(eventName?: string): void {
+        if (!this._event_listeners_ids) return;
 
-                this._dom_object.removeChild(xObject.dom)
+        const keys = eventName ? [eventName] : Object.keys(this._event_listeners_ids);
+        for (const ev of keys) {
+            const ids = this._event_listeners_ids[ev] || [];
+            for (const id of ids) {
+                try {
+                    (_xem as any).remove(id);
+                } catch { }
+            }
+            delete this._event_listeners_ids[ev];
+        }
+    }
+
+    // ✅ MUST match base signature: removeChild(child: XObject, dispose?: boolean)
+    removeChild(child: XObject, dispose?: boolean): void {
+        // UI cleanup if child is UI
+        if (this._dom_object instanceof HTMLElement && child instanceof XUIObject) {
+            try {
+                this._dom_object.removeChild(child.dom);
             } catch (error) {
-                _xlog.log("Error removing child from dom")
+                _xlog.log("Error removing child from dom");
             }
         }
-        super.removeChild(xObject)
+
+        super.removeChild(child, dispose);
     }
 
-
-    /**
-     * Sets the object text content
-     * @param text - the text content
-     * @deprecated use _text property instead (e.g. xuiObj._text = "Xpell rulz!")
-     */
     setText(text: string) {
-        this._text = text
+        this._text = text;
     }
 
-    /**
-     * Sets the object CSS style
-     * @param attr - the CSS attribute 
-     * @param val - the CSS value
-     * @example
-     * xuiObj.setStyle("background-color","red")
-     */
     setStyleAttribute(attr: string, val: string) {
         if (this._dom_object instanceof HTMLElement) {
-            this._dom_object.style.setProperty(attr, val)
+            this._dom_object.style.setProperty(attr, val);
         }
     }
 
-    /**
-     * Adds a css class to the object
-     * @param className - the css class name
-     */
+    // XUIObject — class helpers (safe for "a b c" inputs)
+    //
+    // - Accepts single or multi-class strings (space/newline/tab separated)
+    // - Never feeds spaces into DOMTokenList APIs
+    // - Keeps (this as any).class in sync when possible
+    // - Backward compatible: addClass("a b") now works instead of throwing
+
+    private splitClass(input: string): string[] {
+        return String(input || "")
+            .split(/\s+/g)
+            .map(s => s.trim())
+            .filter(Boolean);
+    }
+
     addClass(className: string) {
+        const tokens = this.splitClass(className);
+        if (tokens.length === 0) return;
+
         if (this._dom_object instanceof HTMLElement) {
-            this._dom_object.classList.add(className)
+            this._dom_object.classList.add(...tokens);
         }
+
+        const cur = this.splitClass(String((this as any).class || ""));
+        const set = new Set([...cur, ...tokens]);
+        (this as any).class = Array.from(set).join(" ");
     }
 
-    /**
-     * Removes a css class from the object
-     * @param className - the css class name
-     */
     removeClass(className: string) {
+        const tokens = this.splitClass(className);
+        if (tokens.length === 0) return;
+
         if (this._dom_object instanceof HTMLElement) {
-            this._dom_object.classList.remove(className)
+            this._dom_object.classList.remove(...tokens);
         }
+
+        const cur = this.splitClass(String((this as any).class || ""));
+        const remove = new Set(tokens);
+        (this as any).class = cur.filter(c => !remove.has(c)).join(" ");
     }
 
-    /**
-     * Toggles a css class on the object
-     * @param className - the css class name
-     */
     toggleClass(className: string) {
+        const tokens = this.splitClass(className);
+        if (tokens.length === 0) return;
+
         if (this._dom_object instanceof HTMLElement) {
-            this._dom_object.classList.toggle(className)
+            for (const t of tokens) this._dom_object.classList.toggle(t);
+            (this as any).class = this._dom_object.className;
+            return;
         }
+
+        const cur = new Set(this.splitClass(String((this as any).class || "")));
+        for (const t of tokens) {
+            if (cur.has(t)) cur.delete(t);
+            else cur.add(t);
+        }
+        (this as any).class = Array.from(cur).join(" ");
     }
 
-
-    /**
-     * Replaces a css class on the object
-     * @param oldClass class to be replaced
-     * @param newClass new class to replace the old class
-     */
     replaceClass(oldClass: string, newClass: string) {
+        const oldTokens = this.splitClass(oldClass);
+        const newTokens = this.splitClass(newClass);
 
         if (this._dom_object instanceof HTMLElement) {
-            this._dom_object.classList.replace(oldClass, newClass)
-        } else {
-            this.class = newClass
+            if (oldTokens.length) this._dom_object.classList.remove(...oldTokens);
+            if (newTokens.length) this._dom_object.classList.add(...newTokens);
+            (this as any).class = this._dom_object.className;
+            return;
         }
+
+        const cur = this.splitClass(String((this as any).class || ""));
+        const remove = new Set(oldTokens);
+        const kept = cur.filter(c => !remove.has(c));
+        const set = new Set([...kept, ...newTokens]);
+        (this as any).class = Array.from(set).join(" ");
     }
 
 
-    /**
-     * Show the object and trigger onShow (only if visibility actually changes)
-     */
     show() {
-        const el = this.getDOMObject(); // ensure DOM exists
+        const el = this.getDOMObject();
         if (!(el instanceof HTMLElement)) return;
 
         const currentDisplay = getComputedStyle(el).getPropertyValue("display");
@@ -400,7 +406,7 @@ export class XUIObject extends XObject {
             this.addEventListener(
                 "animationend",
                 () => el.classList.remove(this._on_show_animation as string),
-                { _once: true }
+                { _once: true } as any
             );
         }
 
@@ -410,7 +416,7 @@ export class XUIObject extends XObject {
     }
 
     hide() {
-        const el = this.getDOMObject(); // ensure DOM exists
+        const el = this.getDOMObject();
         if (!(el instanceof HTMLElement)) return;
 
         const computedDisplay = getComputedStyle(el).getPropertyValue("display");
@@ -434,7 +440,7 @@ export class XUIObject extends XObject {
                     el.style.display = "none";
                     this.onHide();
                 },
-                { _once: true }
+                { _once: true } as any
             );
             return;
         }
@@ -443,37 +449,35 @@ export class XUIObject extends XObject {
         this.onHide();
     }
 
-
-
     async animate(animation: string, infinite: boolean = false) {
         if (this._dom_object instanceof HTMLElement) {
-            return new Promise((resolve, reject) => {
+            return new Promise((resolve) => {
                 this._dom_object.classList.add(XUIAnimate._animation_base_class, animation);
                 if (infinite) {
-                    this._dom_object.classList.add("animate__infinite")
-                    this["_active_animation"] = animation
-                    resolve(true)
+                    this._dom_object.classList.add("animate__infinite");
+                    (this as any)["_active_animation"] = animation;
+                    resolve(true);
                 } else {
-                    this.addEventListener("animationend", () => {
-                        this._dom_object.classList.remove(animation);
-                        resolve(true)
-                    }, { _once: true });
+                    this.addEventListener(
+                        "animationend",
+                        () => {
+                            this._dom_object.classList.remove(animation);
+                            resolve(true);
+                        },
+                        { _once: true } as any
+                    );
                 }
-            })
+            });
         }
     }
 
     stopAnimation() {
-        if (this._dom_object instanceof HTMLElement && this["_active_animation"]) {
-            this._dom_object.classList.remove(<any>this["active-animation"], "animate__infinite");
-            delete this["_active_animation"]
+        if (this._dom_object instanceof HTMLElement && (this as any)["_active_animation"]) {
+            this._dom_object.classList.remove(<any>(this as any)["active-animation"], "animate__infinite");
+            delete (this as any)["_active_animation"];
         }
     }
 
-
-    /**
-     * This method is used to toggle the object visibility
-     */
     toggle() {
         const el = this._dom_object;
         if (el instanceof HTMLElement) {
@@ -484,30 +488,18 @@ export class XUIObject extends XObject {
         else this.show();
     }
 
-
-
     click() {
         if (this._dom_object instanceof HTMLElement) {
-            this._dom_object.click()
+            this._dom_object.click();
         }
     }
 
-
-
-
-    /**
-     * this method triggered after the HTML DOM object has been mounted by the super
-     * it implemented in this class to support the following events for XUIObject:
-     * _on_click: (XUIObject,event) => {}
-     */
-
     async onMount() {
-        if (this._mounted) return;
+        if ((this as any)._mounted) return;
 
-        // bind click handler (supports function or nano-command string)
         if (this._on_click) {
             if (typeof this._on_click === "function") {
-                this.addEventListener("click", (e) => (this._on_click as any)(this, e));
+                this.addEventListener("click", (e:any) => (this._on_click as any)(this, e));
             } else if (typeof this._on_click === "string") {
                 this.addEventListener("click", () => {
                     this.checkAndRunInternalFunction(this._on_click);
@@ -515,74 +507,53 @@ export class XUIObject extends XObject {
             }
         }
 
-        // base lifecycle
         await super.onMount();
 
-        // observe DOM state only (no forcing)
         const el = this._dom_object;
         if (el instanceof HTMLElement) {
             try {
                 const cs = getComputedStyle(el).getPropertyValue("display");
                 this._visible = cs !== "none";
-
-                // cache only if currently visible
                 if (!this._base_display && cs && cs !== "none") {
                     this._base_display = cs;
                 }
             } catch {
-                // don't guess base_display here
                 this._visible = true;
             }
         } else {
             this._visible = true;
         }
 
-        this._mounted = true;
+        (this as any)._mounted = true;
     }
 
-
-
-
-
-    /**
-     * this method triggered when the XUIObject is shown
-     */
     async onShow() {
         if (this._on_show) {
-            this.checkAndRunInternalFunction(this._on_show)
-        } else if (this._on && this._on.show) {
-            this.checkAndRunInternalFunction(this._on.show)
-        } else if (this._once && this._once.show) {
-            this.checkAndRunInternalFunction(this._once.show)
+            this.checkAndRunInternalFunction(this._on_show);
+        } else if (this._on && (this._on as any).show) {
+            this.checkAndRunInternalFunction((this._on as any).show);
+        } else if (this._once && (this._once as any).show) {
+            this.checkAndRunInternalFunction((this._once as any).show);
         }
 
         this._children.forEach((child: any) => {
-            if (child.onShow && typeof child.onShow === 'function') {
-                child.onShow()
-            }
-        })
+            if (child.onShow && typeof child.onShow === "function") child.onShow();
+        });
     }
 
-    /**
-     * this method triggered when the XUIObject is hidden
-     */
     async onHide() {
         if (this._on_hide) {
-            this.checkAndRunInternalFunction(this._on_hide)
-        } else if (this._on && this._on.hide) {
-            this.checkAndRunInternalFunction(this._on.hide)
-        } else if (this._once && this._once.hide) {
-            this.checkAndRunInternalFunction(this._once.hide)
+            this.checkAndRunInternalFunction(this._on_hide);
+        } else if (this._on && (this._on as any).hide) {
+            this.checkAndRunInternalFunction((this._on as any).hide);
+        } else if (this._once && (this._once as any).hide) {
+            this.checkAndRunInternalFunction((this._once as any).hide);
         }
 
         this._children.forEach((child: any) => {
-            if (child.onHide && typeof child.onHide === 'function') {
-                child.onHide()
-            }
-        })
+            if (child.onHide && typeof child.onHide === "function") child.onHide();
+        });
     }
-
 }
 
-export default XUIObject
-
+export default XUIObject;

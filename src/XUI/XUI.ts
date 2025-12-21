@@ -48,12 +48,12 @@ import XUIObject from "./XUIObject";
 import {
   _xlog,
   XParser,
-  _xem,
   XModule,
   type XModuleData,
   type XObjectData,
 } from "xpell-core";
 
+import { _xem } from "../XEM/XEventManager";
 import XUICoreObjects from "./XUICoreObjects";
 import "./Style/xui.css";
 
@@ -145,10 +145,45 @@ export class XUIModule extends XModule {
    * Create + mount a XUIObject.
    * IMPORTANT: DOES NOT call show() or onShow().
    */
+  /**
+ * Create + mount a XUIObject.
+ * IMPORTANT: DOES NOT call show() or onShow().
+ *
+ * Contract fix:
+ * - _on_create / _on.create / _once.create fire AFTER the full tree is mounted/registered
+ * - runs once per object, async-safe, never crashes the app
+ */
   add(xData: XObjectData, parent?: HTMLElement | string | null): XUIObject {
-    const xobj = this.create(xData);
-    return this.mount(xobj, parent);
+    const root = this.create(xData);
+    const mounted = this.mount(root, parent);
+
+    // Post-mount create pass (tree-complete)
+    queueMicrotask(() => {
+      const run = async (o: any): Promise<void> => {
+        if (!o) return;
+
+        try {
+          if (typeof o.onCreate === "function") await o.onCreate();
+        } catch (e) {
+          // optional: _xlog.error(e);
+        }
+
+        const kids = o._children;
+        if (Array.isArray(kids)) {
+          for (const c of kids) {
+            if (c && typeof (c as any).onCreate === "function") {
+              await run(c);
+            }
+          }
+        }
+      };
+
+      run(mounted).catch(() => { });
+    });
+
+    return mounted;
   }
+
 
   /**
    * Append XUIObject to the parent XUI Object by ID.
@@ -158,8 +193,7 @@ export class XUIModule extends XModule {
     if (parent) return parent.append(xobj);
 
     _xlog.log(
-      `XUI.append | Parent object ${parentXobjId} not found for object ${
-        (xobj as any)._id ?? "[no-id]"
+      `XUI.append | Parent object ${parentXobjId} not found for object ${(xobj as any)._id ?? "[no-id]"
       }`
     );
   }
@@ -179,13 +213,7 @@ export class XUIModule extends XModule {
     return w;
   }
 
-  /* ------------------------------------------------------------------------ */
-  /* Utilities                                                                */
-  /* ------------------------------------------------------------------------ */
 
-  createFromTemplate(xpell2json: { [k: string]: any }) {
-    return this.create(XParser.xpellify(xpell2json));
-  }
 
   /**
    * Navigate the browser to a new URL

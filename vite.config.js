@@ -1,52 +1,59 @@
-import { resolve } from 'path';
-import dts from 'vite-plugin-dts';
-import { defineConfig } from 'vite';
+// xpell-ui/vite.config.ts
+import { resolve } from "path";
+import dts from "vite-plugin-dts";
+import { defineConfig } from "vite";
 
-export default defineConfig({
-  server: {
-    port: 3001
-  },
+export default defineConfig(({ mode }) => {
+  const DEV_ALIAS = process.env.XPELL_DEV_ALIAS === "1";
 
-  build: {
-    lib: {
-      entry: "./src/index.ts",
-      name: "XpellUI",
-      formats: ["es", "cjs", "umd"],
-      fileName: (format) => `xpell-ui.${format}.js`
+  return {
+    server: {
+      port: 3001,
     },
 
-    target: "modules",
-    minify: true,
-    outDir: "dist",
+    build: {
+      lib: {
+        entry: "./src/index.ts",
+        name: "XpellUI",
+        formats: ["es", "cjs", "umd"],
+        fileName: (format) => `xpell-ui.${format}.js`,
+      },
 
-    rollupOptions: {
-      external: ["xpell-core", "animate.css"], // externalized dependencies
-      output: {
-        globals: {
-          "xpell-core": "XpellCore",
-          "animate.css": "animateCSS"
+      target: "modules",
+      minify: true,
+      outDir: "dist",
+
+      rollupOptions: {
+        external: ["xpell-core", "animate.css"],
+        output: {
+          globals: {
+            "xpell-core": "XpellCore",
+            "animate.css": "animateCSS",
+          },
+          exports: "named",
         },
-        exports: "named"
-      }
-    }
-  },
+      },
+    },
 
-  resolve: {
-    alias: {
-      // Internal dev import convenience
-      "xpell-ui": resolve(__dirname, "src")
-    }
-  },
+    resolve: {
+      alias: DEV_ALIAS
+        ? {
+          // Dev-only convenience (avoid in published builds; can confuse TS/IDE)
+          "xpell-ui": resolve(__dirname, "src"),
+        }
+        : {},
+    },
 
-  plugins: [
-    dts({
-      outputDir: "types",
-      insertTypesEntry: true,
-      rollupTypes: false,        // ⬅️ turn OFF rollup / api-extractor integration
-      staticImport: true,
-      skipDiagnostics: false,
-      logDiagnostics: true,
-      exclude: ["public"]
-    })
-  ]
+    plugins: [
+      dts({
+        outputDir: "dist",
+        insertTypesEntry: true,
+        rollupTypes: false,
+        staticImport: true,
+        skipDiagnostics: false,
+        logDiagnostics: true,
+        exclude: ["public", "examples", "example", "**/dist", "**/types"],
+      }),
+    ],
+  };
 });

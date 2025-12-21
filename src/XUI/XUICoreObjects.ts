@@ -31,8 +31,9 @@
  * © 2022–present Aime Technologies. All rights reserved.
  */
 
-import XUIObject from "./XUIObject";
-import {_x,XObjectData,XObjectPack ,_xem, _xlog, XObject} from "xpell-core";
+import {XUIObject,type XUIObjectData} from "./XUIObject";
+import {_x,type XObjectData,XObjectPack , _xlog, XObject} from "xpell-core";
+import {_xem} from "../XEM/XEventManager"
 
 
 
@@ -40,7 +41,7 @@ export class XView extends XUIObject {
 
     static _xtype = "view"
 
-    constructor(data:XObjectData) {
+    constructor(data:XUIObjectData) {
         const defaults =  {
             _type: XView._xtype,
             "class":"xview",
@@ -56,7 +57,7 @@ export class XView extends XUIObject {
 
 export class XForm extends XUIObject {
     static _xtype = "form"
-    constructor(data:XObjectData) {
+    constructor(data:XUIObjectData) {
         const tag = "form"
         const defaults = {
             _type: tag,
@@ -73,7 +74,7 @@ export class XImage extends XUIObject {
    
     static _xtype = "image"
 
-    constructor(data:XObjectData) {
+    constructor(data:XUIObjectData) {
         const defaults = {
             _type: XImage._xtype,
             class:"x" + XImage._xtype,
@@ -161,6 +162,21 @@ export class XWebcam extends XUIObject {
 
 }
 
+/**
+ * 
+ * based on bootstrap card component:
+ * 
+ * <div class="card" style="width: 18rem;">
+  <img class="card-img-top" src="..." alt="Card image cap">
+  <div class="card-body">
+    <h5 class="card-title">Card title</h5>
+    <p class="card-text">Some quick example text to build on the card title and make up the bulk of the card's content.</p>
+    <a href="#" class="btn btn-primary">Go somewhere</a>
+  </div>
+</div>
+ */
+
+// use with 
 
 export class XTextField extends XUIObject {
     static _xtype = "text"
@@ -603,7 +619,7 @@ export class XHTML extends XUIObject {
 
   
 
-  constructor(data: XObjectData) {
+  constructor(data: XUIObjectData) {
     const t = (data?._type ?? "").toString();
 
     const defaults = {
@@ -622,7 +638,7 @@ export class XHTML extends XUIObject {
 export class XUIObjectPack extends XObjectPack {
     static getObjects() {
         return {
-            [XView._xtype]:XView,
+            [XView._xtype]:XView, // "view"
             "div":XView, //alias for XView
             "header": XHTML,
             "aside": XHTML,
@@ -638,29 +654,28 @@ export class XUIObjectPack extends XObjectPack {
             "ol": XHTML,
             "li": XHTML,
             "h1": XHTML, "h2": XHTML, "h3": XHTML, "h4": XHTML, "h5": XHTML, "h6": XHTML,
-            [XLabel._xtype]:XLabel,
-            [XLink._xtype]:XLink,
-            [XButton._xtype]:XButton,
-            [XTextField._xtype]:XTextField,
-            [XPassword._xtype]:XPassword,
-            [XInput._xtype]:XInput,
-            [XTextArea._xtype]:XTextArea,
-            [XVideo._xtype]:XVideo,
-            [XImage._xtype]:XImage,
-            [XList._xtype]:XList,
-            [XForm._xtype]:XForm,
-            [XWebcam._xtype]:XWebcam,
-            [XHTML._xtype]:XHTML,
-            [XSVG._xtype]:XSVG,
-            [XSVGCircle._xtype]:XSVGCircle,
-            [XSVGRect._xtype]:XSVGRect,
-            [XSVGEllipse._xtype]:XSVGEllipse,
-            [XSVGLine._xtype]:XSVGLine,
-            [XSVGPolyline._xtype]:XSVGPolyline,
-            [XSVGPolygon._xtype]:XSVGPolygon,
-            [XSVGPath._xtype]:XSVGPath,
-            // "grid" : TO-DO,
-            // "table": TO-DO,
+            [XLabel._xtype]:XLabel, //"label"
+            [XLink._xtype]:XLink, //"link"
+            [XButton._xtype]:XButton, //"button"
+            [XTextField._xtype]:XTextField, //"text"
+            [XPassword._xtype]:XPassword, //"password"
+            [XInput._xtype]:XInput, //"input"
+            [XTextArea._xtype]:XTextArea, //"textarea"
+            [XVideo._xtype]:XVideo, //"video"
+            [XImage._xtype]:XImage, //"image"
+            [XList._xtype]:XList,   //"list"
+            [XForm._xtype]:XForm,   //"form"
+            [XWebcam._xtype]:XWebcam,   //"webcam"
+            [XHTML._xtype]:XHTML,   //"xhtml"
+            [XSVG._xtype]:XSVG,  //"svg"
+            [XSVGCircle._xtype]:XSVGCircle, //"circle"
+            [XSVGRect._xtype]:XSVGRect, //"rect"
+            [XSVGEllipse._xtype]:XSVGEllipse, //"ellipse"
+            [XSVGLine._xtype]:XSVGLine, //"line"
+            [XSVGPolyline._xtype]:XSVGPolyline, //"polyline"
+            [XSVGPolygon._xtype]:XSVGPolygon, //"polygon"
+            [XSVGPath._xtype]:XSVGPath, //"path"
+
         }
     }
 }

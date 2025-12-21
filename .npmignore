@@ -1,0 +1,17 @@
+# source
+src
+examples
+example
+playground
+tests
+test
+
+# tooling
+.vscode
+tsconfig*.json
+vite.config.*
+*.log
+
+# misc
+node_modules
+.DS_Store

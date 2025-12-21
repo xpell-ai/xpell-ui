@@ -34,10 +34,11 @@
 import {
     XData as _xd,
     XLogger as _xlog,
-    _xem,
     XUtils as _xu,
     XModule
 } from "xpell-core"
+
+import {_xem} from "../XEM/XEventManager"
 
 export const WormholeEvents = {
     WormholeOpen: "wormhole-open",
@@ -200,7 +201,7 @@ export class WormholeInstance extends XModule {
                 this._ready = false
                 if (this._wh_log_rules._open) _xlog.log("Wormholer is closed...");
                 _xd._o[WormholeEvents.WormholeOpen] = false
-                _xem.fire(WormholeEvents.WormholeClose, {}, true)
+                _xem.fire(WormholeEvents.WormholeClose, {})
             };
         }
     }

@@ -41,7 +41,9 @@
  * © 2022–present Aime Technologies. All rights reserved.
  */
 
-import { XNanoCommandPack, XCommand, _xlog, XObject, _xem, _xd } from "xpell-core"
+import { XNanoCommandPack, XCommand, _xlog, XObject, _xd } from "xpell-core"
+import {_xem} from "../XEM/XEventManager"
+
 // import { _xem } from "../XEM/XEventManager"
 import XUIObject from "./XUIObject"
 
