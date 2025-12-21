@@ -1,12 +1,13 @@
 {
   "name": "xpell-ui",
-  "version": "2.0.0-alpha.2",
+  "version": "2.0.0-alpha.3",
   "description": "Xpell UI JS Framework",
   "files": [
     "dist",
     "docs",
     "README.md",
-    "LICENSE","CHANGELOG.md"
+    "LICENSE",
+    "CHANGELOG.md"
   ],
   "module": "./dist/xpell-ui.es.js",
   "main": "./dist/xpell-ui.cjs.js",
