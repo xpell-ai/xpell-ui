@@ -1,0 +1,15 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+
+    "paths": {},
+
+    "verbatimModuleSyntax": true
+  },
+  "include": ["src"],
+  "exclude": ["node_modules", "dist", "types", "public", "examples", "example"]
+}

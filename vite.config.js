@@ -1,59 +1,46 @@
-// xpell-ui/vite.config.ts
 import { resolve } from "path";
 import dts from "vite-plugin-dts";
 import { defineConfig } from "vite";
 
-export default defineConfig(({ mode }) => {
+export default defineConfig(() => {
   const DEV_ALIAS = process.env.XPELL_DEV_ALIAS === "1";
 
   return {
-    server: {
-      port: 3001,
-    },
+    server: { port: 3001 },
 
     build: {
       lib: {
         entry: "./src/index.ts",
         name: "XpellUI",
-        formats: ["es", "cjs", "umd"],
+        formats: ["es", "cjs"], // drop UMD unless you really need it
         fileName: (format) => `xpell-ui.${format}.js`,
       },
-
-      target: "modules",
+      target: "es2022",
       minify: true,
       outDir: "dist",
-
       rollupOptions: {
-        external: ["xpell-core", "animate.css"],
-        output: {
-          globals: {
-            "xpell-core": "XpellCore",
-            "animate.css": "animateCSS",
-          },
-          exports: "named",
-        },
+        external: ["xpell-core","animate.css"], // keep animate.css here only if it's a peer dep + you really want it external
+        output: { exports: "named" },
       },
     },
 
     resolve: {
       alias: DEV_ALIAS
-        ? {
-          // Dev-only convenience (avoid in published builds; can confuse TS/IDE)
-          "xpell-ui": resolve(__dirname, "src"),
-        }
+        ? { "xpell-ui": resolve(__dirname, "src/index.ts") }
         : {},
     },
 
     plugins: [
       dts({
-        outputDir: "dist",
+        tsconfigPath: "./tsconfig.types.json",
+        outputDir: "dist/types",
         insertTypesEntry: true,
         rollupTypes: false,
         staticImport: true,
         skipDiagnostics: false,
         logDiagnostics: true,
         exclude: ["public", "examples", "example", "**/dist", "**/types"],
-      }),
+      }), 
     ],
   };
 });

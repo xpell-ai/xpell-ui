@@ -41,8 +41,8 @@
  * © 2022–present Aime Technologies. All rights reserved.
  */
 
-import { XNanoCommandPack, XCommand, _xlog, XObject, _xd } from "xpell-core"
-import {_xem} from "../XEM/XEventManager"
+import { type XNanoCommandPack, XCommand, _xlog, XObject, _xd, XD_FRAME_NUMBER } from "@xpell/core"
+import { _xem } from "../XEM/XEventManager"
 
 // import { _xem } from "../XEM/XEventManager"
 import XUIObject from "./XUIObject"
@@ -73,18 +73,29 @@ export const _xuiobject_basic_nano_commands: XNanoCommandPack = {
 
   "set-text-from-frame": (cmd, obj?: XObject) => {
     if (!obj) return;
-    let text: any = _xd._o["frame-number"];
+
+    // Prefer canonical key
+    let v: any = _xd.get(XD_FRAME_NUMBER);
+
+    // Fallback to legacy key if compat legacy keys are enabled
+    if (v === undefined && _xd._compat_legacy_keys) {
+      v = _xd.get("frame-number");
+    }
+
+    let text: any = v;
     const pattern = (cmd as any)._params?.pattern;
     if (pattern) text = String(pattern).replace("$data", String(text ?? ""));
-    (obj as any as XUIObject)._text = String(text ?? "");
+
+    (obj as any as any)._text = String(text ?? "");
   },
 
   "set-text-from-data": (cmd, obj?: XObject) => {
-    if (!obj || !obj._data_source) return;
-    const ds = obj._data_source;
-    if (!_xd._o[ds]) return;
+    if (!obj) return;
 
-    let data = _xd._o[ds];
+    // ✅ data is passed from onData(...) through checkAndRunInternalFunction
+    const data = (cmd as any)._params?.data;
+    if (data === undefined) return;
+
     let text: any = data;
 
     const pattern = (cmd as any)._params?.pattern;
@@ -136,11 +147,26 @@ export const _xuiobject_basic_nano_commands: XNanoCommandPack = {
     if (el?.removeAttribute) el.removeAttribute(String(name));
     else delete (obj as any)[String(name)];
   },
+
+  "focus": (_cmd, obj?: XObject) => {
+    const el = (obj as any as XUIObject)?.dom as any;
+    if (el?.focus) el.focus();
+  },
+
+  "scroll-into-view": (cmd, obj?: XObject) => {
+    const el = (obj as any as XUIObject)?.dom as any;
+    if (!el?.scrollIntoView) return;
+    const behavior = (cmd as any)._params?.behavior;
+    const block = (cmd as any)._params?.block;
+    el.scrollIntoView({
+      behavior: behavior === "smooth" ? "smooth" : "auto",
+      block: ["start", "center", "end", "nearest"].includes(block) ? block : "start",
+    });
+  },
 };
 
 
 export default (_xuiobject_basic_nano_commands)
-
 
 
 

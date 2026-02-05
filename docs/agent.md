@@ -1,4 +1,4 @@
-# xui-codex.md
+# agent.md rules for ai agent for vibe coding with xpell-ui
 
 ## XUI — Xpell UI Module (Contract)
 
@@ -81,16 +81,3 @@ Result:
 
 ---
 
-## Recommended Convenience Helpers
-
-### `XUI.createView(...)`
-A small helper to make view creation obvious and consistent:
-
-- creates a `{ _type:"view" }` XUIObject
-- does not mount
-- does not show
-
-(Implementation: wrapper around `XUI.create()`)
-
-Optionally, XVM may add `XVM.createView(...)` / `XVM.ensureView(...)`
-if it needs to enforce region/container invariants.

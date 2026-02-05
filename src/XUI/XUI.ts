@@ -47,11 +47,10 @@ import XUIObject from "./XUIObject";
 
 import {
   _xlog,
-  XParser,
   XModule,
   type XModuleData,
   type XObjectData,
-} from "xpell-core";
+} from "@xpell/core";
 
 import { _xem } from "../XEM/XEventManager";
 import XUICoreObjects from "./XUICoreObjects";

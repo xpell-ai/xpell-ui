@@ -1,330 +1,126 @@
 /**
- * Wormholes — Web Client
+ * Wormholes — facade (xpell-ui)
  *
- * Real-time communication client for the Xpell runtime.
+ * Default: Wormholes v2.
+ * Optional: legacy v1 when explicitly allowed.
  *
- * Manages a Wormholes session with a Wormholes server, providing a
- * persistent bi-directional channel (typically WebSocket) used to
- * transport Xpell commands, events, entity updates, and streaming data
- * between client and server runtimes.
- *
- * ---
- *
- * ## Responsibilities
- *
- * - Establish and maintain a Wormholes connection/session
- * - Send and receive Xpell commands (request/response + push events)
- * - Handle reconnect/backoff and session continuity (when supported)
- * - Provide message routing/dispatch to Xpell modules
- *
- * ---
- *
- * ## Architectural Role
- *
- * Wormholes is transport and session orchestration.
- * It is UI-agnostic (XUI) and navigation-agnostic (XVM).
- *
- * @packageDocumentation
- * @since 2022-05-03
- * @author Tamir Fridman
+ * Goals:
+ * - Single import surface for app code: `import Wormholes from "@xpell/ui"`
+ * - Prefer v2 protocol when possible
+ * - Allow explicit opt-in fallback to v1 for legacy servers
  */
 
-//import WebSocket from WebSocket;
+import type { WormholesClientAPI, WormholesOpenOptions } from "./wh.types";
+import WormholesV2 from "./Wormholes.v2";
+import WormholesV1, { WormholesV1Adapter } from "./Wormholes.v1";
 
-import {
-    XData as _xd,
-    XLogger as _xlog,
-    XUtils as _xu,
-    XModule
-} from "xpell-core"
+type WHImplCtor = new () => WormholesClientAPI;
 
-import {_xem} from "../XEM/XEventManager"
-
-export const WormholeEvents = {
-    WormholeOpen: "wormhole-open",
-    WormholeClose: "wormhole-close",
-    ResponseDataArrived: "wh-data-res",
+function _isV2Url(url: string): boolean {
+  // Keep simple and safe: you can improve later (or remove entirely once you add opts._version)
+  return typeof url === "string" && url.includes("/wh/v2");
 }
 
+export class WormholesFacade implements WormholesClientAPI {
+  private _impl: WormholesClientAPI;
 
+  constructor() {
+    this._impl = new WormholesV2();
+  }
 
+  private _setImpl(Ctor: WHImplCtor) {
+    // close previous impl (best-effort) before swapping
+    try {
+      this._impl?.close?.();
+    } catch {
+      // ignore
+    }
+    this._impl = new Ctor();
+  }
 
-export enum MessageType {
-    Text,
-    JSON
+  /* -------------------------------------------------------------------------- */
+  /* Contract passthrough                                                       */
+  /* -------------------------------------------------------------------------- */
+
+  set verbose(v: boolean) {
+    this._impl.verbose = v;
+  }
+
+  get _ready() {
+    return this._impl._ready;
+  }
+
+  get _wid() {
+    return this._impl._wid;
+  }
+
+  get _sid() {
+    return this._impl._sid;
+  }
+
+  /**
+   * Open a wormholes session.
+   *
+   * Selection rules:
+   * - If opts._force_v1 => use v1
+   * - Else if url looks like v2 => use v2
+   * - Else => v1 only if opts._allow_v1, otherwise throw
+   */
+  open(opts: WormholesOpenOptions): void {
+    const forceV1 = !!opts._force_v1;
+    const allowV1 = !!opts._allow_v1;
+
+    const shouldUseV2 = !forceV1 && _isV2Url(opts._url);
+
+    if (shouldUseV2) {
+      this._setImpl(WormholesV2);
+      this._impl.open(opts);
+      return;
+    }
+
+    // non-v2 url:
+    if (!allowV1 && !forceV1) {
+      throw new Error(
+        `Wormholes: URL is not v2 and legacy v1 is not allowed. _url=${opts._url}`
+      );
+    }
+
+    // v1 fallback
+    this._setImpl(WormholesV1Adapter);
+
+    // v1 legacy signature: open(url: string)
+    // We keep it isolated here so the rest stays typed.
+    (this._impl as unknown as { open: (url: string) => void }).open(opts._url);
+  }
+
+  close(): void {
+    this._impl.close();
+  }
+
+  sendSync(payload: any, timeoutMs?: number) {
+    return this._impl.sendSync(payload, timeoutMs);
+  }
+
+  sendXcmd(xcmd: any, timeoutMs?: number) {
+    return this._impl.sendXcmd(xcmd, timeoutMs);
+  }
+
+  sendEvt(_name: string, _data?: any, _args?: any[]) {
+    return this._impl.sendEvt(_name, _data, _args);
+  }
+
+  onOpen(cb: () => void) {
+    this._impl.onOpen(cb);
+  }
 }
 
+const Wormholes = new WormholesFacade();
 
-interface WaitersPack {
-    [waiterID: string]: CallableFunction
-}
-
-
-interface WormholeMessage {
-    id: string,
-    type: MessageType,
-    data: string
-}
-
-export class WormholeInstance extends XModule {
-    _ws: null | WebSocket
-    _ready: boolean
-    _data_waiters: WaitersPack
-    _wh_log_rules: { [key: string]: boolean }
-    _on_open?: CallableFunction
-    _data_queue: any = {}
-
-    constructor() {
-        super({ _name: "wormholes" })
-        this._ws = null;
-        this._ready = false
-        this._data_waiters = {}
-        this._wh_log_rules = {
-            _open: false,
-            _connect: false,
-            _disconnect: false,
-            _send: false,
-            _receive: false
-        }
-
-    }
-
-
-    /**
-     * Set the log rules for the wormhole
-     */
-    set verbose(val: boolean) {
-
-        this._wh_log_rules = {
-            _open: val,
-            _connect: val,
-            _disconnect: val,
-            _send: val,
-            _receive: val
-        }
-    }
-
-    private createMessage(msg: object, type: MessageType = MessageType.JSON): WormholeMessage {
-        const oData: string = this.stringify(msg)
-        return {
-            id: _xu.guid(),
-            type: type,
-            data: oData
-        }
-    }
-
-    /**
-     * Opens a Wormhole to the PAI-BOT on the server (client-to-server wormhole)
-     * @param {*} url 
-     */
-    open(url: string) {
-
-        try {
-
-            this._ws = new WebSocket(url);
-        } catch (ex) {
-            _xlog.log(ex)
-        }
-
-        const sthis = this //strong this for anonymous function
-
-
-        // this.listener = document.addEventListener(WormholeEvents.ResponseDataArrived, (e: any) => {
-        //     const edata = JSON.parse(e.detail)
-        //     sthis.dataWaiters[edata.data["eid"]]?.(edata.data)
-        // })
-        if (this._wh_log_rules._open) _xlog.log("Wormhole is opening...");
-
-        _xem.on(WormholeEvents.ResponseDataArrived, (e: any) => {
-            const edata = e.sed
-            sthis._data_waiters[edata["waiterID"]]?.(edata.data)
-
-            if (edata.data._msg_action && edata.data._msg_action === "datasource") {
-                
-                const dsName = edata.data._params._data_source
-                const dsData = edata.data._params._data
-
-                if (!this._data_queue[dsName]) {
-                    this._data_queue[dsName] = []
-                }
-
-                this._data_queue[dsName].push(dsData)                
-            } else if (edata.data._msg_action && edata.data._msg_action === "xem") {
-                const eventName = edata.data._params._event
-                const eventData = edata.data._params._data
-                _xem.fire(eventName, eventData)
-            }
-
-
-        })
-
-        if (this._ws) {
-            this._ws.onopen = async () => {
-                this._ready = true
-                if (this._wh_log_rules._open) _xlog.log("Wormhole has been created");
-                _xd._o[WormholeEvents.WormholeOpen] = true
-                // let event = new CustomEvent("wormhole-open")
-                // document.dispatchEvent(event)
-                _xem.fire(WormholeEvents.WormholeOpen, {})
-                if (this._on_open) {
-                    try {
-                        this._on_open()
-                    } catch (e) {
-                        _xlog.error(e)
-                    }
-                }
-
-            }
-
-
-            this._ws.onmessage = async (evt) => {
-                try {
-                    let msg = JSON.parse(evt.data.toString())
-                    let ddata = msg.data
-                    try {
-                        ddata = JSON.parse(msg.data)
-                    } catch (e) { }
-                    const sed = {
-                        "waiterID": ddata["eid"],
-                        data: ddata
-                    }
-                    _xem.fire(WormholeEvents.ResponseDataArrived, { sed: sed })
-                    if (this._wh_log_rules._receive) _xlog.log("Wormhole received message", ddata)
-
-                } catch (e) {
-                    _xlog.error(e);
-                }
-
-            };
-
-            this._ws.onclose = async () => {
-                this._ready = false
-                if (this._wh_log_rules._open) _xlog.log("Wormholer is closed...");
-                _xd._o[WormholeEvents.WormholeOpen] = false
-                _xem.fire(WormholeEvents.WormholeClose, {})
-            };
-        }
-    }
-
-    close() {
-        this._ws?.close()
-    }
-
-    /**
-     * sends the message to the server (asynchronous) and return the result in a callback function
-     * @param message - the message to send
-     * @param cb - Callback Function (data: string) => void
-     * @param type - type of the message MessageType.JSON / MessageType.Text
-     */
-    send(message: any, cb: CallableFunction, type = MessageType.JSON) {
-        if (this._ws) {
-            let wormholeMessage = this.createMessage(message, type)
-
-
-            if (!cb) {
-                cb = (data: string) => {
-                    _xlog.log("[Wormhole default callback] data ->", data)
-                }
-            }
-            this._data_waiters[wormholeMessage.id] = cb
-            try {
-                this._ws.send(JSON.stringify(wormholeMessage))
-                if (this._wh_log_rules._send) _xlog.log("Wormhole sent message", wormholeMessage)
-            } catch (ex) {
-                _xlog.log("ERROR" + ex);
-
-            }
-        }
-    }
-
-    /**
-     * Sends the message to the server and return the result as a response (synchronous) 
-     * @param message - the message to send
-     * @param checkXProtocol - check the result for XProtocol (True by default, if false the response will be return as is)
-     */
-    sendSync(message: any, checkXProtocol = true): Promise<WormholeMessage | any> {
-        return new Promise((resolve, reject) => {
-            Wormholes.send(message, (data: any) => {
-                //new addition for xprotocol
-                // data = data.data
-                let res
-                if (!data) {
-                    res = "ERROR: No response from server"
-                    reject(res)
-                } else {
-                    if (checkXProtocol) {
-                        if (data["_ok"]) {
-                            resolve(data["_result"])
-                        } else {
-                            reject(data["_result"])
-                        }
-                    } else {
-                        resolve(data)
-                    }
-                }
-            })
-        })
-    }
-
-    private stringify(obj: object, esc = false): string {
-        let no = JSON.stringify(obj)
-        if (esc) { no = no.replace(/\"/g, "\\\"") }
-        return no
-    }
-
-
-    onOpen(cb: CallableFunction) {
-        if (cb && typeof cb === "function") {
-            this._on_open = cb
-        }
-    }
-    // sendWebMBlob(blob) {
-    //     // Create a new FormData object
-    //     const formData = new FormData();
-
-    //     // Append the WebM blob to the FormData object
-    //     formData.append('blob', blob, 'recording.webm');
-
-    //     // Send the FormData object over the WebSocket
-    //     if (this.ws) {
-    //         // let wormholeMessage = this.createMessage(message, type)
-
-
-    //         if (!cb) {
-    //             cb = (data: string) => {
-    //             }
-    //         }
-    //         this.dataWaiters[wormholeMessage.id] = cb
-    //         try
-    //         {
-    //             this.ws.send(formData)
-    //         } catch (ex) {
-    //             console.error("ERROR" + ex);
-
-    //         }
-    //     }
-    //   }
-
-    async onFrame(frameNumber: number): Promise<void> {
-        return new Promise((resolve, reject) => {
-            const keys = Object.keys(this._data_queue)
-
-            keys.forEach((key) => {
-                if (this._data_queue[key].length === 0) return
-                const currentdata = this._data_queue[key].shift()
-                _xd._o[key] = currentdata
-            })
-
-            resolve()
-        })
-    }
-
-}
-
-const Wormholes = new WormholeInstance()
-
-export { Wormholes }
-
-export default Wormholes
-
-
+/**
+ * Named + default exports:
+ * - default: singleton (common usage)
+ * - Wormholes: singleton (explicit)
+ * - WormholesFacade: class (advanced usage / testing)
+ */
+export { Wormholes };
+export default Wormholes;

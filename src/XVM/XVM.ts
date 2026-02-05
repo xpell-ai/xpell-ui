@@ -70,11 +70,11 @@
  */
 
 
-import { XModule, _xlog, _xd, type XObjectData, XParams } from "xpell-core";
-import {_xem} from "../XEM/XEventManager"
+import { XModule, _xlog, _xd, type XObjectData, XParams } from "@xpell/core";
+import { _xem } from "../XEM/XEventManager"
 
-import { XUI } from "./XUI";
-import { XUIObject } from "./XUIObject";
+import { XUI } from "../XUI/XUI";
+import { XUIObject } from "../XUI/XUIObject";
 
 /* -------------------------------------------------------------------------- */
 /* Types                                                                      */
@@ -85,6 +85,8 @@ type ContainerMap = Record<string, XViewContainer>;
 type HistoryMap = Record<string, XUIObject[]>;
 type RawViewsMap = Record<string, XObjectData>;
 type ActiveMap = Record<string, string | null>;
+
+const XD_XVM_IGNORE_HASH_CHANGE = "xvm:ignore-hash-change";
 
 export const XVMEvents = {
   container_added: "xvm-container-added",
@@ -603,16 +605,17 @@ class _XVM extends XModule {
     } as any);
 
     if (!opts.silent && policy.hashSync) {
-      _xd._o["ignore-hash-change"] = true;
+      _xd.set(XD_XVM_IGNORE_HASH_CHANGE, true, { source: "xvm:navigate" });
 
-      const nextHash = "#" + (route ? route._id : id);
+      const next_hash = "#" + (route ? route._id : id);
 
-      if (opts.replace) window.location.replace(nextHash);
-      else window.location.hash = nextHash.replace("#", "");
+      if (opts.replace) window.location.replace(next_hash);
+      else window.location.hash = next_hash.replace("#", "");
 
       setTimeout(() => {
-        _xd._o["ignore-hash-change"] = false;
+        _xd.set(XD_XVM_IGNORE_HASH_CHANGE, false, { source: "xvm:navigate" });
       }, 0);
+
     }
   }
 
@@ -653,7 +656,8 @@ class _XVM extends XModule {
     const fallbackViewId = opts?.fallbackViewId;
 
     const runHash = async () => {
-      if (_xd._o["ignore-hash-change"]) return;
+      if (_xd.get(XD_XVM_IGNORE_HASH_CHANGE) === true) return;
+
 
       const id = (window.location.hash || "").replace("#", "");
       if (!id) {

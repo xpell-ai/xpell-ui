@@ -1,8 +1,8 @@
 // ============================================================================
 // xpell-ui/src/index.ts
-// FIX: stop `export * from "xpell-core"` because it re-exports core _xem/_XEventManager
-// and you want xpell-ui to expose the UI-adapted XEventManager as `_xem`.
-// This version keeps core types + core engine default, but overrides _xem.
+// - Explicit core exports to avoid collisions
+// - xpell-ui overrides `_xem` with DOM-adapted XEventManager
+// - Clean Wormholes surface (v1 + v2 + facade)
 // ============================================================================
 
 /**
@@ -16,8 +16,7 @@
 /* Core exports (SAFE + deterministic)                                        */
 /* -------------------------------------------------------------------------- */
 
-// 1) Export ALL core *types* (no runtime collisions)
-// Core type surface (explicit = reliable)
+// 1) Export core TYPES only (safe)
 export type {
   XValue,
   IXData,
@@ -32,68 +31,82 @@ export type {
   XNanoCommand,
   XCommandData,
   XModuleData,
-  XDataObject,
-  XDataVariable,
   XErrorOptions,
   XErrorLevel,
   XErrorMeta,
-} from "xpell-core";
+  XResponseData,
+  XFrameScheduler,
+} from "@xpell/core";
+
+// 2) (Optional) default export — keep only if intentional
+export { default as XpellCore } from "@xpell/core";
 
 
-// 2) Export the core default (XpellEngine instance) as the DEFAULT of xpell-ui
-//    If you prefer UI default (XUI) later, change this line.
-export { default } from "xpell-core";
-
-// 3) Re-export core runtime symbols explicitly EXCEPT `_xem` / `XEventManager` / `_XEventManager`
-//    because xpell-ui must expose the DOM-adapted event manager instead.
+// 3) Explicit core runtime exports (exclude core XEM)
 export {
-  Xpell, _x,
-
-  XUtils,_xu,
-  XData,_xd,_XData,
-  // type XDataObject,
-  // type XDataVariable,
-
+  Xpell,
+  _x,
+  XUtils,
+  _xu,
+  XData,
+  _xd,
+  _XData,
   XParser,
-
   XCommand,
-  // type XCommandData,
-
   XLogger,
   _xlog,
   _XLogger,
-
   XModule,
-  // type XModuleData,
-
   XObject,
   XObjectPack,
-  
   XObjectManager,
-
-
   XParams,
-
   XError,
-  // type XErrorOptions,
-  // type XErrorLevel,
-  // type XErrorMeta,
-
   XD_FRAME_NUMBER,
   XD_FPS,
   XpellEngine,
-} from "xpell-core";
+  XResponse,
+  XResponseOK,
+  XResponseError,
+} from "@xpell/core";
 
 /* -------------------------------------------------------------------------- */
-/* Wormholes                                                                  */
+/* Wormholes (v1 + v2 + facade)                                               */
 /* -------------------------------------------------------------------------- */
+
+// Re-export only the public UI surface (avoid exporting *everything)
+export type {
+  WormholesOpenOptions,
+  WormholesClientAPI,
+  WHEnvelope,
+  WHKind,
+  WHEventPayload,
+  XCmd,
+} from "./Wormholes/wh.types";
 
 export {
-  Wormholes,
-  Wormholes as _wh,
-  WormholeEvents,
-  type MessageType,
-} from "./Wormholes/Wormholes";
+  // helpful for advanced users / debugging
+  parseEnvelope,
+  stringifyEnvelope,
+  makeEnvelope,
+  makeHello,
+  makeAuth,
+  makeReq,
+  makeEvt,
+} from "./Wormholes/wh.codec";
+
+// Implementations (explicit)
+export { default as WormholesV1 } from "./Wormholes/Wormholes.v1";
+export { default as WormholesV2 } from "./Wormholes/Wormholes.v2";
+
+// Facade (default export = singleton instance)
+// NOTE: This file should export:
+//  - default Wormholes (singleton)
+//  - export { Wormholes } (named singleton) optional
+//  - export class WormholesFacade (class)
+export { default as Wormholes } from "./Wormholes/Wormholes";
+export { WormholesFacade } from "./Wormholes/Wormholes";
+
 
 /* -------------------------------------------------------------------------- */
 /* XUI (renderer)                                                             */
@@ -135,7 +148,7 @@ export { XUIAnimate, _AnimateCSS } from "./XUI/XUIAnimations";
 /* XVM (SPA runtime)                                                          */
 /* -------------------------------------------------------------------------- */
 
-export { XVM, _xvm } from "./XUI/XVM";
+export { XVM, _xvm } from "./XVM/XVM";
 export type {
   XVMApp,
   XVMRouteSpec,
@@ -146,7 +159,9 @@ export type {
   NavigateOptions,
   ShowOptions,
   CloseOptions,
-} from "./XUI/XVM";
+} from "./XVM/XVM";
+export { XVMClient } from "./XVM/XVMClient";
+export type { XVMClientOptions, XVMClientConnectionChange } from "./XVM/XVMClient";
 
 /* -------------------------------------------------------------------------- */
 /* XDB                                                                        */
@@ -157,9 +172,6 @@ export { XDB, XDB as _xdb, _XDataBase } from "./XDB/XDB";
 /* -------------------------------------------------------------------------- */
 /* XEM (UI adapter overrides core exports)                                    */
 /* -------------------------------------------------------------------------- */
-
-// IMPORTANT: xpell-ui owns the public XEventManager on the UI package surface.
-// This intentionally shadows core's XEventManager/_xem.
 
 export { XEventManager, XEventManager as _xem, _XEventManager } from "./XEM/XEventManager";
 export type { HTMLEventListenersIndex } from "./XEM/XEventManager";

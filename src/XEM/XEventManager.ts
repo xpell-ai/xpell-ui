@@ -6,12 +6,12 @@
  * - supports legacy fire(event, data, supportHtmlBoolean)
  */
 
-import { _xlog } from "xpell-core";
+import { _xlog } from "@xpell/core";
 
 import {
   _XEventManager as _XEventManagerBase,
   type XEventListenerOptions as XEventListenerOptionsBase,
-} from "xpell-core";
+} from "@xpell/core";
 
 export type XEventListenerOptions = XEventListenerOptionsBase & {
   _support_html?: boolean; // UI-only legacy flag

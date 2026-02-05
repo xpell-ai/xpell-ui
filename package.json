@@ -1,7 +1,8 @@
 {
-  "name": "xpell-ui",
+  "name": "@xpell/ui",
   "version": "2.0.0-alpha.3",
   "description": "Xpell UI JS Framework",
+  "type": "module",
   "files": [
     "dist",
     "docs",
@@ -11,10 +12,10 @@
   ],
   "module": "./dist/xpell-ui.es.js",
   "main": "./dist/xpell-ui.cjs.js",
-  "types": "./dist/index.d.ts",
+  "types": "./dist/types/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
+      "types": "./dist/types/index.d.ts",
       "import": "./dist/xpell-ui.es.js",
       "require": "./dist/xpell-ui.cjs.js"
     },
@@ -22,9 +23,11 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build && pnpm run build:types",
+    "build:types": "tsc --project tsconfig.types.json",
     "docs": "typedoc --options ./typedoc.json --tsconfig ./",
-    "publish-alpha-next": "pnpm version prerelease --preid=alpha --no-git-tag-version && pnpm publish --tag alpha"
+    "publish-alpha-next": "pnpm version prerelease --preid=alpha --no-git-tag-version && pnpm publish --tag alpha",
+    "check:xdata-legacy": "sh -c 'rg -n \"_xd\\._o\\[\" src && { echo \"Legacy XData write detected\" >&2; exit 1; } || true'"
   },
   "author": "Tamir Fridman <fridman.tamir@gmail.com>",
   "license": "MIT",
@@ -33,9 +36,7 @@
     "url": "git+https://github.com/xpell-ai/xpell-ui.git"
   },
   "peerDependencies": {
-    "xpell-core": "workspace:*"
-  },
-  "dependencies": {
+    "@xpell/core": "^2.0.0-alpha",
     "animate.css": "^4.1.1"
   },
   "devDependencies": {
@@ -44,6 +45,7 @@
     "typescript": "^5.9.3",
     "vite": "^5.4.21",
     "vite-plugin-dts": "^3.9.1",
-    "xpell-core": "workspace:*"
+    "animate.css": "^4.1.1",
+    "@xpell/core": "workspace:*"
   }
 }
