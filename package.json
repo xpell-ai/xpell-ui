@@ -26,7 +26,7 @@
     "build": "vite build && pnpm run build:types",
     "build:types": "tsc --project tsconfig.types.json",
     "docs": "typedoc --options ./typedoc.json --tsconfig ./",
-    "publish-alpha-next": "pnpm version prerelease --preid=alpha --no-git-tag-version && pnpm publish --tag alpha",
+    "publish-alpha-next": "pnpm version prerelease --preid=alpha  && pnpm publish --tag alpha",
     "check:xdata-legacy": "sh -c 'rg -n \"_xd\\._o\\[\" src && { echo \"Legacy XData write detected\" >&2; exit 1; } || true'"
   },
   "author": "Tamir Fridman <fridman.tamir@gmail.com>",
@@ -46,6 +46,6 @@
     "vite": "^5.4.21",
     "vite-plugin-dts": "^3.9.1",
     "animate.css": "^4.1.1",
-    "@xpell/core": "workspace:*"
+    "@xpell/core": "^2.0.0-alpha"
   }
 }
