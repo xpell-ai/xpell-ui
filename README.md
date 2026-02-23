@@ -1,130 +1,118 @@
-# Xpell UI  
-**Declarative Runtime UI Platform for the Web (v2.0-Alpha)**
+# @xpell/ui
 
-Xpell UI is the **web runtime** of the Xpell framework — designed to run **applications as data**, not bundles.
-It is built for **real-time**, **AI-generated**, and **server-driven** user interfaces using **TypeScript, JavaScript, and native HTML**.
+Xpell 2 Alpha --- Real-Time Runtime UI Framework
 
-> **Current version:** `2.0.0-alpha.2`  
-> **Status:** Alpha — architecture stabilized, APIs evolving
+`@xpell/ui` is the browser-based UI runtime of the Xpell 2 platform.
 
----
+It is designed for structured, runtime-driven applications where
+interfaces can be loaded, mutated, and evolved without rebuild cycles.
+Unlike traditional build-time component frameworks, Xpell UI executes
+applications as structured runtime data.
 
-## What is Xpell UI?
+This package works together with:
 
-Xpell UI is not a traditional component framework.
+-   `@xpell/core` --- runtime contracts and execution engine
+-   `@xpell/node` --- server runtime (xnode, Wormholes, XDB)
+-   `@xpell/3d` --- spatial runtime layer
 
-It is a **runtime UI platform** composed of three distinct layers:
+> This package is part of the Xpell 2 Alpha platform.\
+> Learn more at https://xpell.ai
 
-- **XUI** – Rendering & lifecycle (DOM engine)
-- **XVM** – View Manager (navigation, regions, history)
-- **XVMApp** – Declarative application manifest
-
-Together, these enable:
-
-- Runtime-loaded applications
-- Server-stored UI definitions
-- Deterministic navigation (SPA + modals)
-- AI-generated apps and layouts
-- High-FPS, real-time interfaces
-
----
+------------------------------------------------------------------------
 
 ## Core Architecture
 
-```
-XVMApp (Application Manifest)
-        │
-        ▼
-XVM (Runtime / Navigation)
-        │
-        ▼
-XUI (DOM Renderer)
-```
+Xpell UI is composed of three layers:
+
+XVMApp (Application Manifest) │ ▼ XVM (Runtime / Navigation) │ ▼ XUI
+(DOM Renderer)
 
 ### Responsibilities
 
-| Layer | Responsibility |
-|------|----------------|
-| **XUI** | Create DOM elements, mount, lifecycle, animations |
-| **XVM** | Navigation, regions, history, routing |
-| **XVMApp** | Declarative description of an application |
+-   **XUI** → Rendering & lifecycle (DOM engine)
+-   **XVM** → Navigation, regions, history, routing
+-   **XVMApp** → Declarative application description
 
-> XUI renders. XVM decides. XVMApp describes.
+XUI renders.\
+XVM decides.\
+XVMApp describes.
 
----
+------------------------------------------------------------------------
 
-## What Xpell UI Includes
+## What @xpell/ui Provides
 
-### ⚡ XUI — Real-Time UI Engine
-A low-level DOM engine that:
-- Creates native HTML elements
-- Manages lifecycle (`onMount`, `onShow`, `onHide`)
-- Handles visibility and animations
-- Avoids virtual DOMs and diffing
+### XUI --- Real-Time DOM Engine
 
-XUI does **not** manage navigation or app state.
+-   Creates native HTML elements
+-   Manages lifecycle (`onMount`, `onShow`, `onHide`)
+-   Controls visibility and transitions
+-   Avoids virtual DOM and diffing
 
----
+XUI does not manage navigation or global application state.
 
-### 🧭 XVM — Xpell View Manager (NEW)
-The application runtime responsible for:
+------------------------------------------------------------------------
 
-- Containers & regions
-- View stacking and history
-- SPA navigation
-- Modal flows
-- URL hash synchronization
-- App loading
+### XVM --- View Manager
 
-XVM enforces strict rules:
-- `add()` never shows
-- `stack()` is the only place that shows
-- `navigate()` is the only place that updates URL
-- One active view per container
+-   Container & region management
+-   Deterministic SPA navigation
+-   View stacking and history
+-   Modal flows
+-   URL synchronization
+-   Runtime app loading
 
----
+XVM enforces strict runtime rules: - `add()` does not show views -
+`stack()` controls visibility - `navigate()` controls URL - One active
+view per container
 
-### 📦 XVMApp — Declarative App Manifest (NEW)
-Applications are now defined as **data**.
+------------------------------------------------------------------------
+
+### XVMApp --- Declarative App Manifest
+
+Applications are defined as structured data.
 
 An `XVMApp` can describe:
-- App shell (layout)
-- Containers & regions
-- Views (JSON or factories)
-- Routes
-- Router behavior
-- Initial navigation
+
+-   App shell layout
+-   Containers and regions
+-   Views (JSON or factories)
+-   Routes
+-   Router behavior
+-   Initial navigation
 
 This enables:
-- Server-side app storage
-- Runtime loading
-- Versioned UI apps
-- AI-generated applications
 
----
+-   Server-stored UI definitions
+-   Runtime loading
+-   Versioned applications
+-   AI-generated interfaces
+-   Vibe coding workflows
 
-## Installation
+------------------------------------------------------------------------
 
-```bash
-npm install xpell-ui
-# or
-pnpm add xpell-ui
-```
+## Installation (Alpha)
 
----
+npm install @xpell/ui@alpha
 
-## Getting Started (Minimal)
+Typically combined with:
 
-```ts
-import { _x, XUI, XVM } from "xpell-ui";
+npm install @xpell/core@alpha\
+npm install @xpell/node@alpha
+
+Alpha builds are intentionally not published under the `latest` tag.
+
+------------------------------------------------------------------------
+
+## Minimal Example
+
+``` ts
+import { _x, XUI, XVM } from "@xpell/ui";
 
 _x.start();
 _x.loadModule(XUI);
 
-// Create root mount point
 XUI.createPlayer("xplayer");
 
-// Add a simple view
 XUI.add({
   _type: "label",
   _id: "hello",
@@ -132,61 +120,70 @@ XUI.add({
 });
 ```
 
-For full applications, use **XVMApp** instead of manual wiring.
+For full applications, use `XVMApp` instead of manual wiring.
 
----
+------------------------------------------------------------------------
 
-## When to Use Xpell UI
+## When to Use @xpell/ui
 
-Xpell UI is ideal for:
+Ideal for:
 
-- Dashboards and admin panels
-- Real-time control systems
-- AI-generated interfaces
-- Server-driven applications
-- Visual editors
-- Tools requiring deterministic navigation
-- Applications that evolve at runtime
+-   Dashboards and admin systems
+-   Real-time control panels
+-   AI-generated interfaces
+-   Server-driven applications
+-   Visual builders and editors
+-   Systems requiring deterministic navigation
+-   Applications that evolve at runtime
 
-If you need **build-time JSX components**, React may be a better fit.
+If you need build-time JSX components and compile-time tooling, other
+frameworks may be more suitable.
 
-If you need **runtime apps**, Xpell UI is designed for you.
+If you need runtime-native applications, Xpell UI is designed for that
+model.
 
----
+------------------------------------------------------------------------
 
-## Related Packages
+## Architecture Role in Xpell 2
 
-- **xpell-core** – Runtime engine, interpreter, event system
-- **xpell-ui** – UI runtime (this package)
-- **xpell-3d** – 3D/WebGL engine
-- **xpell** – Unified entry point (UI + 3D + AI + sync)
+Xpell 2 is modular:
 
----
+-   `@xpell/core` → Runtime contracts + execution engine\
+-   `@xpell/ui` → Real-time UI framework\
+-   `@xpell/3d` → Three.js-based spatial runtime\
+-   `@xpell/node` → Server runtime (xnode, Wormholes, XDB)
 
-## Documentation
+`@xpell/ui` implements the browser execution layer on top of the core
+runtime.
 
-- `ARCHITECTURE.md` – Internal architecture & design philosophy
-- `README.md` – Overview and usage
-- Release notes – See GitHub releases
-
----
+------------------------------------------------------------------------
 
 ## Alpha Status
 
-This is an **alpha** release:
-- APIs may change
-- App manifest is stabilizing
-- No backward-compatibility guarantees yet
+This package is currently in Alpha.
 
-That said:
-- **XVMApp is now the foundation**
-- Server-side work will target this model
+-   APIs may evolve
+-   XVMApp contracts may be refined
+-   SSR integration via xnode is planned
 
----
+This release targets early adopters and architectural experimentation.
 
-## License & Credits
+------------------------------------------------------------------------
 
-MIT License  
-Author: Tamir Fridman  
-© Aime Technologies, 2022–Present  
-https://xpell.ai
+## Documentation & Links
+
+Website: https://xpell.ai\
+GitHub: https://github.com/xpell-ai/xpell-ui
+
+------------------------------------------------------------------------
+
+## Versioning
+
+Follows semantic versioning under the Xpell 2 release stream.
+
+------------------------------------------------------------------------
+
+## License
+
+MIT License\
+© Aime Technologies
