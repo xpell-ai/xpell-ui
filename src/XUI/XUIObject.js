@@ -223,6 +223,9 @@ export class XUIObject extends XObject {
     setText(text) {
         this._text = text;
     }
+    getValue() {
+        return this.dom?.value ?? this._text ?? "";
+    }
     setStyleAttribute(attr, val) {
         if (this._dom_object instanceof HTMLElement) {
             this._dom_object.style.setProperty(attr, val);

@@ -6,7 +6,7 @@
 // ============================================================================
 
 import {
-     XObject, type XObjectData,
+    XObject, type XObjectData,
     type XEventListenerOptions, _xlog, type XObjectOnEventIndex,
     type XNanoCommand, type XDataXporter
 } from "@xpell/core";
@@ -304,6 +304,10 @@ export class XUIObject extends XObject {
         this._text = text;
     }
 
+    getValue(): string {
+        return (this.dom as HTMLTextAreaElement)?.value ?? this._text ?? "";
+    }
+
     setStyleAttribute(attr: string, val: string) {
         if (this._dom_object instanceof HTMLElement) {
             this._dom_object.style.setProperty(attr, val);
@@ -499,7 +503,7 @@ export class XUIObject extends XObject {
 
         if (this._on_click) {
             if (typeof this._on_click === "function") {
-                this.addEventListener("click", (e:any) => (this._on_click as any)(this, e));
+                this.addEventListener("click", (e: any) => (this._on_click as any)(this, e));
             } else {
                 this.addEventListener("click", (e: any) => {
                     this.checkAndRunInternalFunction(this._on_click, e);

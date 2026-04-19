@@ -50,6 +50,7 @@ import {
   XModule,
   type XModuleData,
   type XObjectData,
+  setXEventManager,
 } from "@xpell/core";
 
 import { _xem } from "../XEM/XEventManager";
@@ -78,6 +79,12 @@ export class XUIModule extends XModule {
     // Register default objects
     this.importObjectPack(XUICoreObjects);
 
+  }
+
+  load() {
+    super.load?.();
+    // Set the XEventManager instance for the entire app (DOM adapter)
+    setXEventManager(_xem);
     _xem.fire(this._events._loaded);
   }
 

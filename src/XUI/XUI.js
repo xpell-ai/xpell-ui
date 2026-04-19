@@ -42,7 +42,7 @@
  * © 2022–present Aime Technologies. All rights reserved.
  */
 import XUIObject from "./XUIObject";
-import { _xlog, XModule, } from "@xpell/core";
+import { _xlog, XModule, setXEventManager, } from "@xpell/core";
 import { _xem } from "../XEM/XEventManager";
 import XUICoreObjects from "./XUICoreObjects";
 import "./Style/xui.css";
@@ -63,6 +63,11 @@ export class XUIModule extends XModule {
         };
         // Register default objects
         this.importObjectPack(XUICoreObjects);
+    }
+    load() {
+        super.load?.();
+        // Set the XEventManager instance for the entire app (DOM adapter)
+        setXEventManager(_xem);
         _xem.fire(this._events._loaded);
     }
     /* ------------------------------------------------------------------------ */

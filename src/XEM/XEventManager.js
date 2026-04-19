@@ -6,7 +6,7 @@
  * - supports legacy fire(event, data, supportHtmlBoolean)
  */
 import { _xlog } from "@xpell/core";
-import { _XEventManager as _XEventManagerBase, } from "@xpell/core";
+import { _XEventManager as _XEventManagerBase, setXEventManager } from "@xpell/core";
 export class _XEventManager extends _XEventManagerBase {
     constructor() {
         super(...arguments);

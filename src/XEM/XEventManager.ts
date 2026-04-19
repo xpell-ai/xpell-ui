@@ -11,6 +11,7 @@ import { _xlog } from "@xpell/core";
 import {
   _XEventManager as _XEventManagerBase,
   type XEventListenerOptions as XEventListenerOptionsBase,
+  setXEventManager
 } from "@xpell/core";
 
 export type XEventListenerOptions = XEventListenerOptionsBase & {
