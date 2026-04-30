@@ -98,9 +98,9 @@ export class WormholesV2 implements WormholesClientAPI {
       return;
     }
 
-      this._ws.onopen = () => {
-        this.__ready = true;
-        setWormholeState(WormholeEvents.WormholeOpen, true, "wormholes:v2:open");
+    this._ws.onopen = () => {
+      this.__ready = true;
+      setWormholeState(WormholeEvents.WormholeOpen, true, "wormholes:v2:open");
 
       if (this._log._connect) _xlog.log("[WHv2] open");
 
@@ -153,9 +153,9 @@ export class WormholesV2 implements WormholesClientAPI {
       }
     };
 
-      this._ws.onclose = () => {
-        this.__ready = false;
-        setWormholeState(WormholeEvents.WormholeOpen, false, "wormholes:v2:close");
+    this._ws.onclose = () => {
+      this.__ready = false;
+      setWormholeState(WormholeEvents.WormholeOpen, false, "wormholes:v2:close");
 
       if (this._log._disconnect) _xlog.log("[WHv2] closed");
 
@@ -286,11 +286,14 @@ export class WormholesV2 implements WormholesClientAPI {
   }
 
   private _handleEvt(payload: WHEventPayload | any) {
+    // _xlog.log("[WHv2] evt start", payload);
     if (!payload) return;
 
     const name = payload._name ?? payload.name;
     const data = payload._data ?? payload.data;
     const args = payload._args ?? payload.args;
+
+    if (!name) return;
 
     if (this._log._evt) _xlog.log("[WHv2] evt", name, data, args);
 
@@ -311,16 +314,26 @@ export class WormholesV2 implements WormholesClientAPI {
       return;
     }
 
-    _xem.fire(name, data ?? args);
+    if (data !== undefined) {
+      _xem.fire(name, data);
+      return;
+    }
+
+    if (Array.isArray(args)) {
+      _xem.fire(name, args.length === 1 ? args[0] : args);
+      return;
+    }
+
+    _xem.fire(name, args);
   }
 
   async onFrame(_: number) {
-        const keys = Object.keys(this._data_queue);
-        for (const key of keys) {
-          if (this._data_queue[key].length === 0) continue;
-          const next = this._data_queue[key].shift();
-          setWormholeState(key, next, "wormholes:v2:data");
-        }
+    const keys = Object.keys(this._data_queue);
+    for (const key of keys) {
+      if (this._data_queue[key].length === 0) continue;
+      const next = this._data_queue[key].shift();
+      setWormholeState(key, next, "wormholes:v2:data");
+    }
   }
 }
 

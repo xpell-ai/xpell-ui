@@ -3,10 +3,14 @@
   "compilerOptions": {
     "noEmit": false,
 
+    "declaration": true,
+    "emitDeclarationOnly": true,
+
+    "outDir": "dist/types",
+    "rootDir": "./src",
+
     "module": "ESNext",
     "moduleResolution": "bundler",
-
-    "paths": {},
 
     "verbatimModuleSyntax": true
   },

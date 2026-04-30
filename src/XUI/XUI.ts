@@ -63,6 +63,8 @@ export const FIRST_USER_GESTURE = "first-user-gesture";
  * XUI Module - Xpell User Interface Module for HTML and CSS
  */
 export class XUIModule extends XModule {
+  static _module_name = "xui";
+
   private _player_element: HTMLElement | null = null;
   private _first_gesture_occurred = false;
 
@@ -73,8 +75,8 @@ export class XUIModule extends XModule {
   /**
    * @fires "xui-loaded" event
    */
-  constructor(data: XModuleData) {
-    super(data);
+  constructor() {
+    super({ _name: XUIModule._module_name });
 
     // Register default objects
     this.importObjectPack(XUICoreObjects);
@@ -362,6 +364,6 @@ export class XUIModule extends XModule {
 /* Public singleton                                                           */
 /* -------------------------------------------------------------------------- */
 
-export const XUI = new XUIModule({ _name: "xui" });
+export const XUI = new XUIModule();
 
 export default XUI;

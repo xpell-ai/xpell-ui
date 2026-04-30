@@ -201,6 +201,7 @@ export type XVMApp = {
 class _XVM extends XModule {
   static _module_name = "xvm";
 
+  private _current_view_object: XUIObject | null = null;
   _event_container_added = XVMEvents.container_added;
   _event_app_loaded = XVMEvents.app_loaded;
 
@@ -539,7 +540,8 @@ class _XVM extends XModule {
     this.clearActive(containerId);
 
     const target = this.add(view, { containerId });
-    target.show(); // ONLY place that shows
+    this._current_view_object = target; // 🔥 ADD THIS LINE
+    target.show();
     try {
       const el = this.requireContainer(containerId).dom as any;
       if (el instanceof HTMLElement) el.classList.add("xvm-open");
@@ -642,6 +644,10 @@ class _XVM extends XModule {
       // sync hash to view id (not route) - keep existing behavior
       this.navigate("#" + prev._id, { region: t.region, replace: true } as any);
     }
+  }
+
+  getCurrentView(): XUIObject | null {
+    return this._current_view_object;
   }
 
   initRouter(opts?: { containerId?: string; region?: RegionName; fallbackViewId?: string }) {

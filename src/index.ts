@@ -175,3 +175,6 @@ export { XDB, XDB as _xdb, _XDataBase } from "./XDB/XDB";
 
 export { XEventManager, XEventManager as _xem, _XEventManager } from "./XEM/XEventManager";
 export type { HTMLEventListenersIndex } from "./XEM/XEventManager";
+
+export { FlowManagerClient, XFM, _xfm } from "./XFM/FlowManagerClient";
+export { XUIRuntime ,type XUIRuntimeOptions, type XUIRuntimeAppOptions} from "./XUI/XUIRuntime";

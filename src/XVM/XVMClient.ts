@@ -520,9 +520,9 @@ export class XVMClient {
         : "xplayer";
     const regions_summary = Array.isArray(runtime_app._regions)
       ? runtime_app._regions.map((r: any) => ({
-          _id: r?._id,
-          _container_id: r?._container_id,
-        }))
+        _id: r?._id,
+        _container_id: r?._container_id,
+      }))
       : [];
 
     this._log("mount_runtime_app:before", {
@@ -681,43 +681,77 @@ export class XVMClient {
       this._set_connection_status("error", "wormhole-error");
     });
 
-    _xem.on(EVT_SERVER_XVM_UPDATE, async (payload: any) => {
-      const evt_payload =
-        is_obj(payload) && Array.isArray((payload as any)._args) && is_obj((payload as any)._args[0])
-          ? (payload as any)._args[0]
-          : payload;
-      if (!is_obj(evt_payload)) return;
-      if (evt_payload._app_id !== this._app_id || evt_payload._env !== this._env) return;
-      if (typeof evt_payload._view_id !== "string" || !is_obj(evt_payload._view)) return;
+    const handle_update = async (payload: any, source_evt: string) => {
+      try {
+        const evt_payload =
+          is_obj(payload) && Array.isArray(payload?._args) && is_obj(payload._args[0])
+            ? payload._args[0]
+            : payload;
 
-      const upd = evt_payload as ServerUpdateEvt;
-      const next_version = Number.isFinite(upd._version) ? Number(upd._version) : 0;
-      if (next_version > 0 && !this._should_accept_push_version(next_version, EVT_SERVER_XVM_UPDATE)) {
-        return;
-      }
+        if (!is_obj(evt_payload)) return;
 
-      this._views_cache.set(upd._view_id, upd._view);
-      this._known_view_ids.add(upd._view_id);
-      this._persist_cached_view(upd._view_id, upd._view);
-      this._sync_cache_state();
-      this._app_needs_refresh = true;
+        if (evt_payload._app_id !== this._app_id || evt_payload._env !== this._env) return;
+        if (typeof evt_payload._view_id !== "string" || !is_obj(evt_payload._view)) return;
 
-      if (next_version > 0) {
-        this._set_current_version(next_version);
-        XDB.saveString(this._cache_key_version, String(next_version));
-      }
-      this._log(
-        `update applied view='${upd._view_id}' version=${next_version || this._current_version} active='${this._current_view_id}'`
-      );
+        const upd = evt_payload as ServerUpdateEvt;
 
-      if (this._current_view_id === upd._view_id) {
-        try {
-          await this.render_view(upd._view_id);
-        } catch (err) {
-          this._error("hot reload failed", err);
+        const next_version = Number.isFinite(upd._version) ? Number(upd._version) : 0;
+
+        if (next_version > 0 && !this._should_accept_push_version(next_version, source_evt)) {
+          return;
         }
+
+        // 🔥 update cache
+        this._views_cache.set(upd._view_id, upd._view);
+        this._known_view_ids.add(upd._view_id);
+        this._persist_cached_view(upd._view_id, upd._view);
+        this._sync_cache_state();
+
+        // 🔥 version
+        if (next_version > 0) {
+          this._set_current_version(next_version);
+          XDB.saveString(this._cache_key_version, String(next_version));
+        }
+
+        this._log(
+          `update applied source='${source_evt}' view='${upd._view_id}' version=${next_version || this._current_version} active='${this._current_view_id}'`
+        );
+
+        // 🔥 hot reload / patch
+        if (this._current_view_id === upd._view_id) {
+          let patched = false;
+
+          try {
+            const obj = (XVM as any).getCurrentView?.();
+
+            if (obj && typeof obj.update === "function") {
+              this._log("🔥 patching live view", upd._view_id);
+
+              obj.update(upd._view);
+
+              // keep XVM in sync
+              (XVM as any).registerRawView?.(upd._view);
+
+              patched = true;
+            }
+          } catch (err) {
+            this._error("patch failed", err);
+          }
+
+          if (!patched) {
+            this._log("⚠️ fallback to render_view", upd._view_id);
+            this._app_needs_refresh = true;
+            await this.render_view(upd._view_id);
+          }
+        }
+      } catch (err) {
+        this._error("update handler failed", err);
       }
-    });
+    };
+
+    /* 🔥 NEW EVENT */
+    _xem.on("xvm:update", (payload: any) => handle_update(payload, "xvm:update"));
+
   }
 
   async bootstrap() {

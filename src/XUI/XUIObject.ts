@@ -558,6 +558,106 @@ export class XUIObject extends XObject {
             if (child.onHide && typeof child.onHide === "function") child.onHide();
         });
     }
+
+    update(next: XUIObjectData) {
+        if (!next) return;
+
+        // -------------------------
+        // basic props
+        // -------------------------
+
+        if (next._text !== undefined) {
+            this.setText(next._text as any);
+        }
+
+        if ((next as any).class !== undefined) {
+            (this as any).class = (next as any).class;
+            if (this._dom_object instanceof HTMLElement) {
+                this._dom_object.className = (next as any).class;
+            }
+        }
+
+        if (next.style !== undefined && this._dom_object instanceof HTMLElement) {
+            this._dom_object.setAttribute("style", next.style as any);
+        }
+
+        // -------------------------
+        // generic attributes (🔥 important)
+        // -------------------------
+
+        for (const key of Object.keys(next)) {
+            if (key.startsWith("_")) continue;
+
+            const val = (next as any)[key];
+            if (val == null) continue;
+
+            if (this._dom_object instanceof HTMLElement) {
+                this._dom_object.setAttribute(key, String(val));
+            }
+
+            (this as any)[key] = val;
+        }
+
+        // -------------------------
+        // children patch
+        // -------------------------
+
+        if (Array.isArray(next._children)) {
+            this.patchChildren(next._children as any[]);
+        }
+    }
+
+    private patchChildren(nextChildren: XObjectData[]) {
+        const current = this.ui_children;
+
+        const byId = new Map<string, XUIObject>();
+        for (const c of current) {
+            if (c._id) byId.set(c._id, c);
+        }
+
+        const newChildren: XUIObject[] = [];
+
+        for (const childData of nextChildren) {
+            let existing: XUIObject | undefined;
+
+            if ((childData as any)._id) {
+                existing = byId.get((childData as any)._id);
+            }
+
+            if (existing) {
+                // 🔥 UPDATE existing
+                existing.update(childData as any);
+                newChildren.push(existing);
+                byId.delete(existing._id);
+            } else {
+                // 🔥 CREATE new
+                const created = XUI.create(childData as any);
+                this.append(created);
+                newChildren.push(created);
+            }
+        }
+
+        // 🔥 REMOVE leftovers safely
+        for (const leftover of byId.values()) {
+            super.removeChild(leftover, true);
+        }
+
+        // 🔥 FIX: rebuild children graph safely (NO direct assignment)
+        for (const child of this.ui_children) {
+            super.removeChild(child, false);
+        }
+
+        for (const child of newChildren) {
+            super.append(child);
+        }
+
+        // 🔥 FIX: reorder DOM to match newChildren order
+        if (this._dom_object instanceof HTMLElement) {
+            for (const child of newChildren) {
+                this._dom_object.appendChild(child.dom);
+            }
+        }
+    }
 }
 
 export default XUIObject;
