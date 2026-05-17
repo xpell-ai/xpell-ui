@@ -114,7 +114,7 @@ export { WormholesFacade } from "./Wormholes/Wormholes";
 
 export { XUI, XUI as _xui, XUIModule } from "./XUI/XUI";
 export { XUIObject } from "./XUI/XUIObject";
-export type { XUIObjectData } from "./XUI/XUIObject";
+export type { XUIObjectData, XUIFlowDef } from "./XUI/XUIObject";
 
 export {
   XUIObjectPack as XUIObjects,
@@ -167,14 +167,13 @@ export type { XVMClientOptions, XVMClientConnectionChange } from "./XVM/XVMClien
 /* XDB                                                                        */
 /* -------------------------------------------------------------------------- */
 
-export { XDB, XDB as _xdb, _XDataBase } from "./XDB/XDB";
+export { XDB, XDB as _xdb, XDBClient as _XDataBase } from "./XDB/XDBClient";
 
 /* -------------------------------------------------------------------------- */
 /* XEM (UI adapter overrides core exports)                                    */
 /* -------------------------------------------------------------------------- */
 
-export { XEventManager, XEventManager as _xem, _XEventManager } from "./XEM/XEventManager";
-export type { HTMLEventListenersIndex } from "./XEM/XEventManager";
+export { XEventManager, XEventManager as _xem } from "./XEM/XEventManager";
 
 export { FlowManagerClient, XFM, _xfm } from "./XFM/FlowManagerClient";
 export { XUIRuntime ,type XUIRuntimeOptions, type XUIRuntimeAppOptions} from "./XUI/XUIRuntime";

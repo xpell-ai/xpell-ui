@@ -25,7 +25,7 @@ Supported fields (common):
 - `_children` – nested elements
 - `_text` – text content
 - `class` / `style` – styling
-- Event handlers: `_on_click`, `_on_mount`, `_on_show_animation`
+- Event handlers: , `_on_mount`, `_on_show_animation`
 - Lifecycle hooks: `_on_frame`, `_on_data`
 
 ## Reactive state with XData
@@ -76,19 +76,13 @@ XUI.add({
       _text: "Hello Xpell-UI",
       style: "font-size: 2em;"
     },
-    {
-      _type: "button",
-      _id: "btn",
-      _text: "Click Me",
-      _on_click: () => console.log("Clicked!")
-    }
+
   ]
 });
 ```
 
 ## Events and lifecycle hooks
 - Mount: `_on_mount: (xobj) => { ... }`
-- Click: `_on_click: (xobj, event) => { ... }`
 - Frame loop (animation): `_on_frame: (xobj, frame) => { xobj.dom.style.opacity = (Math.sin(frame / 10) + 1) / 2; }`
 - Data binding: `_data_source` + `_on_data`
 

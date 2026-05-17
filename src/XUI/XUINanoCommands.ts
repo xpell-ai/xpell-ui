@@ -92,19 +92,39 @@ export const _xuiobject_basic_nano_commands: XNanoCommandPack = {
   "set-text-from-data": (cmd, obj?: XObject) => {
     if (!obj) return;
 
-    // ✅ data is passed from onData(...) through checkAndRunInternalFunction
     const data = (cmd as any)._params?.data;
     if (data === undefined) return;
 
     let text: any = data;
 
     const pattern = (cmd as any)._params?.pattern;
-    if (pattern) text = String(pattern).replace("$data", String(data ?? ""));
+
+    // --------------------------------------------------
+    // stringify objects/arrays automatically
+    // --------------------------------------------------
+
+    if (
+      typeof text === "object" &&
+      text !== null
+    ) {
+      text = JSON.stringify(text, null, 2);
+    }
+
+    if (pattern) {
+      text = String(pattern).replace(
+        "$data",
+        String(text ?? "")
+      );
+    }
 
     const empty = (cmd as any)._params?.empty;
-    if (empty === true || empty === "true") obj.emptyDataSource();
 
-    (obj as any as XUIObject)._text = String(text ?? "");
+    if (empty === true || empty === "true") {
+      obj.emptyDataSource();
+    }
+
+    (obj as any as XUIObject)._text =
+      String(text ?? "");
   },
 
   // ---- New universal UI commands ----

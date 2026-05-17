@@ -226,6 +226,19 @@ class _XVM extends XModule {
     _xlog.log("XVM", ...args);
   }
 
+  async onLoad(): Promise<void> {
+    // Listen to hash changes for router (only if region policy allows it)    // register once when module is loaded (safe point)
+    _xem.on("xvm:update", (payload: any) => {
+      if (payload?._view_id && payload?._view) {
+        this._rawViews[payload._view_id] = payload._view;
+
+        if (this._debug) {
+          this.log("Raw view updated:", payload._view_id);
+        }
+      }
+    }, { _owner: this });
+  }
+
   /* ------------------------------------------------------------------------ */
   /* Containers                                                               */
   /* ------------------------------------------------------------------------ */
@@ -466,6 +479,8 @@ class _XVM extends XModule {
     return this._active[t.containerId] ?? null;
   }
 
+
+
   /**
    * Resolve a view by ID:
    * 1) if exists in history -> return it (and remove it from history to avoid duplicates)
@@ -648,6 +663,10 @@ class _XVM extends XModule {
 
   getCurrentView(): XUIObject | null {
     return this._current_view_object;
+  }
+
+  getViewById(viewId: string): XObjectData | null {
+    return this._rawViews[viewId] ?? null;
   }
 
   initRouter(opts?: { containerId?: string; region?: RegionName; fallbackViewId?: string }) {

@@ -8,7 +8,8 @@
 import {
     XObject, type XObjectData,
     type XEventListenerOptions, _xlog, type XObjectOnEventIndex,
-    type XNanoCommand, type XDataXporter
+    type XNanoCommand, type XDataXporter,
+    XData
 } from "@xpell/core";
 
 import { _xem } from "../XEM/XEventManager"
@@ -16,11 +17,14 @@ import { _xem } from "../XEM/XEventManager"
 import XUI from "./XUI";
 import _xuiobject_basic_nano_commands from "./XUINanoCommands";
 import { XUIAnimate } from "./XUIAnimations";
+import XUIRuntime from "./XUIRuntime";
 
 const reservedWords = { _children: "child objects" };
 const xpellObjectHtmlFieldsMapping: { [k: string]: string } = { "_id": "id", "css-class": "class", "animation": "xyz", "input-type": "type" };
 
 export type XUIHandler = Function | string | any | any[];
+
+export type XUIFlowDef = string | { _id: string; _payload?: Record<string, any>; };
 
 
 export interface XUIObjectData extends XObjectData {
@@ -29,11 +33,14 @@ export interface XUIObjectData extends XObjectData {
     _html?: string;
     _visible?: boolean;
     _parent_element?: string;
-    _on_click?: XUIHandler;
+    // _on_click?: XUIHandler;
     _on_show?: XUIHandler;
     _on_hide?: XUIHandler;
     _on_show_animation?: string;
     _on_hide_animation?: string;
+    _flow?: string;
+    _flow_event?: string;
+    _flow_auto?: boolean;
 }
 
 export class XUIObject extends XObject {
@@ -75,11 +82,13 @@ export class XUIObject extends XObject {
     #_text: string = "";
     _visible: boolean;
     _parent_element?: string;
-    _on_click?: XUIHandler;
+    // _on_click?: XUIHandler;
     _on_show?: XUIHandler;
     _on_hide?: XUIHandler;
     _on_show_animation?: string;
     _on_hide_animation?: string;
+    _flow?: XUIFlowDef;
+    _flow_event?: string;
 
     constructor(data: XUIObjectData, defaults: XUIObjectData, skipParse?: boolean) {
         super(data, defaults, true);
@@ -94,10 +103,22 @@ export class XUIObject extends XObject {
         // NOTE: _support_html is UI-only. If core typings don't have it, keep cast.
         this._xem_options = <any>{ _once: false, _support_html: true };
 
-        this.addXporterDataIgnoreFields(["_dom_object", "_html", "_xem_options", "_on_click", "#_text"]);
+        this.addXporterDataIgnoreFields(["_dom_object", "_html", "_xem_options", "#_text"]);
         super.addNanoCommandPack(_xuiobject_basic_nano_commands);
 
         if (!skipParse && data) this.parse(data, reservedWords);
+
+    }
+
+
+    parse(data: XObjectData, ignore?: any): void {
+        if (data && typeof data === "object" && (data as any)._on_click) {
+            if (!(data as any)._on) (data as any)._on = {};
+            if (!(data as any)._on.click) { (data as any)._on.click = (data as any)._on_click }
+            delete (data as any)._on_click;
+            _xlog.warn("[XUIObject] _on_click is deprecated. Use _on.click instead.");
+        }
+        super.parse(data, ignore);
     }
 
     // --------------------------------------------------------------------------
@@ -118,9 +139,11 @@ export class XUIObject extends XObject {
         this._html = undefined;
         this._base_display = undefined;
         this.#_text = "";
-        this._on_click = undefined;
+        // this._on_click = undefined;
         this._on_show = undefined;
         this._on_hide = undefined;
+        this._flow = undefined;
+        this._flow_event = undefined;
 
         super.dispose();
     }
@@ -240,51 +263,51 @@ export class XUIObject extends XObject {
    * - listener ids are tracked in _event_listeners_ids[eventName] as string[]
    */
     addEventListener(eventName: string, handler: any, options: XEventListenerOptions = {} as any): string {
-        const id = (_xem as any).on(eventName, handler, { ...(options as any), _support_html: true }, this);
+        // const id = (_xem as any).on(eventName, handler, { ...(options as any), _support_html: true }, this);
 
-        if (!this._event_listeners_ids) (this as any)._event_listeners_ids = {};
-        if (!this._event_listeners_ids[eventName]) this._event_listeners_ids[eventName] = [];
-        this._event_listeners_ids[eventName].push(id);
-
+        // if (!this._event_listeners_ids) (this as any)._event_listeners_ids = {};
+        // if (!this._event_listeners_ids[eventName]) this._event_listeners_ids[eventName] = [];
+        // this._event_listeners_ids[eventName].push(id);
+        const id = super.addEventListener(eventName, handler,  { ...(options as any), _support_html: true });
         return id;
     }
 
-    /**
-     * UI override: remove a specific listener id (both DOM + bus) via UI _xem.
-     */
-    removeEventListener(listenerId: string): void {
-        try {
-            (_xem as any).remove(listenerId);
-        } catch (e) {
-            // ignore
-        }
+    // /**
+    //  * UI override: remove a specific listener id (both DOM + bus) via UI _xem.
+    //  */
+    // removeEventListener(listenerId: string): void {
+    //     try {
+    //         (_xem as any).remove(listenerId);
+    //     } catch (e) {
+    //         // ignore
+    //     }
 
-        // cleanup index
-        if (!this._event_listeners_ids) return;
-        for (const [ev, ids] of Object.entries(this._event_listeners_ids)) {
-            const idx = (ids as string[]).indexOf(listenerId);
-            if (idx >= 0) (ids as string[]).splice(idx, 1);
-            if ((ids as string[]).length === 0) delete this._event_listeners_ids[ev];
-        }
-    }
+    //     // cleanup index
+    //     if (!this._event_listeners_ids) return;
+    //     for (const [ev, ids] of Object.entries(this._event_listeners_ids)) {
+    //         const idx = (ids as string[]).indexOf(listenerId);
+    //         if (idx >= 0) (ids as string[]).splice(idx, 1);
+    //         if ((ids as string[]).length === 0) delete this._event_listeners_ids[ev];
+    //     }
+    // }
 
-    /**
-     * UI override convenience: remove ALL listeners for an eventName.
-     */
-    removeAllEventListeners(eventName?: string): void {
-        if (!this._event_listeners_ids) return;
+    // /**
+    //  * UI override convenience: remove ALL listeners for an eventName.
+    //  */
+    // removeAllEventListeners(eventName?: string): void {
+    //     if (!this._event_listeners_ids) return;
 
-        const keys = eventName ? [eventName] : Object.keys(this._event_listeners_ids);
-        for (const ev of keys) {
-            const ids = this._event_listeners_ids[ev] || [];
-            for (const id of ids) {
-                try {
-                    (_xem as any).remove(id);
-                } catch { }
-            }
-            delete this._event_listeners_ids[ev];
-        }
-    }
+    //     const keys = eventName ? [eventName] : Object.keys(this._event_listeners_ids);
+    //     for (const ev of keys) {
+    //         const ids = this._event_listeners_ids[ev] || [];
+    //         for (const id of ids) {
+    //             try {
+    //                 (_xem as any).remove(id);
+    //             } catch { }
+    //         }
+    //         delete this._event_listeners_ids[ev];
+    //     }
+    // }
 
     // ✅ MUST match base signature: removeChild(child: XObject, dispose?: boolean)
     removeChild(child: XObject, dispose?: boolean): void {
@@ -501,34 +524,271 @@ export class XUIObject extends XObject {
     async onMount() {
         if ((this as any)._mounted) return;
 
-        if (this._on_click) {
-            if (typeof this._on_click === "function") {
-                this.addEventListener("click", (e: any) => (this._on_click as any)(this, e));
-            } else {
-                this.addEventListener("click", (e: any) => {
-                    this.checkAndRunInternalFunction(this._on_click, e);
-                });
-            }
-        }
-
         await super.onMount();
 
         const el = this._dom_object;
+
         if (el instanceof HTMLElement) {
+
+            const onMap = (this as any)._on || {};
+            const onceMap = (this as any)._once || {};
+
+            // --------------------------------
+            // 🔒 bind _on / _once ONLY ONCE
+            // --------------------------------
+            if (!(this as any)._dom_events_bound) {
+                (this as any)._dom_events_bound = true;
+
+                /* -------------------------------------------------- */
+                /* REGULAR EVENTS                                     */
+                /* -------------------------------------------------- */
+
+                for (const eventName of Object.keys(onMap)) {
+
+                    const handler = onMap[eventName];
+
+                    // skip lifecycle hooks
+                    if (eventName === "show" || eventName === "hide") {
+                        continue;
+                    }
+
+                    /* ---------------------------------------------- */
+                    /* XEM EVENTS                                     */
+                    /* ---------------------------------------------- */
+
+                    if (eventName.startsWith("xem:")) {
+
+                        const xemEvent = eventName.slice(4);
+
+                        this.addEventListener(
+                            xemEvent,
+                            handler,
+                        );
+                        continue;
+                    }
+
+                    /* ---------------------------------------------- */
+                    /* DOM EVENTS                                     */
+                    /* ---------------------------------------------- */
+
+                    el.addEventListener(eventName, async (e: any) => {
+                        await this.checkAndRunInternalFunction(handler, e);
+                    });
+                }
+
+                /* -------------------------------------------------- */
+                /* ONCE EVENTS                                        */
+                /* -------------------------------------------------- */
+
+                for (const eventName of Object.keys(onceMap)) {
+
+                    const handler = onceMap[eventName];
+
+                    // skip lifecycle hooks
+                    if (eventName === "show" || eventName === "hide") {
+                        continue;
+                    }
+
+                    /* ---------------------------------------------- */
+                    /* XEM ONCE EVENTS                                */
+                    /* ---------------------------------------------- */
+
+                    if (eventName.startsWith("xem:")) {
+
+                        const xemEvent = eventName.slice(4);
+
+                        this.addEventListener(
+                            xemEvent,
+                            handler,
+                            { _once: true }
+                        );
+
+                        continue;
+                    }
+
+                    /* ---------------------------------------------- */
+                    /* DOM ONCE EVENTS                                */
+                    /* ---------------------------------------------- */
+
+                    el.addEventListener(
+                        eventName,
+                        async (e: any) => {
+                            await this.checkAndRunInternalFunction(handler, e);
+                        },
+                        { once: true }
+                    );
+                }
+            }
+
+            // --------------------------------
+            // 🔒 bind FLOW ONLY ONCE
+            // --------------------------------
+            if (
+                this._flow &&
+                (this as any)._flow_auto !== false &&
+                !(this as any)._flow_bound
+            ) {
+                (this as any)._flow_bound = true;
+
+                const eventName = this._flow_event || "click";
+
+                const hasHandler =
+                    (this as any)._on?.[eventName] ||
+                    (this as any)._once?.[eventName];
+
+                if (!hasHandler) {
+                    el.addEventListener(eventName, async (e: any) => {
+                        try {
+                            let flowId: string | undefined;
+                            let payloadTemplate: Record<string, any> | undefined;
+                            if (typeof this._flow === "string") {
+                                flowId = this._flow;
+
+                            } else if (
+                                this._flow &&
+                                typeof this._flow === "object"
+                            ) {
+
+                                flowId = this._flow._id;
+                                payloadTemplate = this._flow._payload;
+                            }
+
+                            if (!flowId) {
+                                _xlog.warn("[XUIObject] missing _flow._id");
+                                return;
+                            }
+
+                            const ctx = {
+                                event: {
+                                    type: e?.type,
+                                    value: e?.target?.value,
+                                    checked: e?.target?.checked,
+                                    key: e?.key
+                                }
+                            };
+
+                            let payload: Record<string, any>;
+
+                            if (
+                                payloadTemplate &&
+                                typeof payloadTemplate === "object"
+                            ) {
+
+                                payload = this.resolveFlowPayload(
+                                    payloadTemplate,
+                                    ctx
+                                );
+
+                            } else {
+
+                                // fallback behavior
+                                payload = ctx.event;
+                            }
+
+                            _xem.fire("ui:flow-trigger", {
+                                _flow_id: flowId,
+                                _event_name: eventName,
+                                _event_payload: payload,
+                                _object_id: this._id,
+                                _app_id: XUIRuntime.getClient()?._app_id,
+                                _source: "ui"
+                            });
+
+                        } catch (err) {
+
+                            _xlog.error(
+                                "[XUIObject] _flow trigger failed",
+                                err
+                            );
+                        }
+                    });
+                }
+            }
+
+            // --------------------------------
+            // visibility state
+            // --------------------------------
             try {
-                const cs = getComputedStyle(el).getPropertyValue("display");
+
+                const cs =
+                    getComputedStyle(el).getPropertyValue("display");
+
                 this._visible = cs !== "none";
+
                 if (!this._base_display && cs && cs !== "none") {
                     this._base_display = cs;
                 }
+
             } catch {
+
                 this._visible = true;
             }
+
         } else {
+
             this._visible = true;
         }
 
         (this as any)._mounted = true;
+    }
+
+    private resolveFlowPayload(template: any, ev: any) {
+
+        const eventCtx = {
+            type: ev?.type,
+            value: ev?.target?.value,
+            checked: ev?.target?.checked,
+            key: ev?.key,
+            target: ev?.target
+        };
+
+        const resolve = (val: any): any => {
+
+            if (typeof val === "string") {
+
+                /* ---------------- xdata ---------------- */
+
+                if (val.startsWith("$xdata.")) {
+                    const key = val.slice(7);
+                    return XData.get(key);
+                }
+
+                /* ---------------- event ---------------- */
+
+                if (val === "$event") {
+                    return eventCtx;
+                }
+
+                if (val.startsWith("$event.")) {
+                    const key = val.slice(7);
+                    return eventCtx[key as keyof typeof eventCtx];
+                }
+
+                return val;
+            }
+
+            /* ---------------- arrays ---------------- */
+
+            if (Array.isArray(val)) {
+                return val.map(resolve);
+            }
+
+            /* ---------------- objects ---------------- */
+
+            if (val && typeof val === "object") {
+                const out: any = {};
+
+                for (const k of Object.keys(val)) {
+                    out[k] = resolve(val[k]);
+                }
+
+                return out;
+            }
+
+            return val;
+        };
+
+        return resolve(template);
     }
 
     async onShow() {

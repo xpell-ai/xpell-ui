@@ -2,8 +2,9 @@ import { _x } from "@xpell/core";
 
 import { XUI } from "./XUI";
 import { XVM } from "../XVM/XVM";
-import { FlowManagerClient } from "../XFM/FlowManagerClient";
+import { XFM } from "../XFM/FlowManagerClient";
 import { XVMClient, type XVMClientOptions } from "../XVM/XVMClient";
+import { EntityClient } from "../XDB/EntityClient";
 
 /* -------------------------------------------------------------------------- */
 
@@ -11,6 +12,7 @@ export type XUIRuntimeOptions = {
   auto_start?: boolean;
   load_flow?: boolean;
   load_xvm?: boolean;
+  load_entity_client?: boolean;
 };
 
 export type XUIRuntimeAppOptions = XVMClientOptions & {
@@ -26,11 +28,14 @@ export class XUIRuntime {
   /* LOAD MODULES                                                           */
   /* ---------------------------------------------------------------------- */
 
+
+
   static loadModules(opts: XUIRuntimeOptions = {}) {
     const {
       auto_start = true,
       load_flow = true,
-      load_xvm = true
+      load_xvm = true,
+      load_entity_client = true
     } = opts;
 
     _x.loadModule(XUI);
@@ -40,7 +45,11 @@ export class XUIRuntime {
     }
 
     if (load_flow) {
-      _x.loadModule(new FlowManagerClient());
+      _x.loadModule(XFM);
+    }
+
+    if (load_entity_client) {
+      _x.loadModule(new EntityClient());
     }
 
     if (auto_start) {
@@ -81,6 +90,9 @@ export class XUIRuntime {
     });
 
     this._client = client;
+    if (typeof window !== "undefined") {
+      (window as any).__xvm_client = client;
+    }
 
     /* -------------------------------------------------------------- */
     /* 3. Bootstrap app                                               */
@@ -96,6 +108,13 @@ export class XUIRuntime {
   /* ---------------------------------------------------------------------- */
 
   static getClient(): XVMClient | null {
+    return this._client;
+  }
+
+  static requireClient(): XVMClient {
+    if (!this._client) {
+      throw new Error("[xui-runtime] XVMClient not initialized");
+    }
     return this._client;
   }
 }

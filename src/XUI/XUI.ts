@@ -83,8 +83,7 @@ export class XUIModule extends XModule {
 
   }
 
-  load() {
-    super.load?.();
+  async onLoad() {
     // Set the XEventManager instance for the entire app (DOM adapter)
     setXEventManager(_xem);
     _xem.fire(this._events._loaded);

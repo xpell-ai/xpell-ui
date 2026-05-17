@@ -1,7 +1,18 @@
-import { XModule, type XCommand, _x, _xu } from "@xpell/core";
+import { XModule, type XCommand, _x, _xu, _xlog, _xd } from "@xpell/core";
 import { _xem } from "../XEM/XEventManager";
+import { XUIRuntime } from "../XUI/XUIRuntime";
+
 
 /* -------------------------------------------------------------------------- */
+
+const is_debug = () =>
+    true//typeof window !== "undefined" && (window as any)?.__xpell_debug === true;
+
+const log_debug = (message: string, payload?: any) => {
+    if (is_debug()) {
+        _xlog.log(message, payload);
+    }
+};
 
 type XFlowBinding = {
     _flow_id: string;
@@ -10,17 +21,70 @@ type XFlowBinding = {
     _env?: string;
 };
 
+type XFlowTriggerPayload = {
+    _flow_id: string;
+    _event_name?: string;
+    _event_payload?: object;
+    _app_id?: string;
+    _env?: string;
+    _source?: "ui" | "event";
+};
+
 /* -------------------------------------------------------------------------- */
 
 export class FlowManagerClient extends XModule {
     static _name = "flow-client";
+    static _instance: FlowManagerClient | null = null;
 
     private _bindings: XFlowBinding[] = [];
     private _bound_events: Set<string> = new Set();
+    private _ui_listener_bound = false;
 
     constructor() {
         super({ _name: FlowManagerClient._name });
+        if (FlowManagerClient._instance) {
+            return FlowManagerClient._instance;
+        }
+        FlowManagerClient._instance = this;
     }
+
+    async onLoad() {
+
+        if (this._ui_listener_bound) return;
+        this._ui_listener_bound = true;
+        _xem.on("ui:flow-trigger", async (payload: any) => {
+            log_debug("[flow-client] ui:flow-trigger received raw", payload);
+            if (!payload || typeof payload._flow_id !== "string") {
+                _xlog.warn("[flow-client] invalid ui trigger", payload);
+                return;
+            }
+
+            log_debug("[flow-client] ui-trigger received", payload);
+
+            const client = (window as any)?.__xvm_client;
+
+
+            const safe_payload = {
+                _flow_id: payload._flow_id,
+                _event_name: typeof payload._event_name === "string" ? payload._event_name : undefined,
+                _event_payload: (payload.hasOwnProperty("_event_payload") && typeof payload._event_payload === "object" && payload._event_payload !== null) ? payload._event_payload : undefined,
+                _app_id: payload._app_id ?? client?._app_id,
+                _env: payload._env ?? client?._env,
+                _source: payload._source === "ui" || payload._source === "event" ? payload._source : "ui"
+            };
+
+            try {
+                await _x.execute({
+                    _module: "flow-client",
+                    _op: "trigger",
+                    _params: safe_payload
+                });
+            } catch (err) {
+                _xlog.error("[flow-client] ui trigger failed", err, safe_payload);
+            }
+        });
+    }
+
 
     /* ------------------------------------------------------------------------ */
     /* REGISTER FLOW BINDING                                                    */
@@ -34,6 +98,22 @@ export class FlowManagerClient extends XModule {
         const app_id = _xu.ensure_string(params._app_id, "_app_id");
         const env = params._env ?? "default";
 
+        const duplicate = this._bindings.find((binding) =>
+            binding._flow_id === flow_id &&
+            binding._event === event &&
+            binding._app_id === app_id
+        );
+
+        if (duplicate) {
+            log_debug("[flow-client] bind skipped (duplicate)", {
+                flow_id,
+                event,
+                app_id
+            });
+
+            return { _ok: true, _duplicate: true };
+        }
+
         const binding: XFlowBinding = {
             _flow_id: flow_id,
             _event: event,
@@ -46,6 +126,133 @@ export class FlowManagerClient extends XModule {
         this.ensure_event_listener(event);
 
         return { _ok: true };
+    }
+
+    /* ------------------------------------------------------------------------ */
+    /* TRIGGER FLOW                                                             */
+    /* ------------------------------------------------------------------------ */
+
+    private normalize_trigger_payload(params_in: Record<string, any>): XFlowTriggerPayload {
+        const params = _xu.ensure_params(params_in);
+
+        return {
+            _flow_id: _xu.ensure_string(params._flow_id, "_flow_id"),
+            _event_name: typeof params._event_name === "string" ? params._event_name : undefined,
+            _event_payload: typeof params._event_payload === "object" && params._event_payload !== null ? params._event_payload : {},
+            _app_id: typeof params._app_id === "string" ? params._app_id : undefined,
+            _env: typeof params._env === "string" ? params._env : undefined,
+            _source: params._source === "ui" || params._source === "event" ? params._source : undefined
+        };
+    }
+
+    private async trigger_flow(params_in: Record<string, any>) {
+
+        const normalized = this.normalize_trigger_payload(params_in);
+
+        const client = XUIRuntime.requireClient();
+
+        const app_id =
+            normalized._app_id ?? client?._app_id;
+
+        const env =
+            normalized._env ?? client?._env;
+
+        /* -------------------------------------------------- */
+        /* VALIDATION                                         */
+        /* -------------------------------------------------- */
+
+        if (!app_id || typeof app_id !== "string") {
+
+            throw new Error(
+                "[flow-client] missing _app_id (no payload and no XVM client)"
+            );
+        }
+
+        /* -------------------------------------------------- */
+        /* DEBUG                                              */
+        /* -------------------------------------------------- */
+
+        log_debug("[flow-client] trigger", {
+            event: normalized._event_name,
+            flow_id: normalized._flow_id,
+            payload: normalized._event_payload,
+            source: normalized._source
+        });
+
+        /* -------------------------------------------------- */
+        /* SEND                                               */
+        /* -------------------------------------------------- */
+
+        const res = await client.sendXcmd({
+            _module: "flow",
+            _op: "run",
+            _params: {
+
+                _flow_id: normalized._flow_id,
+
+                _app_id: app_id,
+
+                ...(env !== undefined
+                    ? { _env: env }
+                    : {}),
+
+                _event_payload:
+                    normalized._event_payload || {},
+
+                ...(normalized._event_name
+                    ? { _event_name: normalized._event_name }
+                    : {})
+            }
+        });
+
+        log_debug(
+            "[flow-client] flow run response",
+            res
+        );
+
+        /* -------------------------------------------------- */
+        /* APPLY FLOW OUTPUTS                                 */
+        /* -------------------------------------------------- */
+
+        // wormhole client may already unwrap _result
+        const flow =
+            res?._flow ??
+            res?._result?._flow;
+
+        if (
+            flow?._outputs &&
+            typeof flow._outputs === "object"
+        ) {
+
+            for (const key of Object.keys(flow._outputs)) {
+
+                const raw =
+                    flow._outputs[key];
+
+                const value =
+                    raw &&
+                        typeof raw === "object" &&
+                        raw._ok === true &&
+                        raw.hasOwnProperty("_result")
+                        ? raw._result
+                        : raw;
+
+                _xd.set(
+                    key,
+                    value,
+                    {
+                        source: "flow-client"
+                    }
+                );
+            }
+        }
+
+        return res;
+    }
+
+    async _trigger(xcmd: XCommand) {
+        const params = _xu.ensure_params(xcmd?._params);
+        return await this.trigger_flow(params);
     }
 
     /* ------------------------------------------------------------------------ */
@@ -65,17 +272,16 @@ export class FlowManagerClient extends XModule {
 
             for (const binding of this._bindings) {
                 if (binding._event !== event) continue;
+                if (evt_payload?._source === "ui") continue;
 
                 try {
-                    await _x.execute({
-                        _module: "flow",
-                        _op: "run",
-                        _params: {
-                            _flow_id: binding._flow_id,
-                            _app_id: binding._app_id,
-                            ...(binding._env ? { _env: binding._env } : {}),
-                            ...(evt_payload !== undefined ? { _event_payload: evt_payload } : {})
-                        }
+                    await this.trigger_flow({
+                        _flow_id: binding._flow_id,
+                        _app_id: binding._app_id,
+                        _env: binding._env,
+                        _event_name: event,
+                        _event_payload: evt_payload ?? {},
+                        _source: "event"
                     });
                 } catch (err) {
                     console.error("[flow-client] flow execution failed", err);
@@ -95,6 +301,10 @@ export class FlowManagerClient extends XModule {
                 bind: {
                     _params: ["_flow_id", "_event", "_app_id", "_env?"],
                     _desc: "Bind event → flow execution"
+                },
+                trigger: {
+                    _params: ["_flow_id", "_event_payload?", "_event_name?", "_app_id?", "_env?"],
+                    _desc: "Trigger flow execution directly"
                 }
             }
         };

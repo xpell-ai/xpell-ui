@@ -2,16 +2,20 @@ import { _xd, _xlog } from "@xpell/core";
 
 import { _xem } from "../XEM/XEventManager";
 import Wormholes from "../Wormholes/Wormholes";
-import { XDB } from "../XDB/XDB";
+import { XDB } from "../XDB/XDBClient";
 import { XVM, type XVMApp } from "./XVM";
 
 const LOG = "[xvm-client]";
 const DEFAULT_REGION = "main";
 const DEFAULT_CONTAINER_ID = "region-main";
 
-const EVT_SERVER_XVM_UPDATE = "server-xvm:update";
+const EVT_XVM_UPDATE = "xvm:update";
 const EVT_XVM_VIEW_RENDERED = "xvm:view-rendered";
 const EVT_XVM_CONNECTION = "xvm:connection-change";
+export const _XD_KEYS = {
+  XVM_APP_ID: "xvm:current_app_id",
+  XVM_ENV: "xvm:current_env",
+}
 
 type ServerXVMApp = {
   _app_id: string;
@@ -137,10 +141,34 @@ export class XVMClient {
 
     this._cache_key_app = `xvm:last_app:${this._env}:${this._app_id}`;
     this._cache_key_version = `xvm:version:${this._env}:${this._app_id}`;
+    _xd.set(
+        _XD_KEYS.XVM_APP_ID,
+        this._app_id,
+        {
+            source: "xvm-client"
+        }
+    );
+
+    _xd.set(
+        _XD_KEYS.XVM_ENV,
+        this._env,
+        {
+            source: "xvm-client"
+        }
+    );
   }
 
   get_current_view_id(): string {
     return this._current_view_id;
+  }
+
+
+  getActiveAppId() {
+    return this._app_id;
+  }
+
+  getActiveEnv() {
+    return this._env;
   }
 
   _log(...args: any[]) {
@@ -199,6 +227,7 @@ export class XVMClient {
   }
 
   _sync_cache_state() {
+    // TODO: consider adding a timestamp and/or version to the cache and use it to determine staleness of cached data
     // noop (kept for API parity)
   }
 
@@ -805,6 +834,20 @@ export class XVMClient {
         this._log("offline: using cached rendered view");
       }
     }
+  }
+
+  get_view(view_id: string): Record<string, any> | null {
+    if (!view_id) return null;
+    return this._views_cache.get(view_id) ?? null;
+  }
+
+  get_current_view(): Record<string, any> | null {
+    if (!this._current_view_id) return null;
+    return this.get_view(this._current_view_id);
+  }
+
+  async sendXcmd(xcmd: any) {
+    return await Wormholes.sendXcmd(xcmd);
   }
 }
 
