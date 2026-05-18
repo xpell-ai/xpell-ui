@@ -146,7 +146,10 @@ export class WormholesV2 implements WormholesClientAPI {
           const hp: any = env._payload ?? {};
           if (hp?._wid && !this.__wid) this.__wid = hp._wid;
         }
-
+        // _xlog.debug(
+        //   "[WHv2] FULL ENVELOPE",
+        //   JSON.stringify(env, null, 2)
+        // );
         this._handleEnvelope(env);
       } catch (e) {
         _xlog.error(e);
@@ -262,9 +265,17 @@ export class WormholesV2 implements WormholesClientAPI {
         delete this._waiters[rid];
 
         const p: any = env._payload ?? {};
-        if (p._ok === false) waiter._reject(p._result ?? p);
-        else waiter._resolve(p._result ?? p);
-        return;
+        if (p._ok === false) {
+          _xlog.error("[WHv2] RES error", p);
+          waiter._reject({
+            _transport: env,
+            _error: p._error ?? p
+          });
+          return;
+        }else {
+          waiter._resolve(p._result ?? p);
+          return;
+        }
       }
 
       case "EVT":

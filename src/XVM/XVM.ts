@@ -870,6 +870,10 @@ class _XVM extends XModule {
 
   async _load_app(cmd: any) {
     const app = XParams.json(cmd, "_app", "app") as any;
+    const _debug = XParams.bool(cmd, "_debug", false);
+    if(_debug) {
+      _xlog.log("XVM _load_app", cmd);
+    }
     if (!app) throw new Error("xvm load_app: missing _app");
     return this.loadApp(app);
   }
@@ -885,17 +889,80 @@ class _XVM extends XModule {
   }
 
   async _navigate(cmd: any) {
-    const to = XParams.str(cmd, "_to", "to", "_id", "id", 0) || "";
-    const region = XParams.str(cmd, "_region", "region", 1) as any;
-    const replace = XParams.bool(cmd, "_replace", false);
-    const silent = XParams.bool(cmd, "_silent", false);
-    const containerId = XParams.str(cmd, "_container_id", "container_id", "_containerId", "containerId", 4) as any;
+    const _debug = XParams.bool(cmd, "_debug", false);
+    if(_debug) {
+      _xlog.log("XVM _navigate", cmd);
+    }
+    const p =
+      cmd?._params || cmd;
 
-    // optional params payload
-    const params = XParams.json(cmd, "_params", "params") as any;
+    const to =
+      XParams.str(
+        p,
+        "_to",
+        "to",
+        "_id",
+        "id",
+        0
+      ) || "";
 
-    if (!to) throw new Error("xvm navigate: missing _to/_id");
-    return this.navigate(to, { region, replace, silent, containerId, ...(params ? ({ _params: params } as any) : {}) } as any);
+    const region =
+      XParams.str(
+        p,
+        "_region",
+        "region",
+        1
+      ) as any;
+
+    const replace =
+      XParams.bool(
+        p,
+        "_replace",
+        false
+      );
+
+    const silent =
+      XParams.bool(
+        p,
+        "_silent",
+        false
+      );
+
+    const containerId =
+      XParams.str(
+        p,
+        "_container_id",
+        "container_id",
+        "_containerId",
+        "containerId",
+        4
+      ) as any;
+
+    const params =
+      XParams.json(
+        p,
+        "_params",
+        "params"
+      ) as any;
+
+    if (!to) {
+      throw new Error(
+        "xvm navigate: missing _to/_id"
+      );
+    }
+
+    return this.navigate(
+      to,
+      {
+        region,
+        replace,
+        silent,
+        containerId,
+        ...(params
+          ? { _params: params }
+          : {})
+      } as any
+    );
   }
 
   async _back(cmd: any) {

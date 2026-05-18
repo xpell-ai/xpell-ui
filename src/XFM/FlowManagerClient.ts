@@ -32,6 +32,17 @@ type XFlowTriggerPayload = {
 
 /* -------------------------------------------------------------------------- */
 
+const run_command_or_list = async (cmd: any) => {
+  if (Array.isArray(cmd)) {
+    for (const item of cmd) {
+      await _x.execute(item);
+    }
+    return;
+  }
+
+  await _x.execute(cmd);
+};
+
 export class FlowManagerClient extends XModule {
     static _name = "flow-client";
     static _instance: FlowManagerClient | null = null;
@@ -149,7 +160,7 @@ export class FlowManagerClient extends XModule {
 
         const normalized = this.normalize_trigger_payload(params_in);
 
-        const client = XUIRuntime.requireClient();
+        const client: any = XUIRuntime.requireClient();
 
         const app_id =
             normalized._app_id ?? client?._app_id;
@@ -183,27 +194,40 @@ export class FlowManagerClient extends XModule {
         /* SEND                                               */
         /* -------------------------------------------------- */
 
-        const res = await client.sendXcmd({
-            _module: "flow",
-            _op: "run",
-            _params: {
+        let res: any;
 
-                _flow_id: normalized._flow_id,
+        try {
+            res = await client.sendXcmd({
+                _module: "flow",
+                _op: "run",
+                _params: {
+                    _flow_id: normalized._flow_id,
+                    _app_id: app_id,
+                    ...(env !== undefined
+                        ? { _env: env }
+                        : {}),
+                    _event_payload:
+                        normalized._event_payload || {},
+                    ...(normalized._event_name
+                        ? { _event_name: normalized._event_name }
+                        : {})
+                }
+            });
 
-                _app_id: app_id,
+            _xlog.log(
+                "FLOW SEND RESULT",
+                JSON.stringify(res, null, 2)
+            );
 
-                ...(env !== undefined
-                    ? { _env: env }
-                    : {}),
+        } catch (err) {
 
-                _event_payload:
-                    normalized._event_payload || {},
+            _xlog.error(
+                "FLOW SEND ERROR",
+                err
+            );
 
-                ...(normalized._event_name
-                    ? { _event_name: normalized._event_name }
-                    : {})
-            }
-        });
+            throw err;
+        }
 
         log_debug(
             "[flow-client] flow run response",
@@ -246,7 +270,65 @@ export class FlowManagerClient extends XModule {
                 );
             }
         }
+        log_debug(
+            "[flow-client] FLOW OBJECT",
+            flow
+        );
+        const last =
+            flow?._last;
+        const flow_definition =
+            client?._flows?.get(
+                normalized._flow_id
+            );
 
+        log_debug(
+            "[flow-client] FLOW DEFINITION",
+            flow_definition
+        );
+
+        log_debug(
+            "[flow-client] FLOW LAST",
+            last
+        );
+
+
+        if (
+            last &&
+            last._ok === true &&
+            flow_definition?._on_success
+        ) {
+
+            try {
+
+                //await _x.execute(flow_definition._on_success);
+                await run_command_or_list(flow_definition._on_success);
+
+            } catch (error) {
+
+                _xlog.error(
+                    "[flow-client] on_success failed",
+                    error
+                );
+
+            }
+        }
+
+        if (
+            last &&
+            last._ok !== true &&
+            flow_definition?._on_error
+        ) {
+            try {
+                await run_command_or_list(flow_definition._on_error);
+            } catch (error) {
+                _xlog.error(
+                    "[flow-client] on_error failed",
+                    error
+                );
+            }
+        }
+
+        
         return res;
     }
 

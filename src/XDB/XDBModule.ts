@@ -20,6 +20,7 @@ import {
 } from "@xpell/core";
 
 import XDB from "./XDBClient.js";
+import { _xlog } from "@xpell/core";
 
 export class XDBClientModule extends XModule {
 
@@ -113,10 +114,15 @@ export class XDBClientModule extends XModule {
         try {
 
             const key:any =
-                xcmd?._params?.key;
+                xcmd?._params?.key || xcmd?._params?._key;
 
             const value:any =
-                xcmd?._params?.value;
+                xcmd?._params?.value || xcmd?._params?._value;
+
+            const _debug = !!xcmd?._params?._debug;
+            if (_debug) {
+                _xlog.debug("[XDBClientModule] _save_string", { key, value });
+            }
 
             XDB.saveString(
                 key,

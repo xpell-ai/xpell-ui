@@ -28,6 +28,8 @@ type ServerGetAppRes = {
   _app: ServerXVMApp;
   _view_ids?: string[];
   _views?: Record<string, any>;
+  _flow_ids?: string[];
+  _flows?: Record<string, any>;
 };
 
 type ServerGetViewRes = {
@@ -113,6 +115,7 @@ export class XVMClient {
   _on_app_mounted?: (payload: { _app_id: string; _env: string; _region: string }) => void;
 
   _views_cache: Map<string, any> = new Map();
+  _flows: Map<string, any> = new Map();
   _known_view_ids: Set<string> = new Set();
   _cmd_seq = 0;
   _app: ServerXVMApp | null = null;
@@ -142,19 +145,19 @@ export class XVMClient {
     this._cache_key_app = `xvm:last_app:${this._env}:${this._app_id}`;
     this._cache_key_version = `xvm:version:${this._env}:${this._app_id}`;
     _xd.set(
-        _XD_KEYS.XVM_APP_ID,
-        this._app_id,
-        {
-            source: "xvm-client"
-        }
+      _XD_KEYS.XVM_APP_ID,
+      this._app_id,
+      {
+        source: "xvm-client"
+      }
     );
 
     _xd.set(
-        _XD_KEYS.XVM_ENV,
-        this._env,
-        {
-            source: "xvm-client"
-        }
+      _XD_KEYS.XVM_ENV,
+      this._env,
+      {
+        source: "xvm-client"
+      }
     );
   }
 
@@ -507,11 +510,23 @@ export class XVMClient {
   }
 
   async _hydrate_all_views_from_server(source: string) {
-    const out = (await this._send_cmd("get-app", {
-      _app_id: this._app_id,
+    const params: any = {
       _env: this._env,
-      _include_views: true,
-    })) as any;
+      _include_views: false,
+      _include_flows: true,
+    };
+
+    if (
+      typeof this._app_id === "string" &&
+      this._app_id.trim().length > 0
+    ) {
+      params._app_id = this._app_id;
+    }
+
+    const out = (await this._send_cmd(
+      "get-app",
+      params
+    )) as ServerGetAppRes;
 
     if (!is_obj(out) || !is_obj(out._app)) {
       throw new Error(`Invalid ${source} get-app(include_views=true) response`);
@@ -666,6 +681,16 @@ export class XVMClient {
     this._app = next_app;
     this._known_view_ids.clear();
     next_view_ids.forEach((v) => this._known_view_ids.add(v));
+    this._flows.clear();
+
+    if (res._flows && typeof res._flows === "object") {
+      for (const key of Object.keys(res._flows)) {
+        this._flows.set(
+          key,
+          res._flows[key]
+        );
+      }
+    }
     this._bump_version_if_newer(next_version, "get-app");
     this._persist_cached_app(this._app, next_view_ids, next_version);
     this._app_needs_refresh = true;
@@ -791,11 +816,23 @@ export class XVMClient {
       this._ensure_connected();
       await this._wait_for_wormhole_open();
 
-      const out = (await this._send_cmd("get-app", {
-        _app_id: this._app_id,
+      const params: any = {
         _env: this._env,
         _include_views: false,
-      })) as ServerGetAppRes;
+        _include_flows: true,
+      };
+
+      if (
+        typeof this._app_id === "string" &&
+        this._app_id.trim().length > 0
+      ) {
+        params._app_id = this._app_id;
+      }
+
+      const out = (await this._send_cmd(
+        "get-app",
+        params
+      )) as ServerGetAppRes;
       const app_apply = this._apply_server_get_app(out);
 
       const entry = this._pick_entry_view_id(this._app, app_apply._view_ids);

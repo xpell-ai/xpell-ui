@@ -5,6 +5,7 @@ import { XVM } from "../XVM/XVM";
 import { XFM } from "../XFM/FlowManagerClient";
 import { XVMClient, type XVMClientOptions } from "../XVM/XVMClient";
 import { EntityClient } from "../XDB/EntityClient";
+import { XDBClientModule } from "../XDB/XDBModule";
 
 /* -------------------------------------------------------------------------- */
 
@@ -30,7 +31,7 @@ export class XUIRuntime {
 
 
 
-  static loadModules(opts: XUIRuntimeOptions = {}) {
+  static async loadModules(opts: XUIRuntimeOptions = {}) {
     const {
       auto_start = true,
       load_flow = true,
@@ -38,19 +39,21 @@ export class XUIRuntime {
       load_entity_client = true
     } = opts;
 
-    _x.loadModule(XUI);
+    await _x.loadModuleAsync(XUI);
+    await _x.loadModuleAsync(new XDBClientModule());
 
     if (load_xvm) {
-      _x.loadModule(XVM);
+      await _x.loadModuleAsync(XVM);
     }
 
     if (load_flow) {
-      _x.loadModule(XFM);
+      await _x.loadModuleAsync(XFM);
     }
 
     if (load_entity_client) {
-      _x.loadModule(new EntityClient());
+      await _x.loadModuleAsync(new EntityClient());
     }
+
 
     if (auto_start) {
       _x.start();
@@ -69,7 +72,7 @@ export class XUIRuntime {
     /* 1. Load modules                                                */
     /* -------------------------------------------------------------- */
 
-    this.loadModules(opts.runtime);
+    await this.loadModules(opts.runtime);
 
     /* -------------------------------------------------------------- */
     /* 2. Create XVM client                                           */
