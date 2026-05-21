@@ -9,7 +9,10 @@ import {
     XObject, type XObjectData,
     type XEventListenerOptions, _xlog, type XObjectOnEventIndex,
     type XNanoCommand, type XDataXporter,
-    XData
+    XData,
+    type XpellSkill,
+    type XpellSkillCommand,
+    type XNanoCommandPack
 } from "@xpell/core";
 
 import { _xem } from "../XEM/XEventManager"
@@ -26,6 +29,55 @@ export type XUIHandler = Function | string | any | any[];
 
 export type XUIFlowDef = string | { _id: string; _payload?: Record<string, any>; };
 
+const XUIOBJECT_SKILL: XpellSkill = {
+    _id: "xuiobject",
+    _title: "XUIObject Runtime UI Contract",
+    _version: "1.0.0",
+    _active: true,
+    _type: "view-skill",
+    _requires: ["xobject", "xem", "xdata"],
+
+    _description:
+        "Base UI runtime object for DOM creation, mounting, visibility, styling classes, semantic variants, UI events, and flow triggering.",
+
+    _fields: {
+        _html_tag: "DOM tag to create.",
+        _html_ns: "Optional DOM namespace.",
+        _html: "Generated HTML cache.",
+        _visible: "Current visibility state.",
+        _parent_element: "DOM parent element id.",
+        _text: "Text content/value.",
+        _on_show: "Handler when object is shown.",
+        _on_hide: "Handler when object is hidden.",
+        _on_show_animation: "Animation class used on show.",
+        _on_hide_animation: "Animation class used on hide.",
+        _flow: "Flow id or flow definition triggered by UI event.",
+        _flow_event: "DOM event that triggers _flow. Default click.",
+        _flow_auto: "Disable automatic flow binding when false.",
+        _variant: "Semantic visual variant.",
+        _tone: "Semantic color/tone.",
+        _size: "Semantic size.",
+        _density: "Semantic density.",
+        _elevation: "Semantic elevation.",
+        "_dom_attrs": "Any non-underscore field is passed as a DOM attribute when supported, e.g. id, title, role, aria-label, data-*."
+    },
+
+    _core_rules: [
+        "Use XUIObject fields for UI behavior only.",
+        "Use _children for UI composition.",
+        "Use _variant, _tone, _size, _density, and _elevation instead of raw class/style.",
+        "Use _on.click for local UI actions.",
+        "Use _flow for app/business actions.",
+        "Do not generate JavaScript functions in JSON."
+    ],
+
+    _notes: [
+        "XUIObject extends XObject.",
+        "XUIObject binds DOM events from _on/_once.",
+        "XUIObject can trigger flows through _flow and ui:flow-trigger."
+    ]
+};
+
 
 export interface XUIObjectData extends XObjectData {
     _html_tag?: string;
@@ -41,9 +93,53 @@ export interface XUIObjectData extends XObjectData {
     _flow?: string;
     _flow_event?: string;
     _flow_auto?: boolean;
+    _variant?: string;
+    _tone?: string;
+    _size?: string;
+    _density?: string;
+    _elevation?: string;
+    _update_data_source_on_change?: boolean;
+    _update_data_source_event?: "input" | "change";
 }
 
 export class XUIObject extends XObject {
+
+    static _xtype = "xuiobject";
+    static _skill: XpellSkill = XUIOBJECT_SKILL;
+
+
+    static getOwnNanoCommands(): XNanoCommandPack {
+        return {
+            ..._xuiobject_basic_nano_commands
+        };
+    }
+
+    static getNanoCommands(): XNanoCommandPack {
+        return {
+            ...super.getNanoCommands(),
+            ...this.getOwnNanoCommands()
+        };
+    }
+
+    static getNanoCommandSkills(): XpellSkillCommand[] {
+        const ownsNanoCommands =
+            Object.prototype.hasOwnProperty.call(
+                this,
+                "getOwnNanoCommands"
+            );
+
+        if (!ownsNanoCommands) {
+            return [];
+        }
+
+        return Object
+            .values(this.getOwnNanoCommands())
+            .map((cmd: any) =>
+                cmd.getSkill?.() ??
+                cmd._skill
+            )
+            .filter(Boolean) as XpellSkillCommand[];
+    }
 
     declare _id: string;
     declare _type: string;
@@ -89,6 +185,11 @@ export class XUIObject extends XObject {
     _on_hide_animation?: string;
     _flow?: XUIFlowDef;
     _flow_event?: string;
+    _variant?: string;
+    _tone?: string;
+    _size?: string;
+    _density?: string;
+    _elevation?: string;
 
     constructor(data: XUIObjectData, defaults: XUIObjectData, skipParse?: boolean) {
         super(data, defaults, true);
@@ -109,6 +210,7 @@ export class XUIObject extends XObject {
         if (!skipParse && data) this.parse(data, reservedWords);
 
     }
+
 
 
     parse(data: XObjectData, ignore?: any): void {
@@ -188,6 +290,7 @@ export class XUIObject extends XObject {
             }
 
             const el = dom_object as HTMLElement;
+            this.applySemanticClasses(el);
 
             if (el.hasAttribute("hidden") || el.style.display === "none") {
                 this._visible = false;
@@ -268,7 +371,7 @@ export class XUIObject extends XObject {
         // if (!this._event_listeners_ids) (this as any)._event_listeners_ids = {};
         // if (!this._event_listeners_ids[eventName]) this._event_listeners_ids[eventName] = [];
         // this._event_listeners_ids[eventName].push(id);
-        const id = super.addEventListener(eventName, handler,  { ...(options as any), _support_html: true });
+        const id = super.addEventListener(eventName, handler, { ...(options as any), _support_html: true });
         return id;
     }
 
@@ -916,6 +1019,33 @@ export class XUIObject extends XObject {
             for (const child of newChildren) {
                 this._dom_object.appendChild(child.dom);
             }
+        }
+    }
+
+    protected applySemanticClasses(el: HTMLElement) {
+
+        // base type class
+        el.classList.add(`x${this._type}`);
+
+        const semanticFields = [
+            "_variant",
+            "_tone",
+            "_size",
+            "_density",
+            "_elevation"
+        ];
+
+        for (const field of semanticFields) {
+
+            const value = (this as any)[field];
+
+            if (!value) continue;
+
+            const cleanField = field.replace("_", "");
+
+            el.classList.add(
+                `x${this._type}--${cleanField}-${value}`
+            );
         }
     }
 }

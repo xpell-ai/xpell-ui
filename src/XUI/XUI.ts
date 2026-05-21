@@ -54,10 +54,35 @@ import {
 } from "@xpell/core";
 
 import { _xem } from "../XEM/XEventManager";
-import XUICoreObjects from "./XUICoreObjects";
+import XUICoreObjects from "./CoreObjects/XUICoreObjects";
+import type {
+  XpellSkill,
+  XpellSkillCommand
+} from "@xpell/core";
+
 import "./Style/xui.css";
 
 export const FIRST_USER_GESTURE = "first-user-gesture";
+
+const XUI_SKILL: XpellSkill = {
+  _id: "xui",
+  _title: "XUI Runtime Module",
+  _version: "1.0.0",
+  _active: true,
+  _type: "client-module-api",
+  _requires: ["xmodule", "xuiobject"],
+
+  _description:
+    "Client-side UI module for creating, mounting, removing, theming, and managing DOM-backed XUI objects.",
+
+  _core_rules: [
+    "XUI creates and mounts UI objects.",
+    "XUI does not own navigation; XVM controls active views.",
+    "XUI.add() and XUI.mount() must not call show().",
+    "Use XUI object _type values, not raw HTML unless needed.",
+    "Use themes and semantic fields instead of raw style/class."
+  ]
+};
 
 /**
  * XUI Module - Xpell User Interface Module for HTML and CSS
@@ -65,8 +90,46 @@ export const FIRST_USER_GESTURE = "first-user-gesture";
 export class XUIModule extends XModule {
   static _module_name = "xui";
 
+  static _skill: XpellSkill = XUI_SKILL;
+
+  static _ops: Record<string, XpellSkillCommand> = {
+    "register-theme": {
+      _name: "register-theme",
+      _scope: "module",
+      _description: "Register a named XUI theme token object.",
+      _params: {
+        _name: "Theme name.",
+        _tokens: "CSS variable token map."
+      }
+    },
+
+    "apply-theme": {
+      _name: "apply-theme",
+      _scope: "module",
+      _description: "Apply a named CSS theme or inline token theme.",
+      _params: {
+        _theme: "Theme name or CSS variable token map."
+      }
+    },
+
+    "create-player": {
+      _name: "create-player",
+      _scope: "module",
+      _description: "Create the root XUI player element.",
+      _params: {
+        _id: "Player id. Default xplayer.",
+        class: "Optional CSS class.",
+        _parent_element: "Optional parent DOM element id.",
+        _set_as_main_player: "Whether to set as main XUI player.",
+        _theme: "Optional theme name or token map."
+      }
+    }
+  };
+
   private _player_element: HTMLElement | null = null;
   private _first_gesture_occurred = false;
+  private _themes: Record<string, Record<string, string>> = {};
+  private _active_theme?: string;
 
   _events = {
     _loaded: "xui-loaded",
@@ -89,6 +152,9 @@ export class XUIModule extends XModule {
     _xem.fire(this._events._loaded);
   }
 
+  getPlayerElement(): HTMLElement | null {
+    return this._player_element;
+  }
   /* ------------------------------------------------------------------------ */
   /* Core creation / mounting                                                  */
   /* ------------------------------------------------------------------------ */
@@ -100,6 +166,57 @@ export class XUIModule extends XModule {
     const d = data ?? { _type: "view", _children: [] };
     if (!(d as any)._type) (d as any)._type = "view";
     return super.create(d) as XUIObject;
+  }
+
+
+  registerTheme(name: string, tokens: Record<string, string>) {
+    this._themes[name] = tokens;
+  }
+
+  applyTheme(
+    theme: string | Record<string, string>,
+    root?: HTMLElement
+  ) {
+
+    const target =
+      root ||
+      this._player_element ||
+      document.documentElement;
+
+    /* ------------------------------------------------------------
+     Remove previous theme classes
+    ------------------------------------------------------------ */
+
+    Array
+      .from(target.classList)
+      .filter(cls => cls.startsWith("xtheme-"))
+      .forEach(cls => target.classList.remove(cls));
+
+    /* ------------------------------------------------------------
+     Named theme (CSS driven)
+    ------------------------------------------------------------ */
+    if (typeof theme === "string") {
+      this._active_theme = theme;
+      target.setAttribute(
+        "data-theme",
+        theme
+      );
+      target.classList.add(
+        `xtheme-${theme}`
+      );
+      _xlog.log("Applied CSS theme", theme);
+      return;
+    }
+
+    /* ------------------------------------------------------------
+     Inline token theme
+    ------------------------------------------------------------ */
+
+    for (const [key, val] of Object.entries(theme)) {
+      target.style.setProperty(key, val);
+    }
+
+    _xlog.log("Applied inline token theme", theme);
   }
 
   /**
@@ -312,7 +429,8 @@ export class XUIModule extends XModule {
     playerId: string = "xplayer",
     cssClass?: string,
     parentElementId?: string,
-    setAsMainPlayer?: boolean
+    setAsMainPlayer?: boolean,
+    theme?: string | Record<string, string>,
   ): HTMLDivElement {
     const parent = parentElementId ? document.getElementById(parentElementId) : document.body;
 
@@ -336,6 +454,9 @@ export class XUIModule extends XModule {
       parent.appendChild(div);
     }
 
+    if (theme) {
+      this.applyTheme(theme, div);
+    }
     return div;
   }
 
@@ -357,7 +478,62 @@ export class XUIModule extends XModule {
     const obj = this.getObject(objectId) as XUIObject | undefined;
     obj?.toggle();
   }
+
+  /**
+   * ops
+   */
+  async _register_theme(cmd: any) {
+    const p = cmd?._params ?? cmd;
+
+    const name = p?._name ?? p?.name;
+    const tokens = p?._tokens ?? p?.tokens;
+
+    if (!name) throw new Error("xui register-theme: missing _name");
+    if (!tokens || typeof tokens !== "object") {
+      throw new Error("xui register-theme: missing _tokens");
+    }
+
+    this.registerTheme(String(name), tokens);
+    return { _ok: true, _result: { _name: name } };
+  }
+
+  async _apply_theme(cmd: any) {
+    const p = cmd?._params ?? cmd;
+
+    const theme =
+      p?._theme ??
+      p?.theme ??
+      p?._tokens ??
+      p?.tokens;
+
+    if (!theme) throw new Error("xui apply-theme: missing _theme");
+
+    this.applyTheme(theme);
+    return { _ok: true, _result: { _theme: theme } };
+  }
+
+  async _create_player(cmd: any) {
+    const p = cmd?._params ?? cmd;
+
+    const player = this.createPlayer(
+      p?._id ?? p?.id ?? "xplayer",
+      p?.class,
+      p?._parent_element,
+      p?._set_as_main_player !== false,
+      p?._theme
+    );
+
+    return {
+      _ok: true,
+      _result: {
+        _id: player.id
+      }
+    };
+  }
+
+
 }
+
 
 /* -------------------------------------------------------------------------- */
 /* Public singleton                                                           */

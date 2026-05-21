@@ -71,6 +71,11 @@
 
 
 import { XModule, _xlog, _xd, type XObjectData, XParams } from "@xpell/core";
+import type {
+  XpellSkill,
+  XpellSkillCommand
+} from "@xpell/core";
+
 import { _xem } from "../XEM/XEventManager"
 
 import { XUI } from "../XUI/XUI";
@@ -159,6 +164,7 @@ export type XVMRouteSpec = {
 export type XVMApp = {
   xpell?: { version?: number };
 
+
   // Optional: create player root automatically
   _player?: {
     _id?: string; // "xplayer"
@@ -167,7 +173,7 @@ export type XVMApp = {
     style?: string;
     _set_as_main_player?: boolean; // default true
   };
-
+  _theme?: string | Record<string, string>;
   // Shell: static layout frame (topbar/sidebar/regions hosts)
   _shell?: XObjectData | (() => XObjectData | Promise<XObjectData>);
 
@@ -200,6 +206,96 @@ export type XVMApp = {
 
 class _XVM extends XModule {
   static _module_name = "xvm";
+  static _skill: XpellSkill = {
+    _id: "xvm",
+    _title: "XVM Client View Manager",
+    _version: "1.0.0",
+    _active: true,
+    _type: "client-module-api",
+    _requires: ["xmodule", "xui"],
+
+    _description:
+      "Client-side view manager for app manifests, containers, regions, routes, history, hash navigation, and view stacking.",
+
+    _core_rules: [
+      "XVM controls application navigation and view lifecycle.",
+      "Use XVM for routes, regions, containers, history, and app manifest loading.",
+      "XUI creates and renders objects; XVM decides what view is active.",
+      "Use navigate for route/hash navigation.",
+      "Use show for stacking a view without changing URL hash.",
+      "Use snake_case params."
+    ]
+  };
+
+  static _ops: Record<string, XpellSkillCommand> = {
+    "load-app": {
+      _name: "load-app",
+      _scope: "module",
+      _description: "Load an XVM app manifest.",
+      _params: {
+        _app: "XVMApp manifest.",
+        _debug: "Optional debug flag."
+      }
+    },
+
+    show: {
+      _name: "show",
+      _scope: "module",
+      _description: "Show a view or route in a region/container without changing URL hash.",
+      _params: {
+        _id: "View id or route id.",
+        _region: "Optional region name.",
+        _container_id: "Optional container id.",
+        _allow_create_from_raw: "Allow creating a view from raw registry."
+      }
+    },
+
+    navigate: {
+      _name: "navigate",
+      _scope: "module",
+      _description: "Navigate to a route or view and update hash if region policy allows.",
+      _params: {
+        _to: "Route id or view id.",
+        _region: "Optional region name.",
+        _replace: "Replace browser history hash.",
+        _silent: "Do not update hash.",
+        _container_id: "Optional container id.",
+        _params: "Optional route/view params."
+      }
+    },
+
+    back: {
+      _name: "back",
+      _scope: "module",
+      _description: "Navigate back in the region/container history stack.",
+      _params: {
+        _region: "Optional region name.",
+        _container_id: "Optional container id.",
+        _sync_hash: "Sync hash after going back.",
+        _if_empty_close: "Close region if history is empty."
+      }
+    },
+
+    close: {
+      _name: "close",
+      _scope: "module",
+      _description: "Close the active view in a region/container.",
+      _params: {
+        _region: "Optional region name. Default modal.",
+        _container_id: "Optional container id.",
+        _clear_history: "Clear region/container history."
+      }
+    },
+
+    help: {
+      _name: "help",
+      _scope: "module",
+      _description: "Return XVM help or command-specific help.",
+      _params: {
+        _op: "Optional operation name."
+      }
+    }
+  };
 
   private _current_view_object: XUIObject | null = null;
   _event_container_added = XVMEvents.container_added;
@@ -740,7 +836,8 @@ class _XVM extends XModule {
         pid,
         app._player.class,
         app._player._parent_element,
-        app._player._set_as_main_player !== false
+        app._player._set_as_main_player !== false,
+        app._theme
       );
 
       // optional style injection (rare but useful)
@@ -748,6 +845,10 @@ class _XVM extends XModule {
         const el = document.getElementById(pid);
         if (el) (el as HTMLElement).setAttribute("style", app._player.style);
       }
+    }
+
+    if (app._theme) {
+      XUI.applyTheme(app._theme);
     }
 
     // 1.5) shell (static layout)
@@ -871,7 +972,7 @@ class _XVM extends XModule {
   async _load_app(cmd: any) {
     const app = XParams.json(cmd, "_app", "app") as any;
     const _debug = XParams.bool(cmd, "_debug", false);
-    if(_debug) {
+    if (_debug) {
       _xlog.log("XVM _load_app", cmd);
     }
     if (!app) throw new Error("xvm load_app: missing _app");
@@ -890,7 +991,7 @@ class _XVM extends XModule {
 
   async _navigate(cmd: any) {
     const _debug = XParams.bool(cmd, "_debug", false);
-    if(_debug) {
+    if (_debug) {
       _xlog.log("XVM _navigate", cmd);
     }
     const p =

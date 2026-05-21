@@ -1,7 +1,10 @@
 import { XModule, type XCommand, _x, _xu, _xlog, _xd } from "@xpell/core";
 import { _xem } from "../XEM/XEventManager";
 import { XUIRuntime } from "../XUI/XUIRuntime";
-
+import type {
+    XpellSkill,
+    XpellSkillCommand
+} from "@xpell/core";
 
 /* -------------------------------------------------------------------------- */
 
@@ -33,19 +36,105 @@ type XFlowTriggerPayload = {
 /* -------------------------------------------------------------------------- */
 
 const run_command_or_list = async (cmd: any) => {
-  if (Array.isArray(cmd)) {
-    for (const item of cmd) {
-      await _x.execute(item);
+    if (Array.isArray(cmd)) {
+        for (const item of cmd) {
+            await _x.execute(item);
+        }
+        return;
     }
-    return;
-  }
 
-  await _x.execute(cmd);
+    await _x.execute(cmd);
 };
 
 export class FlowManagerClient extends XModule {
     static _name = "flow-client";
     static _instance: FlowManagerClient | null = null;
+
+    static _skill: XpellSkill = {
+        _id: "flow-client",
+        _title: "Flow Manager Client",
+        _version: "1.0.0",
+        _active: true,
+        _type: "client-module-api",
+        _requires: ["xmodule", "xem", "xdata"],
+
+        _description:
+            "Client-side flow runtime bridge. Binds UI/runtime events to server flows, triggers flows through XUIRuntime, writes flow outputs into XData, and executes on_success/on_error commands.",
+
+        _core_rules: [
+            "Use flow-client to trigger server-side flows from UI/runtime events.",
+            "Use _flow on XUIObject for common UI-triggered flows.",
+            "Flow outputs are written to XData by output key.",
+            "Use _on_success and _on_error in flow definitions for post-flow commands.",
+            "Do not run server business logic directly on the client."
+        ],
+
+        _fields: {
+            _flow: "XUIObject field for flow id or flow definition.",
+            _flow_event: "DOM event that triggers _flow. Default click.",
+            _flow_auto: "Disable automatic flow binding when false.",
+            "_flow._payload": "Payload object passed to the flow.",
+            "$xdata.key": "Use XData references inside flow payloads."
+        }
+    };
+
+    static _ops: Record<string, XpellSkillCommand> = {
+        bind: {
+            _name: "bind",
+            _scope: "module",
+            _description:
+                "Bind a XEM/runtime event to a server flow execution.",
+            _params: {
+                _flow_id: "Flow id to execute.",
+                _event: "XEM event name to listen for.",
+                _app_id: "Current app id.",
+                _env: "Optional environment. Defaults to default."
+            },
+            _example: {
+                _module: "flow-client",
+                _op: "bind",
+                _params: {
+                    _flow_id: "login",
+                    _event: "user:login-requested",
+                    _app_id: "my-app",
+                    _env: "default"
+                }
+            }
+        },
+
+        trigger: {
+            _name: "trigger",
+            _scope: "module",
+            _description:
+                "Trigger a server flow directly from the client.",
+            _params: {
+                _flow_id: "Flow id to execute.",
+                _event_payload: "Optional payload object passed to the flow.",
+                _event_name: "Optional source event name.",
+                _app_id: "Optional app id. Defaults from XUIRuntime client.",
+                _env: "Optional environment. Defaults from XUIRuntime client.",
+                _source: "Trigger source: ui or event."
+            },
+            _example: {
+                _module: "flow-client",
+                _op: "trigger",
+                _params: {
+                    _flow_id: "login",
+                    _event_payload: {
+                        username: "$xdata.login.username",
+                        password: "$xdata.login.password"
+                    },
+                    _source: "ui"
+                }
+            }
+        },
+
+        help: {
+            _name: "help",
+            _scope: "module",
+            _description: "Return flow-client help."
+        }
+    };
 
     private _bindings: XFlowBinding[] = [];
     private _bound_events: Set<string> = new Set();
@@ -328,7 +417,7 @@ export class FlowManagerClient extends XModule {
             }
         }
 
-        
+
         return res;
     }
 

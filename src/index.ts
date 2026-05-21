@@ -36,6 +36,10 @@ export type {
   XErrorMeta,
   XResponseData,
   XFrameScheduler,
+  XpellSkill,
+  XpellSkillType,
+  XpellSkillCommand,
+  XpellSkillModule
 } from "@xpell/core";
 
 // 2) (Optional) default export — keep only if intentional
@@ -116,31 +120,7 @@ export { XUI, XUI as _xui, XUIModule } from "./XUI/XUI";
 export { XUIObject } from "./XUI/XUIObject";
 export type { XUIObjectData, XUIFlowDef } from "./XUI/XUIObject";
 
-export {
-  XUIObjectPack as XUIObjects,
-  XView,
-  XButton,
-  XForm,
-  XImage,
-  XLabel,
-  XLink,
-  XList,
-  XTextArea,
-  XTextField,
-  XVideo,
-  XWebcam,
-  XHTML,
-  XInput,
-  XSVG,
-  XPassword,
-  XSVGCircle,
-  XSVGEllipse,
-  XSVGLine,
-  XSVGPolygon,
-  XSVGRect,
-  XSVGPolyline,
-  XSVGPath,
-} from "./XUI/XUICoreObjects";
+export * from "./XUI/CoreObjects/index";
 
 export { XUIAnimate, _AnimateCSS } from "./XUI/XUIAnimations";
 

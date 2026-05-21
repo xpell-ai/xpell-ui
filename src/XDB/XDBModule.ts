@@ -19,12 +19,96 @@ import {
     type XCommand
 } from "@xpell/core";
 
+import type {
+    XpellSkill,
+    XpellSkillCommand
+} from "@xpell/core";
+
 import XDB from "./XDBClient.js";
 import { _xlog } from "@xpell/core";
 
 export class XDBClientModule extends XModule {
 
     static _name = "xdb-client";
+    static _skill: XpellSkill = {
+        _id: "xdb-client",
+        _title: "XDB Client Module",
+        _version: "1.0.0",
+        _active: true,
+        _type: "client-module-api",
+        _requires: ["xmodule"],
+
+        _description:
+            "Client-side key-value persistence bridge for XDBClient/local storage style operations.",
+
+        _core_rules: [
+            "Use xdb-client for client-side persistence.",
+            "Use XData/xd for reactive runtime state.",
+            "Do not use xdb-client for server entity operations.",
+            "Use string ops for simple values and object ops for JSON data."
+        ]
+    };
+
+    static _ops: Record<string, XpellSkillCommand> = {
+        info: {
+            _name: "info",
+            _scope: "module",
+            _description: "Return XDB client module info."
+        },
+        has: {
+            _name: "has",
+            _scope: "module",
+            _description: "Check whether a key exists.",
+            _params: { key: "Storage key." }
+        },
+        "get-string": {
+            _name: "get-string",
+            _scope: "module",
+            _description: "Get a stored string value.",
+            _params: { key: "Storage key." }
+        },
+        "save-string": {
+            _name: "save-string",
+            _scope: "module",
+            _description: "Save a string value.",
+            _params: {
+                key: "Storage key.",
+                value: "String value.",
+                _debug: "Optional debug flag."
+            }
+        },
+        "get-object": {
+            _name: "get-object",
+            _scope: "module",
+            _description: "Get a stored JSON object.",
+            _params: { key: "Storage key." }
+        },
+        "save-object": {
+            _name: "save-object",
+            _scope: "module",
+            _description: "Save a JSON object.",
+            _params: {
+                key: "Storage key.",
+                value: "Object value."
+            }
+        },
+        remove: {
+            _name: "remove",
+            _scope: "module",
+            _description: "Remove a stored key.",
+            _params: { key: "Storage key." }
+        },
+        clear: {
+            _name: "clear",
+            _scope: "module",
+            _description: "Clear all client XDB storage."
+        },
+        keys: {
+            _name: "keys",
+            _scope: "module",
+            _description: "Return all stored keys."
+        }
+    };
 
     constructor() {
 
@@ -63,7 +147,7 @@ export class XDBClientModule extends XModule {
 
         try {
 
-            const key:any =
+            const key: any =
                 xcmd?._params?.key;
 
             return new XResponseOK({
@@ -88,7 +172,7 @@ export class XDBClientModule extends XModule {
 
         try {
 
-            const key:any =
+            const key: any =
                 xcmd?._params?.key;
 
             return new XResponseOK({
@@ -113,10 +197,10 @@ export class XDBClientModule extends XModule {
 
         try {
 
-            const key:any =
+            const key: any =
                 xcmd?._params?.key || xcmd?._params?._key;
 
-            const value:any =
+            const value: any =
                 xcmd?._params?.value || xcmd?._params?._value;
 
             const _debug = !!xcmd?._params?._debug;
@@ -150,7 +234,7 @@ export class XDBClientModule extends XModule {
 
         try {
 
-            const key:any =
+            const key: any =
                 xcmd?._params?.key;
 
             return new XResponseOK({
@@ -175,10 +259,10 @@ export class XDBClientModule extends XModule {
 
         try {
 
-            const key:any =
+            const key: any =
                 xcmd?._params?.key;
 
-            const value:any =
+            const value: any =
                 xcmd?._params?.value;
 
             XDB.saveObject(
@@ -207,7 +291,7 @@ export class XDBClientModule extends XModule {
 
         try {
 
-            const key:any =
+            const key: any =
                 xcmd?._params?.key;
 
             XDB.remove(key);

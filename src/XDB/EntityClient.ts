@@ -3,27 +3,139 @@ import {
     type XCommand,
     XResponseError,
     XResponseOK,
-    _xd
+    _xd,
+    type XpellSkill,
+    type XpellSkillCommand
 } from "@xpell/core";
+
 
 import XDBSyncManager from "./XDBSyncManager.js";
 
 export class EntityClient extends XModule {
 
     static _name = "entity-client";
+    static _skill: XpellSkill = {
+        _id: "entity-client",
+        _title: "Entity Client Runtime",
+        _version: "1.0.0",
+        _active: true,
+        _type: "client-module-api",
+        _requires: ["xmodule", "xdata"],
 
-    private _sync =
-        new XDBSyncManager();
+        _description:
+            "Client-side runtime entity manager for synced CRUD operations and local entity cache access.",
 
-    private _started =
-        false;
+        _core_rules: [
+            "Use entity-client for runtime CRUD operations.",
+            "Entity records are synced through XDBSyncManager.",
+            "Entity subscriptions are created automatically on first usage.",
+            "Use _entity to select the target entity.",
+            "Use _filter for querying and updates."
+        ],
+
+        _fields: {
+            _entity: "Entity name.",
+            _filter: "Entity query filter.",
+            _updates: "Update payload object.",
+            data: "Record data for add operation.",
+            _env: "Optional environment.",
+            _app_id: "Optional application id."
+        }
+    };
+
+    static _ops: Record<string, XpellSkillCommand> = {
+        add: {
+            _name: "add",
+            _scope: "module",
+            _description:
+                "Add a new entity record.",
+            _params: {
+                _entity: "Entity name.",
+                data: "Record data object.",
+                _env: "Optional environment.",
+                _app_id: "Optional application id."
+            },
+            _example: {
+                _module: "entity-client",
+                _op: "add",
+                _params: {
+                    _entity: "users",
+                    data: {
+                        username: "john"
+                    }
+                }
+            }
+        },
+
+        find: {
+            _name: "find",
+            _scope: "module",
+            _description:
+                "Find entity records using a filter.",
+            _params: {
+                _entity: "Entity name.",
+                _filter: "Query filter object.",
+                _env: "Optional environment.",
+                _app_id: "Optional application id."
+            }
+        },
+
+        update: {
+            _name: "update",
+            _scope: "module",
+            _description:
+                "Update entity records using filter + update payload.",
+            _params: {
+                _entity: "Entity name.",
+                _filter: "Query filter object.",
+                _updates: "Update payload object.",
+                _env: "Optional environment.",
+                _app_id: "Optional application id."
+            }
+        },
+
+        delete: {
+            _name: "delete",
+            _scope: "module",
+            _description:
+                "Delete entity records using a filter.",
+            _params: {
+                _entity: "Entity name.",
+                _filter: "Query filter object.",
+                _env: "Optional environment.",
+                _app_id: "Optional application id."
+            }
+        },
+
+        "sync-entity": {
+            _name: "sync-entity",
+            _scope: "module",
+            _description:
+                "Synchronize entity records from the server into the local runtime cache.",
+            _params: {
+                _entity: "Entity name.",
+                _env: "Optional environment.",
+                _app_id: "Optional application id."
+            }
+        },
+
+        "get-local": {
+            _name: "get-local",
+            _scope: "module",
+            _description:
+                "Return locally cached entity records.",
+            _params: {
+                _entity: "Entity name."
+            }
+        }
+    };
+
+    private _sync = new XDBSyncManager();
+
+    private _started = false;
 
     constructor() {
-
-        super({
-            _name:
-                EntityClient._name
-        });
+        super({ _name: EntityClient._name });
     }
 
     /* -------------------------------------------------- */
@@ -191,7 +303,7 @@ export class EntityClient extends XModule {
 
             const entity =
                 this.getEntity(params);
-            
+
             this.ensureEntitySubscription(
                 entity,
                 params

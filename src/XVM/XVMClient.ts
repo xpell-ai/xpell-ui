@@ -4,6 +4,7 @@ import { _xem } from "../XEM/XEventManager";
 import Wormholes from "../Wormholes/Wormholes";
 import { XDB } from "../XDB/XDBClient";
 import { XVM, type XVMApp } from "./XVM";
+import { XUI } from "../XUI/XUI";
 
 const LOG = "[xvm-client]";
 const DEFAULT_REGION = "main";
@@ -56,11 +57,12 @@ export type XVMClientConnectionChange = {
 };
 
 export type XVMClientOptions = {
-  app_id: string;
-  env: string;
-  wormhole_url: string;
-  region?: string;
-  fallback_view_id?: string;
+  _app_id: string;
+  _env: string;
+  _wormhole_url: string;
+  _region?: string;
+  _fallback_view_id?: string;
+  _theme?: string | Record<string, string>;
   onViewRendered?: (view_id: string) => void;
   onConnectionChange?: (payload: XVMClientConnectionChange) => void;
   onError?: (error: any) => void;
@@ -126,21 +128,22 @@ export class XVMClient {
   _has_rendered_view = false;
   _app_needs_refresh = false;
   _connected = false;
-
+  _theme?: string | Record<string, string>;
   _cache_key_app: string;
   _cache_key_version: string;
 
   constructor(opts: XVMClientOptions) {
-    this._app_id = opts.app_id;
-    this._env = opts.env;
-    this._wormhole_url = opts.wormhole_url;
-    this._region_override = typeof opts.region === "string" && opts.region.trim() ? opts.region.trim() : undefined;
+    this._app_id = opts._app_id;
+    this._env = opts._env;
+    this._wormhole_url = opts._wormhole_url;
+    this._region_override = typeof opts._region === "string" && opts._region.trim() ? opts._region.trim() : undefined;
     this._fallback_view_id =
-      typeof opts.fallback_view_id === "string" && opts.fallback_view_id.trim() ? opts.fallback_view_id.trim() : undefined;
+      typeof opts._fallback_view_id === "string" && opts._fallback_view_id.trim() ? opts._fallback_view_id.trim() : undefined;
     this._on_view_rendered = typeof opts.onViewRendered === "function" ? opts.onViewRendered : undefined;
     this._on_connection_change = typeof opts.onConnectionChange === "function" ? opts.onConnectionChange : undefined;
     this._on_error = typeof opts.onError === "function" ? opts.onError : undefined;
     this._on_app_mounted = typeof opts.onAppMounted === "function" ? opts.onAppMounted : undefined;
+    this._theme = opts._theme;
 
     this._cache_key_app = `xvm:last_app:${this._env}:${this._app_id}`;
     this._cache_key_version = `xvm:version:${this._env}:${this._app_id}`;
@@ -427,6 +430,7 @@ export class XVMClient {
     if (!this._app) throw new Error("Server app metadata missing");
 
     const config = is_obj(this._app._config) ? this._app._config : {};
+
     const views = Object.fromEntries(this._views_cache.entries());
     const fallback_view_id =
       (is_obj(config._router) && typeof config._router._fallback_view_id === "string" && config._router._fallback_view_id) ||
@@ -442,6 +446,7 @@ export class XVMClient {
     return {
       _player: is_obj((config as any)._player) ? (config as any)._player : { _id: "xplayer", _set_as_main_player: true },
       _shell: (config as any)._shell,
+      _theme: this._theme ?? (this._app as any)?._theme,
       _containers: Array.isArray((config as any)._containers) ? (config as any)._containers : [{ _id: default_container_id }],
       _regions: Array.isArray((config as any)._regions)
         ? (config as any)._regions
@@ -464,6 +469,11 @@ export class XVMClient {
     }
     this._app_needs_refresh = false;
     this._log("xvm raw views synced", { _count: entries.length });
+  }
+
+  setTheme(theme:string|Record<string,string>) {
+   this._theme = theme;
+   XUI.applyTheme(theme);
   }
 
   async _ensure_view(view_id: string) {

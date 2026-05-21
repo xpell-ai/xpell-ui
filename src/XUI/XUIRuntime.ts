@@ -1,4 +1,4 @@
-import { _x } from "@xpell/core";
+import { _x, _xlog } from "@xpell/core";
 
 import { XUI } from "./XUI";
 import { XVM } from "../XVM/XVM";
@@ -10,14 +10,17 @@ import { XDBClientModule } from "../XDB/XDBModule";
 /* -------------------------------------------------------------------------- */
 
 export type XUIRuntimeOptions = {
-  auto_start?: boolean;
-  load_flow?: boolean;
-  load_xvm?: boolean;
-  load_entity_client?: boolean;
+  _auto_start?: boolean;
+  _load_flow?: boolean;
+  _load_xvm?: boolean;
+  _load_entity_client?: boolean;
 };
 
 export type XUIRuntimeAppOptions = XVMClientOptions & {
-  runtime?: XUIRuntimeOptions;
+  _runtime?: XUIRuntimeOptions;
+  _object_packs?: any[];
+  _modules?: any[];
+  _debug?: boolean;
 };
 
 /* -------------------------------------------------------------------------- */
@@ -33,10 +36,10 @@ export class XUIRuntime {
 
   static async loadModules(opts: XUIRuntimeOptions = {}) {
     const {
-      auto_start = true,
-      load_flow = true,
-      load_xvm = true,
-      load_entity_client = true
+      _auto_start: auto_start = true,
+      _load_flow: load_flow = true,
+      _load_xvm: load_xvm = true,
+      _load_entity_client: load_entity_client = true
     } = opts;
 
     await _x.loadModuleAsync(XUI);
@@ -65,31 +68,52 @@ export class XUIRuntime {
   /* ---------------------------------------------------------------------- */
 
   static async loadApp(opts: XUIRuntimeAppOptions) {
-    if (!opts?.app_id) throw new Error("Missing app_id");
-    if (!opts?.wormhole_url) throw new Error("Missing wormhole_url");
+    if (!opts?._app_id) throw new Error("Missing app_id");
+    if (!opts?._wormhole_url) throw new Error("Missing wormhole_url");
 
     /* -------------------------------------------------------------- */
     /* 1. Load modules                                                */
     /* -------------------------------------------------------------- */
 
-    await this.loadModules(opts.runtime);
+    await this.loadModules(opts._runtime);
+
+    if (Array.isArray(opts._modules)) {
+
+      for (const mod of opts._modules) {
+
+        await _x.loadModuleAsync(mod);
+
+      }
+
+    }
+    const xui = _x.getModule("xui");
+
+
+
+    if (Array.isArray(opts._object_packs)) {
+      for (const pack of opts._object_packs) {
+        if(opts._debug) _xlog.log("[XUIRuntime] Importing object pack", pack.getObjects());
+        xui.importObjectPack(pack);
+      }
+    }
 
     /* -------------------------------------------------------------- */
     /* 2. Create XVM client                                           */
     /* -------------------------------------------------------------- */
 
     const client = new XVMClient({
-      app_id: opts.app_id,
-      env: opts.env ?? "default",
-      wormhole_url: opts.wormhole_url,
+      _app_id: opts._app_id,
+      _env: opts._env ?? "default",
+      _wormhole_url: opts._wormhole_url,
 
-      region: opts.region,
-      fallback_view_id: opts.fallback_view_id,
+      _region: opts._region,
+      _fallback_view_id: opts._fallback_view_id,
 
       onViewRendered: opts.onViewRendered,
       onConnectionChange: opts.onConnectionChange,
       onError: opts.onError,
-      onAppMounted: opts.onAppMounted
+      onAppMounted: opts.onAppMounted,
+      _theme: opts._theme
     });
 
     this._client = client;

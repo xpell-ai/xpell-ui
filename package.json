@@ -1,6 +1,6 @@
 {
   "name": "@xpell/ui",
-  "version": "2.0.0-alpha.29",
+  "version": "2.0.01",
   "description": "Xpell UI JS Framework",
   "publishConfig": {
     "access": "public"
@@ -22,6 +22,7 @@
       "import": "./dist/xpell-ui.es.js",
       "require": "./dist/xpell-ui.cjs.js"
     },
+    "./xui.css": "./dist/style.css",
     "./package.json": "./package.json"
   },
   "scripts": {
@@ -32,6 +33,9 @@
     "publish-alpha-next": "pnpm version prerelease --preid=alpha  && pnpm publish --tag alpha",
     "check:xdata-legacy": "sh -c 'rg -n \"_xd\\._o\\[\" src && { echo \"Legacy XData write detected\" >&2; exit 1; } || true'"
   },
+  "sideEffects": [
+    "**/*.css"
+  ],
   "author": "Tamir Fridman <fridman.tamir@gmail.com>",
   "license": "MIT",
   "repository": {
@@ -39,7 +43,7 @@
     "url": "git+https://github.com/xpell-ai/xpell-ui.git"
   },
   "peerDependencies": {
-    "@xpell/core": "workspace:*",
+    "@xpell/core": "^2.0.0",
     "animate.css": "^4.1.1"
   },
   "devDependencies": {
