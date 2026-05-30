@@ -431,7 +431,7 @@ export class XUIObject extends XObject {
     }
 
     getValue(): string {
-        return (this.dom as HTMLTextAreaElement)?.value ?? this._text ?? "";
+        return (this.dom as any)?.value ?? this._text ?? "";
     }
 
     setStyleAttribute(attr: string, val: string) {
@@ -922,6 +922,11 @@ export class XUIObject extends XObject {
         });
     }
 
+    /**
+     * This is the core of XUIObject's "patch" capability: it updates the current object with new data, applying changes to the DOM and children as needed, while keeping the same instance.
+     * @param next 
+     * @returns 
+     */
     update(next: XUIObjectData) {
         if (!next) return;
 

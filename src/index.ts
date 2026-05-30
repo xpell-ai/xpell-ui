@@ -39,7 +39,10 @@ export type {
   XpellSkill,
   XpellSkillType,
   XpellSkillCommand,
-  XpellSkillModule
+  XpellSkillModule,
+  XArtifactIntent,
+  XArtifactValidationResult,
+  XArtifactStrategy
 } from "@xpell/core";
 
 // 2) (Optional) default export — keep only if intentional
@@ -72,7 +75,10 @@ export {
   XResponse,
   XResponseOK,
   XResponseError,
+  
 } from "@xpell/core";
+
+
 
 /* -------------------------------------------------------------------------- */
 /* Wormholes (v1 + v2 + facade)                                               */
@@ -157,3 +163,4 @@ export { XEventManager, XEventManager as _xem } from "./XEM/XEventManager";
 
 export { FlowManagerClient, XFM, _xfm } from "./XFM/FlowManagerClient";
 export { XUIRuntime ,type XUIRuntimeOptions, type XUIRuntimeAppOptions} from "./XUI/XUIRuntime";
+export * from "./XUI/CoreObjects/index";

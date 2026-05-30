@@ -36,11 +36,11 @@ export class XInput extends XUIObject {
             _data_source:
                 "Optional _xd key bound to the input value.",
 
-            _update_data_source_on_change:
-                "When true, updates _data_source whenever the input value changes.",
+            _data_output:
+                "Optional XData key to write this input value to when the update event fires.",
 
             _update_data_source_event:
-                "DOM event used for updates. Usually input or change."
+                "DOM event used for _data_output updates. Usually input or change."
         },
 
         _core_rules: [
@@ -48,6 +48,15 @@ export class XInput extends XUIObject {
             "Prefer semantic child types like text or password when possible.",
             "Use _data_source for reactive form state.",
             "Use _update_data_source_on_change for realtime _xd synchronization."
+        ],
+        _canonical_examples: [
+            {
+                _type: "input",
+                name: "username",
+                placeholder: "Enter username",
+                _text:"",
+                _data_output:"user.name"
+            }
         ]
     };
 
@@ -61,10 +70,11 @@ export class XInput extends XUIObject {
 
         const tag = "input";
 
-        const defaultsNext = defaults || {
+        const defaultsNext = {
             _type: XInput._xtype,
             class: "x" + XInput._xtype,
-            _html_tag: "input"
+            _html_tag: "input",
+            ...(defaults || {})
         };
 
         super(data, defaultsNext, true);
@@ -123,7 +133,6 @@ export class XInput extends XUIObject {
     protected enableAutoDataBinding() {
 
         if (
-            
             !this._data_output ||
             this._auto_binding_initialized
         ) {
@@ -228,7 +237,7 @@ export class XTextField extends XInput {
         _version: "1.0.0",
         _active: true,
         _type: "view-skill",
-        _requires: ["xuiobject"],
+        _requires: ["xuiobject","input"],
 
         _description:
             "Single-line text input rendered as an HTML input element.",
@@ -242,7 +251,15 @@ export class XTextField extends XInput {
             autocomplete: "Browser autocomplete hint.",
             required: "Native required flag.",
             disabled: "Disable input.",
-            readonly: "Read-only input."
+            readonly: "Read-only input.",
+             _data_source:
+                "Optional _xd key bound to the input value.",
+
+            _data_output:
+                "Optional XData key to write this input value to when the update event fires.",
+
+            _update_data_source_event:
+                "DOM event used for _data_output updates. Usually input or change."
         },
 
         _core_rules: [
@@ -257,7 +274,9 @@ export class XTextField extends XInput {
             {
                 _type: "text",
                 name: "username",
-                placeholder: "Enter username"
+                placeholder: "Enter username",
+                _text:"",
+                _data_output:"user.name"
             }
         ]
     };
@@ -287,7 +306,7 @@ export class XPassword extends XInput {
         _version: "1.0.0",
         _active: true,
         _type: "view-skill",
-        _requires: ["text"],
+        _requires: ["text", "input"],
 
         _description:
             "Password input rendered as an HTML input element with type='password'.",
@@ -301,9 +320,7 @@ export class XPassword extends XInput {
             required: "Native required flag.",
             disabled: "Disable input.",
             readonly: "Read-only input.",
-            _data_source: "Optional _xd key for password value.",
-            _update_data_source_on_change:
-                "When true, updates _data_source in _xd on input/change."
+            _data_output:"uses _xd to store value automatically"
         },
 
         _core_rules: [
@@ -320,8 +337,7 @@ export class XPassword extends XInput {
                 name: "password",
                 placeholder: "Enter password",
                 autocomplete: "current-password",
-                _data_source: "login.password",
-                _update_data_source_on_change: true
+                _data_output: "login.password",
             }
         ]
     };
@@ -353,7 +369,7 @@ export class XTextArea extends XInput {
         _version: "1.0.0",
         _active: true,
         _type: "view-skill",
-        _requires: ["input"],
+        _requires: ["input", "xuiobject"],
 
         _description:
             "Multiline text input rendered as an HTML textarea element.",
@@ -363,29 +379,48 @@ export class XTextArea extends XInput {
             cols: "Visible textarea columns.",
             placeholder: "Placeholder text.",
             maxlength: "Maximum text length.",
-            _data_source: "Optional _xd binding key.",
-            _update_data_source_on_change:
-                "Update _xd while typing."
+             _data_source:
+                "Optional _xd key bound to the input value.",
+
+            _data_output:
+                "Optional XData key to write this input value to when the update event fires.",
+
+            _update_data_source_event:
+                "DOM event used for _data_output updates. Usually input or change."
         },
 
         _core_rules: [
             "Use textarea for multiline text.",
             "Use text for single-line text.",
             "Use _data_source for reactive content."
+        ],
+        _canonical_examples: [
+            {
+                _type: "textarea",
+                name: "description",
+                placeholder: "Enter description",
+                rows: 4,
+                cols: 50,
+                _data_output: "form.description",
+            }
         ]
     };
 
     constructor(data: XObjectData) {
 
-        super({
-            ...data,
+        const defaults = {
             _type: XTextArea._xtype,
-            class: "xtextarea",
+            class: "x" + XTextArea._xtype,
             _html_tag: "textarea"
-        }, { _type: XTextArea._xtype }, true);
+        };
+
+        super(data, defaults, true);
 
         this.parse(data);
         this.enableAutoDataBinding();
+        if (this._debug) {
+            _xlog.log(`[XTextArea] Initialized with data:`, data);
+        }
 
     }
 
@@ -424,7 +459,7 @@ export class XSelect extends XInput {
         _version: "1.0.0",
         _active: true,
         _type: "view-skill",
-        _requires: ["input"],
+        _requires: ["input", "xuiobject"],
 
         _description:
             "Dropdown/select input rendered as an HTML select element.",
@@ -436,11 +471,14 @@ export class XSelect extends XInput {
             name: "Form/input name.",
             disabled: "Disable select.",
             required: "Native required flag.",
-            _data_source: "Optional _xd key bound to selected value.",
-            _update_data_source_on_change:
-                "When true, updates _data_source when selection changes.",
+             _data_source:
+                "Optional _xd key bound to the input value.",
+
+            _data_output:
+                "Optional XData key to write this input value to when the update event fires.",
+
             _update_data_source_event:
-                "Event used for data-source updates. Defaults to change."
+                "DOM event used for _data_output updates. Usually input or change."
         },
 
         _core_rules: [
@@ -454,8 +492,7 @@ export class XSelect extends XInput {
             {
                 _type: "select",
                 name: "role",
-                _data_source: "user.role",
-                _update_data_source_on_change: true,
+                _data_output: "user.role",
                 _options: [
                     { label: "Admin", value: "admin" },
                     { label: "User", value: "user" }

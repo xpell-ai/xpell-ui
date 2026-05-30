@@ -54,7 +54,7 @@ import {
 } from "@xpell/core";
 
 import { _xem } from "../XEM/XEventManager";
-import XUICoreObjects from "./CoreObjects/XUICoreObjects";
+import {XUIObjectPack ,XUISVGObjectPack} from "./CoreObjects/XUICoreObjects";
 import type {
   XpellSkill,
   XpellSkillCommand
@@ -142,9 +142,16 @@ export class XUIModule extends XModule {
     super({ _name: XUIModule._module_name });
 
     // Register default objects
-    this.importObjectPack(XUICoreObjects);
+    this.importObjectPack(XUIObjectPack);
 
   }
+
+
+
+  loadSVGPack() {
+    this.importObjectPack(XUISVGObjectPack);
+  }
+
 
   async onLoad() {
     // Set the XEventManager instance for the entire app (DOM adapter)

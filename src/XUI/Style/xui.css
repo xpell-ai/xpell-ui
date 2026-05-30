@@ -170,3 +170,78 @@ body {
     color:var(--x-text);
 
 }
+
+/* =========================================================================
+ * XVibe Studio Shell
+ * ========================================================================= */
+
+.xvibe-shell {
+    width: 100%;
+    height: 100%;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 0px;
+    overflow: hidden;
+}
+
+.xvibe-shell.xstudio-open {
+    grid-template-columns: minmax(0, 1fr) 420px;
+}
+
+.xvibe-main {
+    min-width: 0;
+    min-height: 0;
+    overflow: auto;
+}
+
+.xvibe-studio {
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+    border-left: 1px solid rgba(34, 255, 120, .35);
+    background: #020804;
+    color: #b6ffcc;
+    box-shadow: inset 1px 0 0 rgba(34, 255, 120, .18);
+}
+
+/* =========================================================================
+ * XStudio Terminal Skin
+ * ========================================================================= */
+
+.xstudio-editor {
+    height: 100%;
+    box-sizing: border-box;
+    padding: 16px;
+    overflow: auto;
+    background:
+        radial-gradient(circle at top left, rgba(34,255,120,.12), transparent 32%),
+        #020804;
+    color: #b6ffcc;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.xstudio-editor .xfield__label,
+.xstudio-editor .xfield__hint,
+.xstudio-editor .xlabel {
+    color: #8dffb0;
+}
+
+.xstudio-editor .xtextarea,
+.xstudio-editor textarea,
+.xstudio-editor input {
+    background: #031308;
+    color: #b6ffcc;
+    border: 1px solid rgba(34,255,120,.35);
+    border-radius: 8px;
+    font-family: inherit;
+}
+
+.xstudio-editor .xbutton {
+    background: transparent;
+    color: #8dffb0;
+    border: 1px solid rgba(34,255,120,.45);
+    font-family: inherit;
+}
+
+.xstudio-editor .xbutton:hover {
+    background: rgba(34,255,120,.12);
+}

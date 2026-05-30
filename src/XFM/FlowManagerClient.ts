@@ -245,23 +245,34 @@ export class FlowManagerClient extends XModule {
         };
     }
 
-    private async trigger_flow(params_in: Record<string, any>) {
+    private async trigger_flow(
+        params_in: Record<string, any>
+    ) {
 
-        const normalized = this.normalize_trigger_payload(params_in);
+        const normalized =
+            this.normalize_trigger_payload(
+                params_in
+            );
 
-        const client: any = XUIRuntime.requireClient();
+        const client: any =
+            XUIRuntime.requireClient();
 
         const app_id =
-            normalized._app_id ?? client?._app_id;
+            normalized._app_id ??
+            client?._app_id;
 
         const env =
-            normalized._env ?? client?._env;
+            normalized._env ??
+            client?._env;
 
         /* -------------------------------------------------- */
         /* VALIDATION                                         */
         /* -------------------------------------------------- */
 
-        if (!app_id || typeof app_id !== "string") {
+        if (
+            !app_id ||
+            typeof app_id !== "string"
+        ) {
 
             throw new Error(
                 "[flow-client] missing _app_id (no payload and no XVM client)"
@@ -272,41 +283,180 @@ export class FlowManagerClient extends XModule {
         /* DEBUG                                              */
         /* -------------------------------------------------- */
 
-        log_debug("[flow-client] trigger", {
-            event: normalized._event_name,
-            flow_id: normalized._flow_id,
-            payload: normalized._event_payload,
-            source: normalized._source
-        });
+        log_debug(
+            "[flow-client] trigger",
+            {
+                event:
+                    normalized._event_name,
+
+                flow_id:
+                    normalized._flow_id,
+
+                payload:
+                    normalized._event_payload,
+
+                source:
+                    normalized._source
+            }
+        );
 
         /* -------------------------------------------------- */
-        /* SEND                                               */
+        /* SEND (NON-BLOCKING)                                */
         /* -------------------------------------------------- */
 
-        let res: any;
+        const payload = {
+            _module: "flow",
+            _op: "run",
+            _params: {
+                _flow_id:
+                    normalized._flow_id,
+
+                _app_id:
+                    app_id,
+
+                ...(env !== undefined
+                    ? { _env: env }
+                    : {}),
+
+                _event_payload:
+                    normalized._event_payload || {},
+
+                ...(normalized._event_name
+                    ? {
+                        _event_name:
+                            normalized._event_name
+                    }
+                    : {})
+            }
+        };
 
         try {
-            res = await client.sendXcmd({
-                _module: "flow",
-                _op: "run",
-                _params: {
-                    _flow_id: normalized._flow_id,
-                    _app_id: app_id,
-                    ...(env !== undefined
-                        ? { _env: env }
-                        : {}),
-                    _event_payload:
-                        normalized._event_payload || {},
-                    ...(normalized._event_name
-                        ? { _event_name: normalized._event_name }
-                        : {})
-                }
-            });
 
-            _xlog.log(
-                "FLOW SEND RESULT",
-                JSON.stringify(res, null, 2)
-            );
+            client
+                .sendXcmd(payload)
+                .then((res: any) => {
+
+                    log_debug(
+                        "[flow-client] async flow response",
+                        res
+                    );
+
+                    const generated_app_id =
+                        res?._flow?._last?._result?._app_id ??
+                        res?._result?._flow?._last?._result?._app_id;
+
+                    if (
+                        typeof generated_app_id === "string" &&
+                        generated_app_id.trim().length > 0 &&
+                        generated_app_id !== app_id
+                    ) {
+                        log_debug("[flow-client] generated app detected", {
+                            _app_id: generated_app_id
+                        });
+
+                        _xd.set("xvibe.active_app", generated_app_id, {
+                            source: "flow-client"
+                        });
+
+                        _xem.fire("studio:open-app", {
+                            _app_id: generated_app_id,
+                            _env: env ?? "default"
+                        });
+                    }
+
+                    const flow =
+                        res?._flow ??
+                        res?._result?._flow;
+
+                    const flow_definition =
+                        client?._flows?.get(
+                            normalized._flow_id
+                        );
+
+                    /* -------------------------------------- */
+                    /* APPLY FLOW OUTPUTS                     */
+                    /* -------------------------------------- */
+
+                    if (
+                        flow?._outputs &&
+                        typeof flow._outputs === "object"
+                    ) {
+
+                        for (const key of Object.keys(flow._outputs)) {
+
+                            const raw =
+                                flow._outputs[key];
+
+                            const value =
+                                raw &&
+                                    typeof raw === "object" &&
+                                    raw._ok === true &&
+                                    raw.hasOwnProperty("_result")
+                                    ? raw._result
+                                    : raw;
+
+                            _xd.set(
+                                key,
+                                value,
+                                {
+                                    source: "flow-client"
+                                }
+                            );
+                        }
+                    }
+
+                    /* -------------------------------------- */
+                    /* SUCCESS / ERROR HANDLERS               */
+                    /* -------------------------------------- */
+
+                    const last =
+                        flow?._last;
+
+                    if (
+                        last &&
+                        last._ok === true &&
+                        flow_definition?._on_success
+                    ) {
+
+                        run_command_or_list(
+                            flow_definition._on_success
+                        ).catch((error) => {
+
+                            _xlog.error(
+                                "[flow-client] on_success failed",
+                                error
+                            );
+
+                        });
+                    }
+
+                    if (
+                        last &&
+                        last._ok !== true &&
+                        flow_definition?._on_error
+                    ) {
+
+                        run_command_or_list(
+                            flow_definition._on_error
+                        ).catch((error) => {
+
+                            _xlog.error(
+                                "[flow-client] on_error failed",
+                                error
+                            );
+
+                        });
+                    }
+
+                })
+                .catch((err: any) => {
+
+                    _xlog.error(
+                        "FLOW SEND ERROR",
+                        err
+                    );
+
+                });
 
         } catch (err) {
 
@@ -318,107 +468,16 @@ export class FlowManagerClient extends XModule {
             throw err;
         }
 
-        log_debug(
-            "[flow-client] flow run response",
-            res
-        );
-
         /* -------------------------------------------------- */
-        /* APPLY FLOW OUTPUTS                                 */
+        /* RETURN IMMEDIATELY                                 */
         /* -------------------------------------------------- */
 
-        // wormhole client may already unwrap _result
-        const flow =
-            res?._flow ??
-            res?._result?._flow;
-
-        if (
-            flow?._outputs &&
-            typeof flow._outputs === "object"
-        ) {
-
-            for (const key of Object.keys(flow._outputs)) {
-
-                const raw =
-                    flow._outputs[key];
-
-                const value =
-                    raw &&
-                        typeof raw === "object" &&
-                        raw._ok === true &&
-                        raw.hasOwnProperty("_result")
-                        ? raw._result
-                        : raw;
-
-                _xd.set(
-                    key,
-                    value,
-                    {
-                        source: "flow-client"
-                    }
-                );
-            }
-        }
-        log_debug(
-            "[flow-client] FLOW OBJECT",
-            flow
-        );
-        const last =
-            flow?._last;
-        const flow_definition =
-            client?._flows?.get(
+        return {
+            _ok: true,
+            _queued: true,
+            _flow_id:
                 normalized._flow_id
-            );
-
-        log_debug(
-            "[flow-client] FLOW DEFINITION",
-            flow_definition
-        );
-
-        log_debug(
-            "[flow-client] FLOW LAST",
-            last
-        );
-
-
-        if (
-            last &&
-            last._ok === true &&
-            flow_definition?._on_success
-        ) {
-
-            try {
-
-                //await _x.execute(flow_definition._on_success);
-                await run_command_or_list(flow_definition._on_success);
-
-            } catch (error) {
-
-                _xlog.error(
-                    "[flow-client] on_success failed",
-                    error
-                );
-
-            }
-        }
-
-        if (
-            last &&
-            last._ok !== true &&
-            flow_definition?._on_error
-        ) {
-            try {
-                await run_command_or_list(flow_definition._on_error);
-            } catch (error) {
-                _xlog.error(
-                    "[flow-client] on_error failed",
-                    error
-                );
-            }
-        }
-
-
-        return res;
+        };
     }
 
     async _trigger(xcmd: XCommand) {

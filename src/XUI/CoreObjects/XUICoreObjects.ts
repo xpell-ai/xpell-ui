@@ -41,8 +41,8 @@ import type {
 } from "@xpell/core";
 
 import { XInput, XPassword, XTextArea, XTextField, XSelect } from "./XInput";
-import { XSVG,XSVGCircle,XSVGEllipse,XSVGLine,XSVGPath,XSVGPolygon,XSVGPolyline,XSVGRect } from "./SVGObjects";
-
+import { XSVG, XSVGCircle, XSVGEllipse, XSVGLine, XSVGPath, XSVGPolygon, XSVGPolyline, XSVGRect } from "./SVGObjects";
+import { XStyleSheet } from "./XStyleSheet";
 export class XView extends XUIObject {
 
     static _xtype = "view";
@@ -134,6 +134,10 @@ export class XForm extends XUIObject {
             }
         ]
     };
+
+    static override getArtifactStrategy() {
+        return "merge" as const;
+    }
 
     constructor(data: XUIObjectData) {
         const tag = "form"
@@ -322,6 +326,14 @@ export class XWebcam extends XUIObject {
             "Use webcam only when live camera input is required.",
             "Requires browser camera permission.",
             "Do not use webcam for normal video playback; use video instead."
+        ],
+        _canonical_examples: [
+            {
+                _type: "webcam",
+                autoplay: true,
+                muted: true,
+                _video_constraints: { video: true, width: 320, height: 280 }
+            }
         ]
     };
 
@@ -499,6 +511,13 @@ export class XLabel extends XUIObject {
             "Use label for short text and form labels.",
             "Use for when connecting label to an input id.",
             "Use button or link for interactive actions."
+        ],
+        _canonical_examples: [
+            {
+                _type: "label",
+                _text: "Username",
+                class: "form-label"
+            }
         ]
     };
     constructor(data: XObjectData) {
@@ -562,6 +581,11 @@ export class XButton extends XUIObject {
             }
         ]
     };
+
+    static getArtifactStrategy() {
+        return "merge" as const;
+    }
+
     constructor(data: XObjectData) {
         const defs = {
             _type: XButton._xtype,
@@ -611,7 +635,8 @@ export class XHTML extends XUIObject {
         _canonical_examples: [
             {
                 _type: "xhtml",
-                _html_tag: "article",
+                _html_tag: "p",
+                _text: "This is a paragraph of text wrapped in an XHTML object.",
                 _children: []
             }
         ]
@@ -655,6 +680,7 @@ export class XUIObjectPack extends XObjectPack {
             "ol": XHTML,
             "li": XHTML,
             "h1": XHTML, "h2": XHTML, "h3": XHTML, "h4": XHTML, "h5": XHTML, "h6": XHTML,
+            [XStyleSheet._xtype]: XStyleSheet, //"style-sheet"
             [XLabel._xtype]: XLabel, //"label"
             [XLink._xtype]: XLink, //"link"
             [XButton._xtype]: XButton, //"button"
@@ -662,6 +688,7 @@ export class XUIObjectPack extends XObjectPack {
             [XPassword._xtype]: XPassword, //"password"
             [XInput._xtype]: XInput, //"input"
             [XTextArea._xtype]: XTextArea, //"textarea"
+            [XSelect._xtype]: XSelect, //"select"
             [XVideo._xtype]: XVideo, //"video"
             [XImage._xtype]: XImage, //"image"
             [XForm._xtype]: XForm,   //"form"
@@ -675,7 +702,23 @@ export class XUIObjectPack extends XObjectPack {
             [XSVGPolyline._xtype]: XSVGPolyline, //"polyline"
             [XSVGPolygon._xtype]: XSVGPolygon, //"polygon"
             [XSVGPath._xtype]: XSVGPath, //"path"
-            [XSelect._xtype]: XSelect, //"select"
+
+        }
+    }
+}
+
+
+export class XUISVGObjectPack extends XObjectPack {
+    static getObjects() {
+        return {
+            [XSVG._xtype]: XSVG,  //"svg"
+            [XSVGCircle._xtype]: XSVGCircle, //"circle"
+            [XSVGRect._xtype]: XSVGRect, //"rect"
+            [XSVGEllipse._xtype]: XSVGEllipse, //"ellipse"
+            [XSVGLine._xtype]: XSVGLine, //"line"
+            [XSVGPolyline._xtype]: XSVGPolyline, //"polyline"
+            [XSVGPolygon._xtype]: XSVGPolygon, //"polygon"
+            [XSVGPath._xtype]: XSVGPath, //"path"
 
         }
     }

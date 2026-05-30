@@ -295,6 +295,15 @@ export class XSVGShape extends XUIObject {
             "SVG shapes should usually be children of svg.",
             "Use SVG shapes for vector graphics and diagrams.",
             "Do not use svg-shape directly; use circle, rect, path, line, etc."
+        ],
+        _canonical_examples: [
+            {
+                _type: "circle",
+                cx: 100,
+                cy: 60,
+                r: 40,
+                fill: "currentColor"
+            }
         ]
     };
 
@@ -330,7 +339,16 @@ export class XSVGCircle extends XSVGShape {
             r: "Circle radius.",
             fill: "Fill color.",
             stroke: "Stroke color."
-        }
+        },
+        _canonical_examples: [
+            {
+                _type: "circle",
+                cx: 100,
+                cy: 60,
+                r: 40,
+                fill: "currentColor"
+            }
+        ]
     }
 
     constructor(data: XObjectData) {

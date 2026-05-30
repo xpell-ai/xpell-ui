@@ -430,32 +430,185 @@ export class XVMClient {
     if (!this._app) throw new Error("Server app metadata missing");
 
     const config = is_obj(this._app._config) ? this._app._config : {};
-
     const views = Object.fromEntries(this._views_cache.entries());
+
     const fallback_view_id =
-      (is_obj(config._router) && typeof config._router._fallback_view_id === "string" && config._router._fallback_view_id) ||
+      (is_obj(config._router) &&
+        typeof config._router._fallback_view_id === "string" &&
+        config._router._fallback_view_id) ||
       this._fallback_view_id ||
       this._current_view_id ||
       Object.keys(views)[0];
+
     const region =
-      (is_obj(config._router) && typeof config._router._region === "string" && config._router._region) ||
+      (is_obj(config._router) &&
+        typeof config._router._region === "string" &&
+        config._router._region) ||
       this._region_override ||
       DEFAULT_REGION;
+
     const default_container_id = this._resolve_container_id(region);
 
-    return {
-      _player: is_obj((config as any)._player) ? (config as any)._player : { _id: "xplayer", _set_as_main_player: true },
+    const studio_shell_view = {
+      _type: "view",
+      _id: "xvibe-shell",
+      class: "xvibe-shell",
+      _children: [
+        { _type: "view", _id: default_container_id, class: "xvibe-main" },
+        { _type: "view", _id: "region-studio", class: "xvibe-studio" }
+      ]
+    };
+
+    const studio_editor_view: any = {
+      _id: "xstudio-editor",
+      _type: "view",
+      class: "xstudio-editor",
+      _children: [
+        {
+          _type: "field",
+          _label: "Prompt",
+          _hint: "Describe the change you want to make to the current view.",
+          _control: {
+            _id: "xstudio-prompt",
+            _type: "textarea",
+            placeholder: "Example: make this dashboard use KPI cards and add a table...",
+            rows: "6",
+            _data_source: "studio:prompt",
+            _data_output: "studio:prompt",
+            _update_data_source_event: "input",
+          },
+        },
+        {
+          _type: "toolbar",
+          _justify: "space-between",
+          _children: [
+            {
+              _type: "button",
+              _text: "Preview",
+              _variant: "primary",
+              _on: {
+                click: {
+                  _module: "xem",
+                  _op: "fire",
+                  _params: {
+                    event: "studio:preview-request",
+                  },
+                },
+              },
+            },
+            {
+              _type: "button",
+              _text: "Apply",
+              _tone: "success",
+              _on: {
+                click: {
+                  _module: "xem",
+                  _op: "fire",
+                  _params: {
+                    event: "studio:apply-request",
+                  },
+                },
+              },
+            },
+            {
+              _type: "button",
+              _text: "Close",
+              _on: {
+                click: {
+                  _module: "xem",
+                  _op: "fire",
+                  _params: {
+                    event: "studio:close",
+                  },
+                },
+              },
+            },
+          ],
+        },
+      ],
+    };
+
+    const base_app: XVMApp = {
+      _player: is_obj((config as any)._player)
+        ? (config as any)._player
+        : {
+          _id: "xplayer",
+          _set_as_main_player: true,
+        },
+
       _shell: (config as any)._shell,
+
       _theme: this._theme ?? (this._app as any)?._theme,
-      _containers: Array.isArray((config as any)._containers) ? (config as any)._containers : [{ _id: default_container_id }],
+
+      _containers: Array.isArray((config as any)._containers)
+        ? (config as any)._containers
+        : [{ _id: default_container_id }],
+
       _regions: Array.isArray((config as any)._regions)
         ? (config as any)._regions
         : [{ _id: region, _container_id: default_container_id }],
+
       _views: views,
-      _router: is_obj((config as any)._router) ? (config as any)._router : { _region: region, _fallback_view_id: fallback_view_id },
+
+      _router: is_obj((config as any)._router)
+        ? (config as any)._router
+        : {
+          _region: region,
+          _fallback_view_id: fallback_view_id,
+        },
+
       _start: is_obj((config as any)._start)
         ? (config as any)._start
-        : { _view_id: fallback_view_id, _region: region },
+        : {
+          _view_id: fallback_view_id,
+          _region: region,
+        },
+    };
+
+    const can_edit = true; // V1, later from permission/session/app meta.
+
+    if (!can_edit) {
+      return base_app;
+    }
+
+    return {
+      ...base_app,
+
+      _shell: studio_shell_view,
+
+      _containers: [
+        { _id: default_container_id },
+        { _id: "region-studio" },
+      ],
+
+      _regions: [
+        {
+          _id: region,
+          _container_id: default_container_id,
+        },
+        {
+          _id: "studio",
+          _container_id: "region-studio",
+          _hash_sync: false,
+        },
+      ],
+
+      _views: {
+        ...views,
+        "xstudio-editor": studio_editor_view,
+      },
+
+      _router: {
+        ...(is_obj(base_app._router) ? base_app._router : {}),
+        _region: region,
+        _fallback_view_id: fallback_view_id,
+      },
+
+      _start: {
+        ...(is_obj(base_app._start) ? base_app._start : {}),
+        _view_id: fallback_view_id,
+        _region: region,
+      },
     } as XVMApp;
   }
 
@@ -471,9 +624,9 @@ export class XVMClient {
     this._log("xvm raw views synced", { _count: entries.length });
   }
 
-  setTheme(theme:string|Record<string,string>) {
-   this._theme = theme;
-   XUI.applyTheme(theme);
+  setTheme(theme: string | Record<string, string>) {
+    this._theme = theme;
+    XUI.applyTheme(theme);
   }
 
   async _ensure_view(view_id: string) {
