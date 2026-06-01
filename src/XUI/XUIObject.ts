@@ -24,7 +24,19 @@ import XUIRuntime from "./XUIRuntime";
 
 const reservedWords = { _children: "child objects" };
 const xpellObjectHtmlFieldsMapping: { [k: string]: string } = { "_id": "id", "css-class": "class", "animation": "xyz", "input-type": "type" };
-
+const RESERVED_DOM_EVENT_ALIASES: Record<string, string> = {
+            "_click": "click",
+            "_change": "change",
+            "_input": "input",
+            "_submit": "submit",
+            "_focus": "focus",
+            "_blur": "blur",
+            "_keydown": "keydown",
+            "_keyup": "keyup",
+            "_mouseenter": "mouseenter",
+            "_mouseleave": "mouseleave",
+        };
+        
 export type XUIHandler = Function | string | any | any[];
 
 export type XUIFlowDef = string | { _id: string; _payload?: Record<string, any>; };
@@ -412,15 +424,41 @@ export class XUIObject extends XObject {
     //     }
     // }
 
+    removeAllEventListeners(eventName?: string): void {
+        const index = (this as any)._event_listeners_ids;
+
+        if (!index || typeof index !== "object" || Array.isArray(index)) {
+            (this as any)._event_listeners_ids = {};
+            return;
+        }
+
+        const keys = eventName ? [eventName] : Object.keys(index);
+
+        for (const ev of keys) {
+            const ids = Array.isArray(index[ev]) ? [...index[ev]] : [];
+
+            for (const id of ids) {
+                try {
+                    (_xem as any).remove(id);
+                } catch {
+                    // backward-compatible cleanup: ignore stale listener ids
+                }
+            }
+
+            delete index[ev];
+        }
+    }
+
     // ✅ MUST match base signature: removeChild(child: XObject, dispose?: boolean)
     removeChild(child: XObject, dispose?: boolean): void {
-        // UI cleanup if child is UI
-        if (this._dom_object instanceof HTMLElement && child instanceof XUIObject) {
-            try {
-                this._dom_object.removeChild(child.dom);
-            } catch (error) {
-                _xlog.log("Error removing child from dom");
-            }
+        const child_dom = child instanceof XUIObject ? child.getDOMObject() : undefined;
+
+        if (
+            this._dom_object instanceof HTMLElement &&
+            child_dom instanceof HTMLElement &&
+            child_dom.parentElement === this._dom_object
+        ) {
+            this._dom_object.removeChild(child_dom);
         }
 
         super.removeChild(child, dispose);
@@ -631,106 +669,71 @@ export class XUIObject extends XObject {
 
         const el = this._dom_object;
 
-        if (el instanceof HTMLElement) {
+        
 
+        if (el instanceof HTMLElement) {
             const onMap = (this as any)._on || {};
             const onceMap = (this as any)._once || {};
 
-            // --------------------------------
-            // 🔒 bind _on / _once ONLY ONCE
-            // --------------------------------
+            const bindEvent = (eventName: string, handler: any, once = false) => {
+                if (eventName === "show" || eventName === "hide") return;
+
+                const resolvedEventName =
+                    RESERVED_DOM_EVENT_ALIASES[eventName] ?? eventName;
+
+                if (resolvedEventName.startsWith("xem:")) {
+                    const xemEvent = resolvedEventName.slice(4);
+                    if (!xemEvent) return;
+
+                    this.addEventListener(
+                        xemEvent,
+                        handler,
+                        once ? { _once: true } : undefined
+                    );
+                    return;
+                }
+
+                if (
+                    resolvedEventName.startsWith("_") &&
+                    !RESERVED_DOM_EVENT_ALIASES[eventName]
+                ) {
+                    const xemEvent = resolvedEventName.slice(1);
+                    if (!xemEvent) return;
+
+                    this.addEventListener(
+                        xemEvent,
+                        handler,
+                        once ? { _once: true } : undefined
+                    );
+                    return;
+                }
+
+                el.addEventListener(
+                    resolvedEventName,
+                    async (e: any) => {
+                        await this.checkAndRunInternalFunction(handler, e);
+                    },
+                    once ? { once: true } : undefined
+                );
+            };
+
             if (!(this as any)._dom_events_bound) {
                 (this as any)._dom_events_bound = true;
 
-                /* -------------------------------------------------- */
-                /* REGULAR EVENTS                                     */
-                /* -------------------------------------------------- */
-
                 for (const eventName of Object.keys(onMap)) {
-
-                    const handler = onMap[eventName];
-
-                    // skip lifecycle hooks
-                    if (eventName === "show" || eventName === "hide") {
-                        continue;
-                    }
-
-                    /* ---------------------------------------------- */
-                    /* XEM EVENTS                                     */
-                    /* ---------------------------------------------- */
-
-                    if (eventName.startsWith("xem:")) {
-
-                        const xemEvent = eventName.slice(4);
-
-                        this.addEventListener(
-                            xemEvent,
-                            handler,
-                        );
-                        continue;
-                    }
-
-                    /* ---------------------------------------------- */
-                    /* DOM EVENTS                                     */
-                    /* ---------------------------------------------- */
-
-                    el.addEventListener(eventName, async (e: any) => {
-                        await this.checkAndRunInternalFunction(handler, e);
-                    });
+                    bindEvent(eventName, onMap[eventName], false);
                 }
-
-                /* -------------------------------------------------- */
-                /* ONCE EVENTS                                        */
-                /* -------------------------------------------------- */
 
                 for (const eventName of Object.keys(onceMap)) {
-
-                    const handler = onceMap[eventName];
-
-                    // skip lifecycle hooks
-                    if (eventName === "show" || eventName === "hide") {
-                        continue;
-                    }
-
-                    /* ---------------------------------------------- */
-                    /* XEM ONCE EVENTS                                */
-                    /* ---------------------------------------------- */
-
-                    if (eventName.startsWith("xem:")) {
-
-                        const xemEvent = eventName.slice(4);
-
-                        this.addEventListener(
-                            xemEvent,
-                            handler,
-                            { _once: true }
-                        );
-
-                        continue;
-                    }
-
-                    /* ---------------------------------------------- */
-                    /* DOM ONCE EVENTS                                */
-                    /* ---------------------------------------------- */
-
-                    el.addEventListener(
-                        eventName,
-                        async (e: any) => {
-                            await this.checkAndRunInternalFunction(handler, e);
-                        },
-                        { once: true }
-                    );
+                    bindEvent(eventName, onceMap[eventName], true);
                 }
             }
+
 
             // --------------------------------
             // 🔒 bind FLOW ONLY ONCE
             // --------------------------------
-            if (
-                this._flow &&
-                (this as any)._flow_auto !== false &&
-                !(this as any)._flow_bound
-            ) {
+            if (this._flow && (this as any)._flow_auto !== false && !(this as any)._flow_bound) {
                 (this as any)._flow_bound = true;
 
                 const eventName = this._flow_event || "click";
@@ -826,15 +829,15 @@ export class XUIObject extends XObject {
 
                 this._visible = true;
             }
-
         } else {
-
             this._visible = true;
         }
+
 
         (this as any)._mounted = true;
     }
 
+  
     private resolveFlowPayload(template: any, ev: any) {
 
         const eventCtx = {
@@ -988,41 +991,45 @@ export class XUIObject extends XObject {
         for (const childData of nextChildren) {
             let existing: XUIObject | undefined;
 
-            if ((childData as any)._id) {
-                existing = byId.get((childData as any)._id);
+            const childId = (childData as any)?._id;
+            if (typeof childId === "string" && childId) {
+                existing = byId.get(childId);
             }
 
             if (existing) {
-                // 🔥 UPDATE existing
                 existing.update(childData as any);
                 newChildren.push(existing);
                 byId.delete(existing._id);
             } else {
-                // 🔥 CREATE new
                 const created = XUI.create(childData as any);
-                this.append(created);
                 newChildren.push(created);
             }
         }
 
-        // 🔥 REMOVE leftovers safely
         for (const leftover of byId.values()) {
-            super.removeChild(leftover, true);
+            this.removeChild(leftover, true);
         }
 
-        // 🔥 FIX: rebuild children graph safely (NO direct assignment)
-        for (const child of this.ui_children) {
-            super.removeChild(child, false);
+        // Rebuild children graph without disposing reused children.
+        for (const child of [...this.ui_children]) {
+            if (newChildren.includes(child)) {
+                super.removeChild(child, false);
+            }
         }
 
         for (const child of newChildren) {
-            super.append(child);
+            if (!this.ui_children.includes(child)) {
+                super.append(child);
+            }
         }
 
-        // 🔥 FIX: reorder DOM to match newChildren order
         if (this._dom_object instanceof HTMLElement) {
+            this._dom_object.replaceChildren(...newChildren.map((child) => child.dom));
+
             for (const child of newChildren) {
-                this._dom_object.appendChild(child.dom);
+                if (!(child as any)._mounted) {
+                    child.onMount();
+                }
             }
         }
     }

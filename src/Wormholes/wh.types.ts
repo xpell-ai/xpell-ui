@@ -211,6 +211,7 @@ export type WormholesClientAPI = {
 
   sendSync(payload: any, timeoutMs?: number): Promise<any>;
   sendXcmd(xcmd: XCmd, timeoutMs?: number): Promise<any>;
+  sendXcmdFireAndListen(xcmd: XCmd): string | undefined;
   sendEvt(name: string, data?: any, args?: any[]): void;
 
   onOpen(cb: () => void): void;

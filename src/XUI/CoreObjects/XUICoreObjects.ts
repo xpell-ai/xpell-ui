@@ -694,15 +694,6 @@ export class XUIObjectPack extends XObjectPack {
             [XForm._xtype]: XForm,   //"form"
             [XWebcam._xtype]: XWebcam,   //"webcam"
             [XHTML._xtype]: XHTML,   //"xhtml"
-            [XSVG._xtype]: XSVG,  //"svg"
-            [XSVGCircle._xtype]: XSVGCircle, //"circle"
-            [XSVGRect._xtype]: XSVGRect, //"rect"
-            [XSVGEllipse._xtype]: XSVGEllipse, //"ellipse"
-            [XSVGLine._xtype]: XSVGLine, //"line"
-            [XSVGPolyline._xtype]: XSVGPolyline, //"polyline"
-            [XSVGPolygon._xtype]: XSVGPolygon, //"polygon"
-            [XSVGPath._xtype]: XSVGPath, //"path"
-
         }
     }
 }

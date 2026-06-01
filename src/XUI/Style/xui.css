@@ -213,7 +213,7 @@ body {
     padding: 16px;
     overflow: auto;
     background:
-        radial-gradient(circle at top left, rgba(34,255,120,.12), transparent 32%),
+        radial-gradient(circle at center center, rgba(34,255,120,.12), transparent 32%),
         #020804;
     color: #b6ffcc;
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
@@ -228,6 +228,7 @@ body {
 .xstudio-editor .xtextarea,
 .xstudio-editor textarea,
 .xstudio-editor input {
+    width: 100%;
     background: #031308;
     color: #b6ffcc;
     border: 1px solid rgba(34,255,120,.35);

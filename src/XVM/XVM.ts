@@ -80,7 +80,7 @@ import { _xem } from "../XEM/XEventManager"
 
 import { XUI } from "../XUI/XUI";
 import { XUIObject } from "../XUI/XUIObject";
-
+import Wormholes from "../Wormholes/Wormholes";
 /* -------------------------------------------------------------------------- */
 /* Types                                                                      */
 /* -------------------------------------------------------------------------- */
@@ -162,7 +162,7 @@ export type XVMRouteSpec = {
 };
 
 export type XVMApp = {
-  xpell?: { version?: number };
+  _xpell?: { version?: number };
 
 
   // Optional: create player root automatically
@@ -293,6 +293,15 @@ class _XVM extends XModule {
       _description: "Return XVM help or command-specific help.",
       _params: {
         _op: "Optional operation name."
+      }
+    },
+    "call-server": {
+      _name: "call-server",
+      _scope: "module",
+      _description: "Call a server command via Wormholes.",
+      _params: {
+        _params: "Server command details.",
+        _debug: "Optional debug flag."
       }
     }
   };
@@ -1086,6 +1095,32 @@ class _XVM extends XModule {
     return this.help(op);
   }
 
+  async _call_server(cmd: any) {
+    const params = cmd?._params ?? {};
+    const _debug = params._debug === true;
+
+    const server_cmd = params._cmd;
+
+    if (_debug) {
+      _xlog.log("XVM call-server", { cmd, params, server_cmd });
+    }
+
+    if (!server_cmd?._module) {
+      throw new Error("xvm call-server: missing _params._cmd._module");
+    }
+
+    if (!server_cmd?._op) {
+      throw new Error("xvm call-server: missing _params._cmd._op");
+    }
+
+    return await Wormholes.sendXcmd({
+      ...server_cmd,
+      _op:
+        typeof server_cmd._op === "string" && server_cmd._op.startsWith("_")
+          ? server_cmd._op.slice(1)
+          : server_cmd._op
+    });
+  }
 
   help(op?: string) {
     const ops: Record<string, any> = {

@@ -45,7 +45,7 @@ export class XStyleSheet extends XUIObject {
             _media:
                 "Optional map of media queries to class rule maps.",
             class:
-                "Optional CSS class for the generated style element. Defaults to xstyle-sheet."
+                "Class applied to the generated <style> DOM element only. Not used for styling application UI objects."
         },
 
         _core_rules: [
@@ -54,7 +54,8 @@ export class XStyleSheet extends XUIObject {
             "Prefer style-sheet over repeated inline style strings.",
             "Do not use style-sheet for JavaScript logic.",
             "Do not inject external imports, @import, or remote URLs.",
-            "Keep generated CSS deterministic and data-only."
+            "Keep generated CSS deterministic and data-only.",
+            "Do not place application classes on the style-sheet object itself."
         ],
 
         _canonical_examples: [
@@ -70,6 +71,15 @@ export class XStyleSheet extends XUIObject {
                 },
                 _vars: {
                     "--app-accent": "#635bff"
+                }
+            },
+            {
+                _type: "style-sheet",
+                _classes: {
+                    "calc-button": {
+                        "padding": "12px",
+                        "border-radius": "8px"
+                    }
                 }
             }
         ]

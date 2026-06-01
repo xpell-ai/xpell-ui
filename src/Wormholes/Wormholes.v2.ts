@@ -200,6 +200,16 @@ export class WormholesV2 implements WormholesClientAPI {
     return this.sendSync(xcmd, timeoutMs);
   }
 
+  sendXcmdFireAndListen(xcmd: XCmd): string | undefined {
+    if (!this._ws || !this.__ready) {
+      throw { _code: "E_WORMHOLE_NOT_READY" };
+    }
+
+    const env = makeReq(xcmd, this.__wid, this.__sid);
+    this._sendEnvelope(env);
+    return env._id;
+  }
+
   sendSync(payload: any, timeoutMs = 20000): Promise<any> {
     return new Promise((resolve, reject) => {
       if (!this._ws || !this.__ready) return reject({ _code: "E_WORMHOLE_NOT_READY" });

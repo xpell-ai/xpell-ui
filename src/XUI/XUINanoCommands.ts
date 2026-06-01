@@ -136,6 +136,57 @@ export const _xuiobject_basic_nano_commands: XNanoCommandPack = {
     }
   ),
 
+  "append-text-from-data": createNanoCommandWithSkill(
+    (cmd, obj?: XObject) => {
+      if (!obj) return;
+
+      const ui = obj as XUIObject;
+
+      let data = (cmd as any)._params?.data;
+
+      if (data === undefined || data === null) {
+        return;
+      }
+
+      if (typeof data === "object") {
+        data = JSON.stringify(data);
+      }
+
+      const separator =
+        (cmd as any)._params?.separator ?? "";
+
+      const current =
+        String(ui._text ?? "");
+
+      ui._text =
+        current + separator + String(data);
+    },
+    {
+      _name: "append-text-from-data",
+      _scope: "ui-object",
+      _description:
+        "Append incoming event/data payload to the current UI object's text.",
+      _params: {
+        data: "Source data.",
+        separator:
+          "Optional separator inserted before appended value."
+      }
+    }
+  ),
+
+  "clear-text": createNanoCommandWithSkill(
+    (_cmd, obj?: XObject) => {
+      if (!obj) return;
+      (obj as XUIObject)._text = "";
+    },
+    {
+      _name: "clear-text",
+      _scope: "ui-object",
+      _description:
+        "Clear current UI object text."
+    }
+  ),
+
   "add-class": createNanoCommandWithSkill(
     (cmd, obj?: XObject) => {
       const cls = (cmd as any)._params?.class;
@@ -254,7 +305,7 @@ export const _xuiobject_basic_nano_commands: XNanoCommandPack = {
     }
   ),
 
-  focus: createNanoCommandWithSkill(
+  "focus": createNanoCommandWithSkill(
     (_cmd, obj?: XObject) => {
       const el = (obj as XUIObject)?.dom as any;
       if (el?.focus) el.focus();

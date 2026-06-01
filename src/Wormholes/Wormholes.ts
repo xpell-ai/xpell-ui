@@ -105,6 +105,10 @@ export class WormholesFacade implements WormholesClientAPI {
     return this._impl.sendXcmd(xcmd, timeoutMs);
   }
 
+  sendXcmdFireAndListen(xcmd: any) {
+    return this._impl.sendXcmdFireAndListen(xcmd);
+  }
+
   sendEvt(_name: string, _data?: any, _args?: any[]) {
     return this._impl.sendEvt(_name, _data, _args);
   }

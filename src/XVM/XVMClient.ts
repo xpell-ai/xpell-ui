@@ -1,4 +1,4 @@
-import { _xd, _xlog } from "@xpell/core";
+import { _xd, _xlog, XUtils as _xu } from "@xpell/core";
 
 import { _xem } from "../XEM/XEventManager";
 import Wormholes from "../Wormholes/Wormholes";
@@ -13,9 +13,18 @@ const DEFAULT_CONTAINER_ID = "region-main";
 const EVT_XVM_UPDATE = "xvm:update";
 const EVT_XVM_VIEW_RENDERED = "xvm:view-rendered";
 const EVT_XVM_CONNECTION = "xvm:connection-change";
+const EVT_VIBE_GENERATION_STAGE = "vibe:generation-stage";
+const EVT_VIBE_GENERATION_FAILED = "vibe:generation-failed";
+const EVT_XVIBE_ERROR = "xvibe:error";
+const EVT_COMMAND_ERROR = "command:error";
+
 export const _XD_KEYS = {
   XVM_APP_ID: "xvm:current_app_id",
   XVM_ENV: "xvm:current_env",
+  STUDIO_GENERATION_ID: "studio:generation_id",
+  STUDIO_GENERATION_STATE: "studio:generation_state",
+  STUDIO_GENERATION_STATUS: "studio:generation_status",
+  STUDIO_GENERATION_ERROR: "studio:generation_error",
 }
 
 type ServerXVMApp = {
@@ -46,7 +55,23 @@ type ServerUpdateEvt = {
   _view_id: string;
   _version?: number;
   _view: Record<string, any>;
+  _generation_id?: string;
+  _meta?: Record<string, any>;
 };
+
+type VibeGenerationFailureEvt = {
+  _app_id?: string;
+  _env?: string;
+  _view_id?: string;
+  _generation_id?: string;
+  _code?: string;
+  _message?: string;
+  _details?: any;
+  _diagnostic?: any;
+  _diagnostics?: any;
+};
+
+type VibeGenerationState = "idle" | "pending" | "running" | "completed" | "failed";
 
 export type XVMClientConnectionChange = {
   _status: "connected" | "disconnected" | "error" | "connecting";
@@ -122,6 +147,7 @@ export class XVMClient {
   _cmd_seq = 0;
   _app: ServerXVMApp | null = null;
   _current_view_id = "";
+  _app_view_id = "";
   _current_version = 0;
   _bound = false;
   _app_mounted = false;
@@ -131,6 +157,8 @@ export class XVMClient {
   _theme?: string | Record<string, string>;
   _cache_key_app: string;
   _cache_key_version: string;
+  _active_generation_id = "";
+  _active_generation_view_id = "";
 
   constructor(opts: XVMClientOptions) {
     this._app_id = opts._app_id;
@@ -183,6 +211,154 @@ export class XVMClient {
 
   _error(...args: any[]) {
     _xlog.error(LOG, ...args);
+  }
+
+  _vibe_log(...args: any[]) {
+    _xlog.log("[vibe-client]", ...args);
+  }
+
+  _normalize_event_payload(payload: any) {
+    return is_obj(payload) && Array.isArray(payload?._args) && is_obj(payload._args[0])
+      ? payload._args[0]
+      : payload;
+  }
+
+  _is_timeout_error(err: any) {
+    const e = is_obj(err) ? ((err as any)._error ?? err) : err;
+    return is_obj(e) && (e as any)._code === "E_TIMEOUT";
+  }
+
+  _format_generation_error(evt: VibeGenerationFailureEvt) {
+    const code = typeof evt._code === "string" && evt._code.trim() ? evt._code.trim() : "E_VIBE_GENERATION_FAILED";
+    const message =
+      typeof evt._message === "string" && evt._message.trim()
+        ? evt._message.trim()
+        : "Generation failed";
+    const details = evt._details ?? evt._diagnostics ?? evt._diagnostic;
+    return details !== undefined
+      ? `${code}: ${message} ${to_err(details)}`
+      : `${code}: ${message}`;
+  }
+
+  _write_generation_state(state: VibeGenerationState, status: string, error?: any) {
+    _xd.set(_XD_KEYS.STUDIO_GENERATION_STATE, state, { source: "vibe-client" });
+    _xd.set(_XD_KEYS.STUDIO_GENERATION_STATUS, status, { source: "vibe-client" });
+    if (error !== undefined) {
+      _xd.set(_XD_KEYS.STUDIO_GENERATION_ERROR, error, { source: "vibe-client" });
+    }
+  }
+
+  _set_studio_generation_ui(state: VibeGenerationState, status: string) {
+    const button = XUI.getObject("xstudio-preview-button") as any;
+    const status_label = XUI.getObject("xstudio-generation-status") as any;
+    const running = state === "pending" || state === "running";
+
+    if (button) {
+      button.setText?.(running ? "Generating..." : "Go");
+      if (button.dom) {
+        if (running) {
+          button.dom.setAttribute("disabled", "true");
+        } else {
+          button.dom.removeAttribute("disabled");
+        }
+      }
+    }
+
+    status_label?.setText?.(status);
+  }
+
+  _set_generation_state(state: VibeGenerationState, status: string, error?: any) {
+    this._write_generation_state(state, status, error);
+    this._set_studio_generation_ui(state, status);
+  }
+
+  _event_matches_active_generation(evt: Record<string, any>) {
+    if (!this._active_generation_id) return false;
+    if (evt._app_id !== this._app_id || evt._env !== this._env) return false;
+
+    const event_generation_id =
+      typeof evt._generation_id === "string"
+        ? evt._generation_id
+        : typeof evt._meta?._generation_id === "string"
+          ? evt._meta._generation_id
+          : "";
+
+    if (event_generation_id) {
+      return event_generation_id === this._active_generation_id;
+    }
+
+    if (typeof evt._view_id === "string" && this._active_generation_view_id) {
+      return evt._view_id === this._active_generation_view_id;
+    }
+
+    return false;
+  }
+
+  _start_generation(generation_id: string, view_id: string) {
+    this._active_generation_id = generation_id;
+    this._active_generation_view_id = view_id;
+    _xd.set(_XD_KEYS.STUDIO_GENERATION_ID, generation_id, { source: "vibe-client" });
+    this._set_generation_state("pending", "Generating...");
+  }
+
+  _complete_generation_from_update(upd: ServerUpdateEvt) {
+    if (!this._event_matches_active_generation(upd as any)) return;
+    this._vibe_log("generation completed from xvm:update", {
+      _generation_id: this._active_generation_id,
+      _view_id: upd._view_id,
+    });
+    this._active_generation_id = "";
+    this._active_generation_view_id = "";
+    this._set_generation_state("completed", "Generated");
+  }
+
+  _fail_generation_from_event(evt: VibeGenerationFailureEvt, source_evt: string) {
+    if (!this._event_matches_active_generation(evt as any)) return;
+    const message = this._format_generation_error(evt);
+    this._vibe_log("generation failed event", {
+      _source: source_evt,
+      _generation_id: this._active_generation_id,
+      _code: evt._code,
+      _message: evt._message,
+      _details: evt._details ?? evt._diagnostics ?? evt._diagnostic,
+    });
+    this._active_generation_id = "";
+    this._active_generation_view_id = "";
+    this._set_generation_state("failed", message, evt);
+  }
+
+  _handle_generation_stage(payload: any) {
+    const evt_payload = this._normalize_event_payload(payload);
+    if (!is_obj(evt_payload)) return;
+    if (!this._event_matches_active_generation(evt_payload)) return;
+
+    const message =
+      typeof evt_payload._message === "string" && evt_payload._message.trim()
+        ? evt_payload._message.trim()
+        : "Generating...";
+    this._set_generation_state("running", message);
+  }
+
+  _send_generation_fire_and_listen(xcmd: any) {
+    try {
+      const request_id = Wormholes.sendXcmdFireAndListen(xcmd);
+      this._vibe_log("generation fire-and-listen started", {
+        _generation_id: xcmd?._params?._generation_id,
+        _request_id: request_id,
+        _op: xcmd?._op,
+      });
+    } catch (err) {
+      if (this._is_timeout_error(err)) {
+        this._vibe_log("generation request ack timed out; still listening for events", {
+          _generation_id: xcmd?._params?._generation_id,
+        });
+        this._vibe_log("generation ack timeout ignored", {
+          _generation_id: xcmd?._params?._generation_id,
+        });
+        return;
+      }
+      throw err;
+    }
   }
 
   _cache_key_view(view_id: string) {
@@ -465,6 +641,26 @@ export class XVMClient {
       class: "xstudio-editor",
       _children: [
         {
+          _type: "toolbar",
+          _justify: "end",
+          _children: [
+            {
+              _type: "button",
+              _text: "×",
+              _variant: "ghost",
+              _on: {
+                click: {
+                  _module: "xem",
+                  _op: "fire",
+                  _params: {
+                    event: "studio:close",
+                  },
+                },
+              },
+            },
+          ],
+        },
+        {
           _type: "field",
           _label: "Prompt",
           _hint: "Describe the change you want to make to the current view.",
@@ -480,11 +676,18 @@ export class XVMClient {
         },
         {
           _type: "toolbar",
-          _justify: "space-between",
+          _justify: "end",
           _children: [
             {
+              _type: "label",
+              _id: "xstudio-generation-status",
+              class: "xstudio-generation-status",
+              _text: "",
+            },
+            {
               _type: "button",
-              _text: "Preview",
+              _id: "xstudio-preview-button",
+              _text: "Go",
               _variant: "primary",
               _on: {
                 click: {
@@ -492,33 +695,6 @@ export class XVMClient {
                   _op: "fire",
                   _params: {
                     event: "studio:preview-request",
-                  },
-                },
-              },
-            },
-            {
-              _type: "button",
-              _text: "Apply",
-              _tone: "success",
-              _on: {
-                click: {
-                  _module: "xem",
-                  _op: "fire",
-                  _params: {
-                    event: "studio:apply-request",
-                  },
-                },
-              },
-            },
-            {
-              _type: "button",
-              _text: "Close",
-              _on: {
-                click: {
-                  _module: "xem",
-                  _op: "fire",
-                  _params: {
-                    event: "studio:close",
                   },
                 },
               },
@@ -794,6 +970,10 @@ export class XVMClient {
       await this._navigate_view(view_id, region);
     }
     this._current_view_id = view_id;
+    if (region !== "studio") {
+      this._app_view_id = view_id;
+      this._log("app view tracked", { _view_id: view_id, _region: region });
+    }
     this._has_rendered_view = true;
     if (this._on_view_rendered) this._on_view_rendered(view_id);
     await _xem.fire(EVT_XVM_VIEW_RENDERED, { _view_id: view_id, _app_id: this._app_id, _env: this._env });
@@ -900,10 +1080,7 @@ export class XVMClient {
 
     const handle_update = async (payload: any, source_evt: string) => {
       try {
-        const evt_payload =
-          is_obj(payload) && Array.isArray(payload?._args) && is_obj(payload._args[0])
-            ? payload._args[0]
-            : payload;
+        const evt_payload = this._normalize_event_payload(payload);
 
         if (!is_obj(evt_payload)) return;
 
@@ -930,36 +1107,43 @@ export class XVMClient {
           XDB.saveString(this._cache_key_version, String(next_version));
         }
 
+        this._complete_generation_from_update(upd);
+
         this._log(
           `update applied source='${source_evt}' view='${upd._view_id}' version=${next_version || this._current_version} active='${this._current_view_id}'`
         );
 
-        // 🔥 hot reload / patch
-        if (this._current_view_id === upd._view_id) {
-          let patched = false;
+        if (this._current_view_id === upd._view_id || this._app_view_id === upd._view_id) {
+          const live_obj = XUI.getObject(upd._view_id) as any;
 
-          try {
-            const obj = (XVM as any).getCurrentView?.();
+          if (live_obj && typeof live_obj.update === "function") {
+            this._log("live view update via XUIObject.update", {
+              _view_id: upd._view_id,
+              _version: next_version || this._current_version,
+            });
 
-            if (obj && typeof obj.update === "function") {
-              this._log("🔥 patching live view", upd._view_id);
+            live_obj.update(upd._view);
+            (XVM as any).registerRawView?.(upd._view);
+            this._app_needs_refresh = false;
+            this._current_view_id = upd._view_id;
+            this._app_view_id = upd._view_id;
 
-              obj.update(upd._view);
-
-              // keep XVM in sync
-              (XVM as any).registerRawView?.(upd._view);
-
-              patched = true;
-            }
-          } catch (err) {
-            this._error("patch failed", err);
+            if (this._on_view_rendered) this._on_view_rendered(upd._view_id);
+            await _xem.fire(EVT_XVM_VIEW_RENDERED, {
+              _view_id: upd._view_id,
+              _app_id: this._app_id,
+              _env: this._env,
+            });
+            return;
           }
 
-          if (!patched) {
-            this._log("⚠️ fallback to render_view", upd._view_id);
-            this._app_needs_refresh = true;
-            await this.render_view(upd._view_id);
-          }
+          this._log("live view update fallback rerender", {
+            _view_id: upd._view_id,
+            _version: next_version || this._current_version,
+          });
+          (XVM as any).registerRawView?.(upd._view);
+          this._app_needs_refresh = true;
+          await this.render_view(upd._view_id);
         }
       } catch (err) {
         this._error("update handler failed", err);
@@ -968,6 +1152,96 @@ export class XVMClient {
 
     /* 🔥 NEW EVENT */
     _xem.on("xvm:update", (payload: any) => handle_update(payload, "xvm:update"));
+
+    _xem.on(EVT_VIBE_GENERATION_STAGE, (payload: any) => {
+      this._handle_generation_stage(payload);
+    });
+
+    const handle_generation_failure = (payload: any, source_evt: string) => {
+      const evt_payload = this._normalize_event_payload(payload);
+      if (!is_obj(evt_payload)) return;
+      this._fail_generation_from_event(evt_payload as VibeGenerationFailureEvt, source_evt);
+    };
+
+    _xem.on(EVT_VIBE_GENERATION_FAILED, (payload: any) => {
+      handle_generation_failure(payload, EVT_VIBE_GENERATION_FAILED);
+    });
+    _xem.on(EVT_XVIBE_ERROR, (payload: any) => {
+      handle_generation_failure(payload, EVT_XVIBE_ERROR);
+    });
+    _xem.on(EVT_COMMAND_ERROR, (payload: any) => {
+      handle_generation_failure(payload, EVT_COMMAND_ERROR);
+    });
+
+    _xem.on("studio:preview-request", async () => {
+      try {
+        const prompt = String(_xd.get("studio:prompt") ?? "").trim();
+
+        if (!prompt) {
+          this._log("studio preview ignored: empty prompt");
+          return;
+        }
+
+        const app_id = this.getActiveAppId();
+        const env = this.getActiveEnv();
+        const current_view_id = this._current_view_id === "xstudio-editor" ? "" : this._current_view_id;
+        const view_id = this._app_view_id || current_view_id || "main";
+
+        if (!app_id || !view_id) {
+          this._error("studio preview failed: missing app_id or view_id", { _app_id: app_id, _view_id: view_id });
+          return;
+        }
+
+        this._log("studio preview target", { _view_id: view_id });
+        this._log("studio preview request");
+
+        const generation_id = _xu.guid();
+        this._start_generation(generation_id, view_id);
+
+        this._send_generation_fire_and_listen({
+          _module: "xvibe",
+          _op: "generate-view",
+          _params: {
+            _mode: "refine",
+            _app_id: app_id,
+            _env: env,
+            _view_id: view_id,
+            _prompt: prompt,
+            _generation_id: generation_id,
+          },
+        });
+        this._set_generation_state("running", "Generating...");
+      } catch (err) {
+        if (this._is_timeout_error(err)) {
+          this._vibe_log("generation request ack timed out; still listening for events", {
+            _generation_id: this._active_generation_id,
+          });
+          this._vibe_log("generation ack timeout ignored", {
+            _generation_id: this._active_generation_id,
+          });
+          return;
+        }
+        this._active_generation_id = "";
+        this._active_generation_view_id = "";
+        this._set_generation_state("failed", to_err(err), err);
+        this._error("studio preview failed", err);
+      }
+    });
+
+    _xem.on("studio:apply-request", () => {
+      this._log("studio apply ignored: preview already persists in V1");
+    });
+
+    _xem.on("studio:close", async () => {
+      try {
+        await (XVM as any).close?.({ region: "studio" });
+        const shell = XUI.getObject("xvibe-shell") as any;
+        shell?.removeClass?.("xstudio-open");
+        this._log("studio closed");
+      } catch (err) {
+        this._error("studio close failed", err);
+      }
+    });
 
   }
 

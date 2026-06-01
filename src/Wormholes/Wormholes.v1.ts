@@ -215,6 +215,11 @@ export class WormholesV1 extends XModule {
     return this.sendSync(xcmd, true);
   }
 
+  sendXcmdFireAndListen(xcmd: any): string | undefined {
+    this.send(xcmd, () => {}, MessageType.JSON);
+    return undefined;
+  }
+
   /**
    * v2 facade compatibility: send an event push.
    * v1 server expects { _msg_action:"xem", _params:{ _event,_data } }
@@ -325,6 +330,17 @@ export  class WormholesV1Adapter implements WormholesClientAPI {
 
   async sendXcmd(xcmd: any, timeoutMs?: number): Promise<any> {
     return this.sendSync(xcmd, timeoutMs);
+  }
+
+  sendXcmdFireAndListen(xcmd: any): string | undefined {
+    if (typeof (this._v1 as any).sendXcmdFireAndListen === "function") {
+      return (this._v1 as any).sendXcmdFireAndListen(xcmd);
+    }
+
+    void this.sendXcmd(xcmd).catch(() => {
+      // legacy v1 best-effort fire-and-listen
+    });
+    return undefined;
   }
 
   sendEvt(name: string, data?: any, args?: any[]): void {
