@@ -5,6 +5,7 @@ import Wormholes from "../Wormholes/Wormholes";
 import { XDB } from "../XDB/XDBClient";
 import { XVM, type XVMApp } from "./XVM";
 import { XUI } from "../XUI/XUI";
+import { studio_editor_view } from "../XStudio/XSEditor";
 
 const LOG = "[xvm-client]";
 const DEFAULT_REGION = "main";
@@ -25,6 +26,14 @@ export const _XD_KEYS = {
   STUDIO_GENERATION_STATE: "studio:generation_state",
   STUDIO_GENERATION_STATUS: "studio:generation_status",
   STUDIO_GENERATION_ERROR: "studio:generation_error",
+  STUDIO_STATUS: "studio:status",
+  STUDIO_JSON: "studio:json",
+  STUDIO_SELECTED_MODULE: "studio:selected_module",
+  STUDIO_MODULE_SOURCE: "studio:module_source",
+  STUDIO_MODULE_REPAIR_PROMPT: "studio:module_repair_prompt",
+  STUDIO_VIEWS: "studio:views",
+  STUDIO_FLOWS: "studio:flows",
+  STUDIO_MODULES: "studio:modules",
 }
 
 type ServerXVMApp = {
@@ -49,6 +58,18 @@ type ServerGetViewRes = {
   _view: Record<string, any>;
 };
 
+type ServerListViewsRes = {
+  _views?: any[];
+};
+
+type ServerListFlowsRes = {
+  _flows?: any[];
+};
+
+type ServerListGeneratedModulesRes = {
+  _modules?: any[];
+};
+
 type ServerUpdateEvt = {
   _app_id: string;
   _env: string;
@@ -64,6 +85,7 @@ type VibeGenerationFailureEvt = {
   _env?: string;
   _view_id?: string;
   _generation_id?: string;
+  _meta?: Record<string, any>;
   _code?: string;
   _message?: string;
   _details?: any;
@@ -71,7 +93,33 @@ type VibeGenerationFailureEvt = {
   _diagnostics?: any;
 };
 
+type VibeGenerationStageEvt = {
+  _app_id?: string;
+  _env?: string;
+  _view_id?: string;
+  _generation_id?: string;
+  _meta?: Record<string, any>;
+  _stage?: string;
+  _message?: string;
+};
+
 type VibeGenerationState = "idle" | "pending" | "running" | "completed" | "failed";
+
+const GENERATION_STAGE_STATUS: Record<string, string> = {
+  preparing: "Preparing generation...",
+  planning: "Planning...",
+  "selecting-skills": "Selecting skills...",
+  "loading-view": "Loading current view...",
+  "building-prompt": "Building prompt...",
+  generating: "Generating JSON...",
+  parsing: "Parsing response...",
+  validating: "Validating...",
+  repairing: "Repairing...",
+  saving: "Saving...",
+  complete: "Done",
+  completed: "Done",
+  failed: "Generation failed",
+};
 
 export type XVMClientConnectionChange = {
   _status: "connected" | "disconnected" | "error" | "connecting";
@@ -115,12 +163,12 @@ const to_err = (e: any) => {
 const to_result = (raw: any) => {
   if (is_obj(raw) && typeof raw._ok === "boolean") {
     if (raw._ok !== true) throw new Error(to_err(raw._result ?? raw));
-    return raw._result;
+    return "_result" in raw ? raw._result : raw;
   }
 
   if (is_obj(raw) && is_obj(raw._payload) && typeof raw._payload._ok === "boolean") {
     if (raw._payload._ok !== true) throw new Error(to_err(raw._payload._result ?? raw._payload));
-    return raw._payload._result;
+    return "_result" in raw._payload ? raw._payload._result : raw._payload;
   }
 
   if (is_obj(raw) && "_result" in raw) {
@@ -218,9 +266,21 @@ export class XVMClient {
   }
 
   _normalize_event_payload(payload: any) {
-    return is_obj(payload) && Array.isArray(payload?._args) && is_obj(payload._args[0])
-      ? payload._args[0]
+    const raw = typeof payload === "string" && payload.trim()
+      ? (() => {
+        try {
+          return JSON.parse(payload);
+        } catch {
+          return payload;
+        }
+      })()
       : payload;
+
+    if (is_obj(raw) && Array.isArray(raw?._args) && is_obj(raw._args[0])) return raw._args[0];
+    if (is_obj(raw) && Array.isArray(raw?.args) && is_obj(raw.args[0])) return raw.args[0];
+    if (is_obj(raw) && is_obj(raw?._payload)) return raw._payload;
+    if (is_obj(raw) && is_obj(raw?.payload)) return raw.payload;
+    return raw;
   }
 
   _is_timeout_error(err: any) {
@@ -229,15 +289,76 @@ export class XVMClient {
   }
 
   _format_generation_error(evt: VibeGenerationFailureEvt) {
-    const code = typeof evt._code === "string" && evt._code.trim() ? evt._code.trim() : "E_VIBE_GENERATION_FAILED";
+    const code = typeof evt._code === "string" && evt._code.trim() ? evt._code.trim() : "";
     const message =
       typeof evt._message === "string" && evt._message.trim()
         ? evt._message.trim()
-        : "Generation failed";
-    const details = evt._details ?? evt._diagnostics ?? evt._diagnostic;
-    return details !== undefined
-      ? `${code}: ${message} ${to_err(details)}`
-      : `${code}: ${message}`;
+        : "";
+
+    if (code && message) return `${code}: ${message}`;
+    if (message) return message;
+    if (code) return code;
+    return "Generation failed";
+  }
+
+  _normalize_generation_stage(stage: string) {
+    return stage.trim().toLowerCase().replaceAll("_", "-");
+  }
+
+  _humanize_generation_stage(stage: string) {
+    const text = stage
+      .trim()
+      .replaceAll("_", " ")
+      .replaceAll("-", " ")
+      .replace(/\s+/g, " ")
+      .toLowerCase();
+
+    if (!text) return "Generating...";
+    return `${text.charAt(0).toUpperCase()}${text.slice(1)}...`;
+  }
+
+  _format_generation_stage_message(evt: Record<string, any>) {
+    const message = typeof evt._message === "string" && evt._message.trim() ? evt._message.trim() : "";
+    if (message) return message;
+
+    const stage = typeof evt._stage === "string" && evt._stage.trim() ? evt._stage.trim() : "";
+    if (!stage) return "Generating...";
+
+    const normalized_stage = this._normalize_generation_stage(stage);
+    return GENERATION_STAGE_STATUS[normalized_stage] ?? this._humanize_generation_stage(stage);
+  }
+
+  _format_generation_stage(evt: VibeGenerationStageEvt) {
+    return this._format_generation_stage_message(evt);
+  }
+
+  _short_generation_status(status: string) {
+    const text = typeof status === "string" ? status.trim() : "";
+    if (!text) return "Working...";
+
+    const mapped: Record<string, string> = {
+      "Preparing generation...": "Preparing...",
+      "Planning intent...": "Planning...",
+      "Planning...": "Planning...",
+      "Selecting skills...": "Selecting...",
+      "Skills selected": "Skills selected",
+      "Loading current view...": "Loading...",
+      "Building prompt...": "Prompt...",
+      "Generating JSON...": "Generating...",
+      "Parsing response...": "Parsing...",
+      "Validating artifact...": "Validating...",
+      "Validating...": "Validating...",
+      "Repairing artifact...": "Repairing...",
+      "Repairing...": "Repairing...",
+      "Saving view...": "Saving...",
+      "Saving...": "Saving...",
+      "View updated": "Done",
+      "Done": "Done",
+      "Generation failed": "Failed",
+    };
+
+    if (mapped[text]) return mapped[text];
+    return text.length <= 22 ? text : "Working...";
   }
 
   _write_generation_state(state: VibeGenerationState, status: string, error?: any) {
@@ -252,9 +373,10 @@ export class XVMClient {
     const button = XUI.getObject("xstudio-preview-button") as any;
     const status_label = XUI.getObject("xstudio-generation-status") as any;
     const running = state === "pending" || state === "running";
+    const button_text = running ? this._short_generation_status(status) : "Go";
 
     if (button) {
-      button.setText?.(running ? "Generating..." : "Go");
+      button.setText?.(button_text);
       if (button.dom) {
         if (running) {
           button.dom.setAttribute("disabled", "true");
@@ -265,23 +387,463 @@ export class XVMClient {
     }
 
     status_label?.setText?.(status);
+    return button_text;
+  }
+
+  _set_studio_label(object_id: string, text: string) {
+    const label = XUI.getObject(object_id) as any;
+    label?.setText?.(text);
+  }
+
+  _set_studio_json_editor(text: string) {
+    const editor = XUI.getObject("xstudio-json") as any;
+    if (editor?.setValue) {
+      editor.setValue(text);
+    } else if (editor?.dom && "value" in editor.dom) {
+      editor.dom.value = text;
+    }
+  }
+
+  _set_studio_module_source_editor(text: string) {
+    const editor = XUI.getObject("xstudio-module-source") as any;
+    editor?.setValue?.(text);
+  }
+
+  _set_studio_selected_module_editor(text: string) {
+    const editor = XUI.getObject("xstudio-selected-module") as any;
+    editor?.setValue?.(text);
+  }
+
+  _write_studio_status(status: string) {
+    _xd.set(_XD_KEYS.STUDIO_STATUS, status, { source: "xstudio-runtime" });
+    this._set_studio_label("xstudio-status", status);
+  }
+
+  _get_studio_module_name(item: any) {
+    if (typeof item === "string" && item.trim()) return item.trim();
+    if (!is_obj(item)) return "";
+
+    const name =
+      typeof item._name === "string" && item._name.trim()
+        ? item._name.trim()
+        : typeof item._id === "string" && item._id.trim()
+          ? item._id.trim()
+          : typeof item.id === "string" && item.id.trim()
+            ? item.id.trim()
+            : "";
+
+    return name;
+  }
+
+  _get_studio_module_state(item: any) {
+    if (!is_obj(item)) return "";
+    return typeof item._state === "string" && item._state.trim()
+      ? item._state.trim()
+      : "";
+  }
+
+  _get_studio_modules() {
+    const modules = _xd.get(_XD_KEYS.STUDIO_MODULES);
+    return Array.isArray(modules) ? modules : [];
+  }
+
+  _resolve_studio_selected_module(options: { allow_dev_fallback?: boolean } = {}) {
+    const selected_module = String(_xd.get(_XD_KEYS.STUDIO_SELECTED_MODULE) ?? "").trim();
+    if (selected_module) return selected_module;
+
+    const modules = this._get_studio_modules();
+    if (modules.length > 0) {
+      this._write_studio_status("Select a module first");
+      return "";
+    }
+
+    if (options.allow_dev_fallback === false) {
+      this._write_studio_status("Select a module first");
+      return "";
+    }
+
+    const fallback = "tic-tac-toe";
+    _xd.set(_XD_KEYS.STUDIO_SELECTED_MODULE, fallback, { source: "xstudio-module-editor" });
+    this._set_studio_selected_module_editor(fallback);
+    return fallback;
+  }
+
+  _format_studio_list_item(item: any) {
+    if (typeof item === "string") return item;
+    if (!is_obj(item)) return String(item);
+
+    const id =
+      typeof item._id === "string" && item._id.trim()
+        ? item._id.trim()
+        : typeof item.id === "string" && item.id.trim()
+          ? item.id.trim()
+          : "";
+    const title =
+      typeof item._title === "string" && item._title.trim()
+        ? item._title.trim()
+        : typeof item._name === "string" && item._name.trim()
+          ? item._name.trim()
+          : "";
+
+    if (id && title && title !== id) return `${id} (${title})`;
+    if (id) return id;
+    if (title) return title;
+
+    try {
+      return JSON.stringify(item);
+    } catch {
+      return String(item);
+    }
+  }
+
+  _format_studio_list(label: string, items: any[]) {
+    if (!Array.isArray(items) || items.length === 0) return `${label}: -`;
+    return `${label}: ${items.map((item) => this._format_studio_list_item(item)).join(", ")}`;
+  }
+
+  _format_studio_module_list_item(item: any) {
+    const name = this._get_studio_module_name(item);
+    const state = this._get_studio_module_state(item);
+
+    if (name && state) return `${name} (${state})`;
+    if (name) return name;
+
+    try {
+      return JSON.stringify(item);
+    } catch {
+      return String(item);
+    }
+  }
+
+  _format_studio_module_list(items: any[]) {
+    if (!Array.isArray(items) || items.length === 0) return "Modules: -";
+    return `Modules: ${items.map((item) => this._format_studio_module_list_item(item)).join(", ")}`;
+  }
+
+  _extract_studio_generated_module_response(result: any, selected_module: string) {
+    const direct_source =
+      is_obj(result) && typeof result._source === "string"
+        ? result._source
+        : undefined;
+    const module_source =
+      is_obj(result?._module) && typeof result._module._source === "string"
+        ? result._module._source
+        : undefined;
+    const nested_source =
+      is_obj(result?._result) && typeof result._result._source === "string"
+        ? result._result._source
+        : undefined;
+    const nested_module_source =
+      is_obj(result?._result?._module) && typeof result._result._module._source === "string"
+        ? result._result._module._source
+        : undefined;
+
+    const direct_name =
+      is_obj(result) && typeof result._name === "string" && result._name.trim()
+        ? result._name.trim()
+        : "";
+    const module_name =
+      is_obj(result?._module) && typeof result._module._name === "string" && result._module._name.trim()
+        ? result._module._name.trim()
+        : "";
+
+    return {
+      _name: direct_name || module_name || selected_module,
+      _source: direct_source ?? module_source ?? nested_source ?? nested_module_source,
+    };
+  }
+
+  _resolve_studio_target_view_id() {
+    const current_view_id = this._current_view_id === "xstudio-editor" ? "" : this._current_view_id;
+    return this._app_view_id || current_view_id || "";
+  }
+
+  async _refresh_studio_runtime() {
+    try {
+      const app_id = this.getActiveAppId();
+      const env = this.getActiveEnv();
+
+      if (!app_id) {
+        throw new Error("Missing active app id");
+      }
+
+      this._write_studio_status("Refreshing runtime...");
+
+      const params = { _app_id: app_id, _env: env };
+      const [views_res, flows_res, modules_res] = await Promise.all([
+        this._send_cmd("list-views", params) as Promise<ServerListViewsRes>,
+        this._send_cmd("list-flows", params) as Promise<ServerListFlowsRes>,
+        this._send_cmd("list-generated-modules", {}) as Promise<ServerListGeneratedModulesRes>,
+      ]);
+
+      const views = Array.isArray(views_res?._views) ? views_res._views : [];
+      const flows = Array.isArray(flows_res?._flows) ? flows_res._flows : [];
+      const modules = Array.isArray(modules_res?._modules) ? modules_res._modules : [];
+
+      _xd.set(_XD_KEYS.STUDIO_VIEWS, views, { source: "xstudio-runtime" });
+      _xd.set(_XD_KEYS.STUDIO_FLOWS, flows, { source: "xstudio-runtime" });
+      _xd.set(_XD_KEYS.STUDIO_MODULES, modules, { source: "xstudio-runtime" });
+
+      const selected_module = String(_xd.get(_XD_KEYS.STUDIO_SELECTED_MODULE) ?? "").trim();
+      if (!selected_module && modules.length > 0) {
+        const first_module = this._get_studio_module_name(modules[0]);
+        if (first_module) {
+          _xd.set(_XD_KEYS.STUDIO_SELECTED_MODULE, first_module, { source: "xstudio-runtime" });
+          this._set_studio_selected_module_editor(first_module);
+        }
+      }
+
+      this._set_studio_label("xstudio-views-list", this._format_studio_list("Views", views));
+      this._set_studio_label("xstudio-flows-list", this._format_studio_list("Flows", flows));
+      this._set_studio_label("xstudio-modules-list", this._format_studio_module_list(modules));
+      this._write_studio_status("Runtime refreshed");
+      return true;
+    } catch (err) {
+      const message = `Runtime refresh failed: ${to_err(err)}`;
+      this._write_studio_status(message);
+      this._error("studio runtime refresh failed", err);
+      return false;
+    }
+  }
+
+  async _load_studio_current_view_json() {
+    try {
+      const app_id = this.getActiveAppId();
+      const env = this.getActiveEnv();
+      const view_id = this._resolve_studio_target_view_id();
+
+      if (!app_id || !view_id) {
+        throw new Error("Missing active app id or view id");
+      }
+
+      this._write_studio_status(`Loading ${view_id}...`);
+
+      const out = (await this._send_cmd("get-view", { _app_id: app_id, _env: env, _view_id: view_id })) as ServerGetViewRes;
+      if (!is_obj(out) || !is_obj(out._view)) {
+        throw new Error(`Invalid get-view response for '${view_id}'`);
+      }
+
+      const json = JSON.stringify(out._view, null, 2);
+      _xd.set(_XD_KEYS.STUDIO_JSON, json, { source: "xstudio-runtime" });
+      this._set_studio_json_editor(json);
+      this._write_studio_status(`Loaded ${view_id}`);
+    } catch (err) {
+      const message = `Load current view failed: ${to_err(err)}`;
+      this._write_studio_status(message);
+      this._error("studio load current view failed", err);
+    }
+  }
+
+  async _save_studio_view_json() {
+    try {
+      const app_id = this.getActiveAppId();
+      const env = this.getActiveEnv();
+      const json = String(_xd.get(_XD_KEYS.STUDIO_JSON) ?? "").trim();
+
+      if (!app_id) {
+        throw new Error("Missing active app id");
+      }
+      if (!json) {
+        throw new Error("studio:json is empty");
+      }
+
+      const view = JSON.parse(json);
+      if (!is_obj(view)) {
+        throw new Error("studio:json must be a JSON object");
+      }
+
+      const json_view_id =
+        typeof view._id === "string" && view._id.trim()
+          ? view._id.trim()
+          : "";
+      const view_id = json_view_id || this._resolve_studio_target_view_id();
+
+      if (!view_id) {
+        throw new Error("Missing view id");
+      }
+
+      this._write_studio_status(`Saving ${view_id}...`);
+
+      await this._send_cmd("save-view-json", {
+        _app_id: app_id,
+        _env: env,
+        _view_id: view_id,
+        _view: view,
+      });
+
+      this._write_studio_status(`Saved ${view_id}`);
+    } catch (err) {
+      const message = `Save view failed: ${to_err(err)}`;
+      this._write_studio_status(message);
+      this._error("studio save view failed", err);
+    }
+  }
+
+  async _load_studio_generated_module_source() {
+    try {
+      const selected_module = this._resolve_studio_selected_module();
+      if (!selected_module) return;
+
+      this._write_studio_status(`Loading module ${selected_module}...`);
+
+      const out = await this._send_module_creator_cmd("get-generated-module", {
+        _name: selected_module,
+      });
+
+      this._log("studio get-generated-module result", out);
+
+      const parsed = this._extract_studio_generated_module_response(out, selected_module);
+
+      if (typeof parsed._source !== "string") {
+        this._error("studio get-generated-module missing source", {
+          _selected_module: selected_module,
+          _result: out,
+        });
+        throw new Error(`Invalid get-generated-module response for '${selected_module}'`);
+      }
+
+      _xd.set(_XD_KEYS.STUDIO_MODULE_SOURCE, parsed._source, { source: "xstudio-module-editor" });
+      this._set_studio_module_source_editor(parsed._source);
+      this._write_studio_status(`Loaded module ${parsed._name}`);
+    } catch (err) {
+      const message = `Load module failed: ${to_err(err)}`;
+      this._write_studio_status(message);
+      this._error("studio load module failed", err);
+    }
+  }
+
+  async _save_studio_generated_module_source() {
+    try {
+      const selected_module = this._resolve_studio_selected_module();
+      if (!selected_module) return;
+
+      const source = String(_xd.get(_XD_KEYS.STUDIO_MODULE_SOURCE) ?? "");
+
+      this._write_studio_status(`Saving module ${selected_module}...`);
+
+      await this._send_module_creator_cmd("save-generated-module-source", {
+        _name: selected_module,
+        _source: source,
+      });
+
+      const runtime_refreshed = await this._refresh_studio_runtime();
+      this._write_studio_status(
+        runtime_refreshed
+          ? `Saved module ${selected_module}. Runtime refreshed`
+          : `Saved module ${selected_module}. Runtime refresh failed`
+      );
+    } catch (err) {
+      const message = `Save module failed: ${to_err(err)}`;
+      this._write_studio_status(message);
+      this._error("studio save module failed", err);
+    }
+  }
+
+  async _repair_studio_generated_module() {
+    try {
+      const selected_module = this._resolve_studio_selected_module();
+      if (!selected_module) return;
+
+      const prompt = String(_xd.get(_XD_KEYS.STUDIO_MODULE_REPAIR_PROMPT) ?? "").trim();
+
+      if (!prompt) {
+        throw new Error("studio:module_repair_prompt is empty");
+      }
+
+      this._write_studio_status(`Repairing module ${selected_module}...`);
+
+      await this._send_module_creator_cmd("repair-generated-module", {
+        _name: selected_module,
+        _prompt: prompt,
+      });
+
+      const out = await this._send_module_creator_cmd("get-generated-module", {
+        _name: selected_module,
+      });
+
+      if (!is_obj(out) || typeof out._source !== "string") {
+        throw new Error(`Invalid get-generated-module response for '${selected_module}'`);
+      }
+
+      _xd.set(_XD_KEYS.STUDIO_MODULE_SOURCE, out._source, { source: "xstudio-module-editor" });
+      this._set_studio_module_source_editor(out._source);
+      const runtime_refreshed = await this._refresh_studio_runtime();
+      this._write_studio_status(
+        runtime_refreshed
+          ? `Repaired module ${selected_module}. Runtime refreshed`
+          : `Repaired module ${selected_module}. Runtime refresh failed`
+      );
+    } catch (err) {
+      const message = `Repair module failed: ${to_err(err)}`;
+      this._write_studio_status(message);
+      this._error("studio repair module failed", err);
+    }
+  }
+
+  async _disable_studio_generated_module() {
+    try {
+      const selected_module = this._resolve_studio_selected_module();
+      if (!selected_module) return;
+
+      this._write_studio_status(`Disabling module ${selected_module}...`);
+
+      await this._send_module_creator_cmd("disable-generated-module", {
+        _name: selected_module,
+      });
+
+      const runtime_refreshed = await this._refresh_studio_runtime();
+      this._write_studio_status(
+        runtime_refreshed
+          ? `Disabled module ${selected_module}. Runtime refreshed`
+          : `Disabled module ${selected_module}. Runtime refresh failed`
+      );
+    } catch (err) {
+      const message = `Disable module failed: ${to_err(err)}`;
+      this._write_studio_status(message);
+      this._error("studio disable module failed", err);
+    }
+  }
+
+  async _delete_studio_generated_module() {
+    try {
+      const selected_module = this._resolve_studio_selected_module({ allow_dev_fallback: false });
+      if (!selected_module) return;
+
+      this._write_studio_status(`Deleting module ${selected_module}...`);
+
+      await this._send_module_creator_cmd("delete-generated-module", {
+        _name: selected_module,
+      });
+
+      const runtime_refreshed = await this._refresh_studio_runtime();
+      this._write_studio_status(
+        runtime_refreshed
+          ? `Deleted module ${selected_module}. Runtime refreshed`
+          : `Deleted module ${selected_module}. Runtime refresh failed`
+      );
+    } catch (err) {
+      const message = `Delete module failed: ${to_err(err)}`;
+      this._write_studio_status(message);
+      this._error("studio delete module failed", err);
+    }
   }
 
   _set_generation_state(state: VibeGenerationState, status: string, error?: any) {
     this._write_generation_state(state, status, error);
-    this._set_studio_generation_ui(state, status);
+    const button_text = this._set_studio_generation_ui(state, status);
+    this._vibe_log("generation-status updated", {
+      _state: state,
+      _status: status,
+      _button_text: button_text,
+      _generation_id: this._active_generation_id,
+    });
   }
 
   _event_matches_active_generation(evt: Record<string, any>) {
     if (!this._active_generation_id) return false;
     if (evt._app_id !== this._app_id || evt._env !== this._env) return false;
 
-    const event_generation_id =
-      typeof evt._generation_id === "string"
-        ? evt._generation_id
-        : typeof evt._meta?._generation_id === "string"
-          ? evt._meta._generation_id
-          : "";
+    const event_generation_id = this._get_event_generation_id(evt);
 
     if (event_generation_id) {
       return event_generation_id === this._active_generation_id;
@@ -294,11 +856,54 @@ export class XVMClient {
     return false;
   }
 
+  _get_event_generation_id(evt: Record<string, any>) {
+    return typeof evt._generation_id === "string"
+      ? evt._generation_id
+      : typeof evt._meta?._generation_id === "string"
+        ? evt._meta._generation_id
+        : "";
+  }
+
+  _generation_event_matches(evt: Record<string, any>) {
+    const event_generation_id = this._get_event_generation_id(evt);
+
+    if (this._active_generation_id) {
+      return event_generation_id === this._active_generation_id;
+    }
+
+    const has_app_id = typeof evt._app_id === "string" && evt._app_id.trim();
+    const has_env = typeof evt._env === "string" && evt._env.trim();
+    if (has_app_id && evt._app_id !== this._app_id) return false;
+    if (has_env && evt._env !== this._env) return false;
+
+    const has_app_env_match = Boolean(has_app_id && has_env);
+    const view_id = typeof evt._view_id === "string" && evt._view_id.trim() ? evt._view_id.trim() : "";
+    const view_matches = view_id === this._app_view_id || view_id === this._current_view_id;
+
+    const matched = has_app_env_match || view_matches;
+    if (matched) {
+      this._vibe_log("generation event fallback match", {
+        _generation_id: event_generation_id,
+        _app_id: evt._app_id,
+        _env: evt._env,
+        _view_id: evt._view_id,
+      });
+    }
+
+    return matched;
+  }
+
   _start_generation(generation_id: string, view_id: string) {
     this._active_generation_id = generation_id;
     this._active_generation_view_id = view_id;
     _xd.set(_XD_KEYS.STUDIO_GENERATION_ID, generation_id, { source: "vibe-client" });
-    this._set_generation_state("pending", "Generating...");
+    this._vibe_log("generation started", {
+      _generation_id: generation_id,
+      _app_id: this._app_id,
+      _env: this._env,
+      _view_id: view_id,
+    });
+    this._set_generation_state("pending", "Preparing generation...");
   }
 
   _complete_generation_from_update(upd: ServerUpdateEvt) {
@@ -309,34 +914,97 @@ export class XVMClient {
     });
     this._active_generation_id = "";
     this._active_generation_view_id = "";
-    this._set_generation_state("completed", "Generated");
+    this._set_generation_state("completed", "Generation complete");
   }
 
-  _fail_generation_from_event(evt: VibeGenerationFailureEvt, source_evt: string) {
-    if (!this._event_matches_active_generation(evt as any)) return;
-    const message = this._format_generation_error(evt);
-    this._vibe_log("generation failed event", {
+  _fail_generation_from_event(evt: VibeGenerationFailureEvt, source_evt: string, error_payload: any = evt) {
+    this._vibe_log("generation-failed received", {
       _source: source_evt,
-      _generation_id: this._active_generation_id,
+      _generation_id: this._get_event_generation_id(evt as any),
+      _app_id: evt._app_id,
+      _env: evt._env,
+      _stage: (evt as any)._stage,
+      _message: evt._message,
+    });
+
+    if (!this._generation_event_matches(evt as any)) {
+      this._vibe_log("generation failed ignored", {
+        _source: source_evt,
+        _generation_id: this._get_event_generation_id(evt as any),
+        _active_generation_id: this._active_generation_id,
+        _app_id: evt._app_id,
+        _env: evt._env,
+        _view_id: evt._view_id,
+        _current_app_view_id: this._resolve_studio_target_view_id(),
+      });
+      return;
+    }
+    const message = this._format_generation_error(evt);
+    this._vibe_log("generation failed shown", {
+      _source: source_evt,
+      _generation_id: this._get_event_generation_id(evt as any) || this._active_generation_id,
       _code: evt._code,
       _message: evt._message,
-      _details: evt._details ?? evt._diagnostics ?? evt._diagnostic,
     });
     this._active_generation_id = "";
     this._active_generation_view_id = "";
-    this._set_generation_state("failed", message, evt);
+    this._set_generation_state("failed", message, error_payload);
   }
 
   _handle_generation_stage(payload: any) {
     const evt_payload = this._normalize_event_payload(payload);
     if (!is_obj(evt_payload)) return;
-    if (!this._event_matches_active_generation(evt_payload)) return;
 
-    const message =
-      typeof evt_payload._message === "string" && evt_payload._message.trim()
-        ? evt_payload._message.trim()
-        : "Generating...";
-    this._set_generation_state("running", message);
+    this._vibe_log("generation-stage received", {
+      _generation_id: this._get_event_generation_id(evt_payload),
+      _app_id: evt_payload._app_id,
+      _env: evt_payload._env,
+      _stage: evt_payload._stage,
+      _message: evt_payload._message,
+    });
+
+    if (!this._generation_event_matches(evt_payload)) return;
+
+    const message = this._format_generation_stage_message(evt_payload);
+    const stage =
+      typeof evt_payload._stage === "string" && evt_payload._stage.trim()
+        ? this._normalize_generation_stage(evt_payload._stage)
+        : "";
+    const next_state: VibeGenerationState =
+      stage === "complete" || stage === "completed"
+        ? "completed"
+        : stage === "failed"
+          ? "failed"
+          : "running";
+    const complete_has_message = typeof evt_payload._message === "string" && evt_payload._message.trim();
+    const status = next_state === "completed" && !complete_has_message ? "Generation complete" : message;
+    const button_text = next_state === "running"
+      ? this._short_generation_status(status)
+      : "Go";
+
+    this._vibe_log("generation stage shown", {
+      _stage: evt_payload._stage,
+      _message: evt_payload._message,
+      _status: status,
+      _button_text: button_text,
+      _generation_id: this._get_event_generation_id(evt_payload),
+    });
+
+    if (next_state === "completed") {
+      this._active_generation_id = "";
+      this._active_generation_view_id = "";
+      this._set_generation_state("completed", status);
+      return;
+    }
+
+    if (next_state === "failed") {
+      this._active_generation_id = "";
+      this._active_generation_view_id = "";
+      this._set_generation_state("failed", status, evt_payload);
+      return;
+    }
+
+    this._set_generation_state("running", status);
   }
 
   _send_generation_fire_and_listen(xcmd: any) {
@@ -519,6 +1187,25 @@ export class XVMClient {
     }
   }
 
+  async _send_module_creator_cmd(_op: string, _params: Record<string, any>) {
+    const req_id = ++this._cmd_seq;
+    this._log(`-> module-creator.${_op}`, { _req_id: req_id, _params });
+    try {
+      const raw = await Wormholes.sendXcmd({
+        _module: "module-creator",
+        _op,
+        _params,
+      });
+      this._log(`<- module-creator.${_op} raw`, { _req_id: req_id, _raw: raw });
+      const result = to_result(raw);
+      this._log(`<- module-creator.${_op} result`, { _req_id: req_id, _result: result });
+      return result;
+    } catch (err: any) {
+      this._error(`xx [${req_id}] module-creator.${_op} failed`, to_err(err));
+      throw err;
+    }
+  }
+
   async _wait_for_wormhole_open() {
     if (Wormholes._ready || this._connected) {
       this._log("wormhole already connected");
@@ -635,74 +1322,7 @@ export class XVMClient {
       ]
     };
 
-    const studio_editor_view: any = {
-      _id: "xstudio-editor",
-      _type: "view",
-      class: "xstudio-editor",
-      _children: [
-        {
-          _type: "toolbar",
-          _justify: "end",
-          _children: [
-            {
-              _type: "button",
-              _text: "×",
-              _variant: "ghost",
-              _on: {
-                click: {
-                  _module: "xem",
-                  _op: "fire",
-                  _params: {
-                    event: "studio:close",
-                  },
-                },
-              },
-            },
-          ],
-        },
-        {
-          _type: "field",
-          _label: "Prompt",
-          _hint: "Describe the change you want to make to the current view.",
-          _control: {
-            _id: "xstudio-prompt",
-            _type: "textarea",
-            placeholder: "Example: make this dashboard use KPI cards and add a table...",
-            rows: "6",
-            _data_source: "studio:prompt",
-            _data_output: "studio:prompt",
-            _update_data_source_event: "input",
-          },
-        },
-        {
-          _type: "toolbar",
-          _justify: "end",
-          _children: [
-            {
-              _type: "label",
-              _id: "xstudio-generation-status",
-              class: "xstudio-generation-status",
-              _text: "",
-            },
-            {
-              _type: "button",
-              _id: "xstudio-preview-button",
-              _text: "Go",
-              _variant: "primary",
-              _on: {
-                click: {
-                  _module: "xem",
-                  _op: "fire",
-                  _params: {
-                    event: "studio:preview-request",
-                  },
-                },
-              },
-            },
-          ],
-        },
-      ],
-    };
+
 
     const base_app: XVMApp = {
       _player: is_obj((config as any)._player)
@@ -1173,6 +1793,38 @@ export class XVMClient {
       handle_generation_failure(payload, EVT_COMMAND_ERROR);
     });
 
+    _xem.on("studio:runtime-refresh", async () => {
+      await this._refresh_studio_runtime();
+    });
+
+    _xem.on("studio:load-current-view", async () => {
+      await this._load_studio_current_view_json();
+    });
+
+    _xem.on("studio:save-view", async () => {
+      await this._save_studio_view_json();
+    });
+
+    _xem.on("studio:load-module", async () => {
+      await this._load_studio_generated_module_source();
+    });
+
+    _xem.on("studio:save-module", async () => {
+      await this._save_studio_generated_module_source();
+    });
+
+    _xem.on("studio:repair-module", async () => {
+      await this._repair_studio_generated_module();
+    });
+
+    _xem.on("studio:disable-module", async () => {
+      await this._disable_studio_generated_module();
+    });
+
+    _xem.on("studio:delete-module", async () => {
+      await this._delete_studio_generated_module();
+    });
+
     _xem.on("studio:preview-request", async () => {
       try {
         const prompt = String(_xd.get("studio:prompt") ?? "").trim();
@@ -1210,7 +1862,7 @@ export class XVMClient {
             _generation_id: generation_id,
           },
         });
-        this._set_generation_state("running", "Generating...");
+        this._set_generation_state("running", "Preparing generation...");
       } catch (err) {
         if (this._is_timeout_error(err)) {
           this._vibe_log("generation request ack timed out; still listening for events", {

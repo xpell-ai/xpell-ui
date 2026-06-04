@@ -460,6 +460,23 @@ export class XLink extends XUIObject {
             _text: "Visible link text."
         },
 
+        _match: {
+            _keywords: [
+                "link",
+                "hyperlink",
+                "url",
+                "website",
+                "web page",
+                "open page",
+                "external site",
+                "navigate",
+                "navigation",
+                "anchor",
+                "href",
+                "target blank",
+                "_blank"
+            ]
+        },
         _core_rules: [
             "Use link for navigation URLs and external resources.",
             "Use button for actions.",
@@ -473,6 +490,18 @@ export class XLink extends XUIObject {
                 href: "https://xpell.ai",
                 target: "_blank",
                 _text: "Open Xpell"
+            },
+            {
+                "_type": "link",
+                "_text": "Documentation",
+                "href": "https://docs.example.com"
+            },
+            {
+                "_type": "link",
+                "_text": "Open Website",
+                "href": "https://example.com",
+                "target": "_blank",
+                "rel": "noopener noreferrer"
             }
         ]
     };

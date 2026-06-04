@@ -246,3 +246,10 @@ body {
 .xstudio-editor .xbutton:hover {
     background: rgba(34,255,120,.12);
 }
+
+.xstudio-more-options {
+    display: flex;
+    gap: 8px;
+    flex-direction: column;
+    margin-top: 16px;
+}
