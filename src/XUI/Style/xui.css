@@ -210,7 +210,8 @@ body {
 .xstudio-editor {
     height: 100%;
     box-sizing: border-box;
-    padding: 16px;
+    padding-left: 16px;
+    padding-right: 16px;
     overflow: auto;
     background:
         radial-gradient(circle at center center, rgba(34,255,120,.12), transparent 32%),

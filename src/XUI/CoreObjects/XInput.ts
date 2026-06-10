@@ -54,8 +54,8 @@ export class XInput extends XUIObject {
                 _type: "input",
                 name: "username",
                 placeholder: "Enter username",
-                _text:"",
-                _data_output:"user.name"
+                _text: "",
+                _data_output: "user.name"
             }
         ]
     };
@@ -139,7 +139,11 @@ export class XInput extends XUIObject {
             return;
         }
 
-        const dom = this.dom as HTMLInputElement;
+        const dom = this._dom_object as HTMLInputElement | undefined;
+
+        if (!(dom instanceof HTMLElement)) {
+            return;
+        }
 
         this._auto_binding_initialized = true;
 
@@ -182,10 +186,9 @@ export class XInput extends XUIObject {
 
     override getDOMObject(): HTMLElement {
         const dom = super.getDOMObject();
-        if (!this._auto_binding_initialized) {
-            this._auto_binding_initialized = true;
-            this.enableAutoDataBinding();
-        }
+
+        this.enableAutoDataBinding();
+
         return dom;
     }
 
@@ -237,7 +240,7 @@ export class XTextField extends XInput {
         _version: "1.0.0",
         _active: true,
         _type: "view-skill",
-        _requires: ["xuiobject","input"],
+        _requires: ["xuiobject", "input"],
 
         _description:
             "Single-line text input rendered as an HTML input element.",
@@ -252,7 +255,7 @@ export class XTextField extends XInput {
             required: "Native required flag.",
             disabled: "Disable input.",
             readonly: "Read-only input.",
-             _data_source:
+            _data_source:
                 "Optional _xd key bound to the input value.",
 
             _data_output:
@@ -275,8 +278,8 @@ export class XTextField extends XInput {
                 _type: "text",
                 name: "username",
                 placeholder: "Enter username",
-                _text:"",
-                _data_output:"user.name"
+                _text: "",
+                _data_output: "user.name"
             }
         ]
     };
@@ -320,7 +323,7 @@ export class XPassword extends XInput {
             required: "Native required flag.",
             disabled: "Disable input.",
             readonly: "Read-only input.",
-            _data_output:"uses _xd to store value automatically"
+            _data_output: "uses _xd to store value automatically"
         },
 
         _core_rules: [
@@ -379,7 +382,7 @@ export class XTextArea extends XInput {
             cols: "Visible textarea columns.",
             placeholder: "Placeholder text.",
             maxlength: "Maximum text length.",
-             _data_source:
+            _data_source:
                 "Optional _xd key bound to the input value.",
 
             _data_output:
@@ -471,7 +474,7 @@ export class XSelect extends XInput {
             name: "Form/input name.",
             disabled: "Disable select.",
             required: "Native required flag.",
-             _data_source:
+            _data_source:
                 "Optional _xd key bound to the input value.",
 
             _data_output:

@@ -341,6 +341,25 @@ export const _xuiobject_basic_nano_commands: XNanoCommandPack = {
         block: "start, center, end, or nearest."
       }
     }
+  ),
+  "animate":createNanoCommandWithSkill(
+     (cmd, obj?: XObject) => {
+      
+
+      const animation = (cmd as any)._params?.animation ? String((cmd as any)._params?.animation) : ""
+      const infinite = (cmd as any)._params?.infinite ? (cmd as any)._params?.infinite : false;
+      (obj as XUIObject)?.animate(animation, infinite);
+      
+    },
+    {
+      _name: "animate",
+      _scope: "ui-object",
+      _description: "Animate the current UI object.",
+      _params: {
+        animation: "Animation name.",
+        infinite: "Whether the animation should loop infinitely."
+      }
+    }
   )
 };
 

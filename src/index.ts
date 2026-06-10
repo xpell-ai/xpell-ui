@@ -150,6 +150,20 @@ export { XVMClient } from "./XVM/XVMClient";
 export type { XVMClientOptions, XVMClientConnectionChange } from "./XVM/XVMClient";
 
 /* -------------------------------------------------------------------------- */
+/* XStudio                                                                    */
+/* -------------------------------------------------------------------------- */
+
+export { XStudioModule } from "./XStudio/XStudioModule";
+export { _XD_KEYS } from "./XStudio/XStudioTypes";
+export type {
+  ServerGetViewRes,
+  ServerListFlowsRes,
+  ServerListGeneratedModulesRes,
+  ServerListViewsRes,
+  VibeGenerationState,
+} from "./XStudio/XStudioTypes";
+
+/* -------------------------------------------------------------------------- */
 /* XDB                                                                        */
 /* -------------------------------------------------------------------------- */
 

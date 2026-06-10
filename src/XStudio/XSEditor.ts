@@ -17,13 +17,14 @@ export const studio_editor_view: any = {
       _children: [
         {
           _type: "label",
-          _text: "XStudio Runtime Editor",
+          _text: "Xpell Runtime Editor",
           _variant: "ghost",
         },
         {
           _type: "button",
-          _text: "×",
+          _text: "X",
           _variant: "ghost",
+          style: "font-size: 20px; line-height: 20px;",
           _on: {
             click: fire_event("studio:close"),
           },
@@ -66,7 +67,7 @@ export const studio_editor_view: any = {
         {
           _type: "button",
           _id: "xstudio-more-options-button",
-          _text: "More Options",
+          _text: "...",
           _variant: "primary",
           _on: {
             click: fire_event("studio:more-options-toggle"),

@@ -6,6 +6,7 @@ import { XFM } from "../XFM/FlowManagerClient";
 import { XVMClient, type XVMClientOptions } from "../XVM/XVMClient";
 import { EntityClient } from "../XDB/EntityClient";
 import { XDBClientModule } from "../XDB/XDBModule";
+import {XStudioModule} from "../XStudio/XStudioModule";
 
 /* -------------------------------------------------------------------------- */
 
@@ -14,6 +15,7 @@ export type XUIRuntimeOptions = {
   _load_flow?: boolean;
   _load_xvm?: boolean;
   _load_entity_client?: boolean;
+  _load_studio?: boolean;
 };
 
 export type XUIRuntimeAppOptions = XVMClientOptions & {
@@ -39,7 +41,8 @@ export class XUIRuntime {
       _auto_start: auto_start = true,
       _load_flow: load_flow = true,
       _load_xvm: load_xvm = true,
-      _load_entity_client: load_entity_client = true
+      _load_entity_client: load_entity_client = true,
+      _load_studio: load_studio = true
     } = opts;
 
     await _x.loadModuleAsync(XUI);
@@ -57,6 +60,9 @@ export class XUIRuntime {
       await _x.loadModuleAsync(new EntityClient());
     }
 
+    if (load_studio) {
+      await _x.loadModuleAsync(new XStudioModule(this));
+    }
 
     if (auto_start) {
       _x.start();
