@@ -170,6 +170,24 @@ export type {
 export { XDB, XDB as _xdb, XDBClient as _XDataBase } from "./XDB/XDBClient";
 
 /* -------------------------------------------------------------------------- */
+/* XAuth                                                                      */
+/* -------------------------------------------------------------------------- */
+
+export {
+  XAuthClient,
+  XAuth,
+  _xauth,
+  AUTH_SESSION_KEY,
+  AUTH_XD_KEYS,
+} from "./XAuth/XAuthClient";
+
+export type {
+  AuthXDataKey,
+  XAuthSession,
+  XAuthResult,
+} from "./XAuth/XAuthClient";
+
+/* -------------------------------------------------------------------------- */
 /* XEM (UI adapter overrides core exports)                                    */
 /* -------------------------------------------------------------------------- */
 

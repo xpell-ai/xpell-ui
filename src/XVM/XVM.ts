@@ -70,7 +70,7 @@
  */
 
 
-import { XModule, _xlog, _xd, type XObjectData, XParams } from "@xpell/core";
+import { XModule, _xlog, _xd, type XObjectData, XParams, _xu, _x } from "@xpell/core";
 import type {
   XpellSkill,
   XpellSkillCommand
@@ -81,6 +81,7 @@ import { _xem } from "../XEM/XEventManager"
 import { XUI } from "../XUI/XUI";
 import { XUIObject } from "../XUI/XUIObject";
 import Wormholes from "../Wormholes/Wormholes";
+
 /* -------------------------------------------------------------------------- */
 /* Types                                                                      */
 /* -------------------------------------------------------------------------- */
@@ -303,7 +304,27 @@ class _XVM extends XModule {
         _params: "Server command details.",
         _debug: "Optional debug flag."
       }
-    }
+    },
+    "list-apps": {
+      _name: "list-apps",
+      _scope: "module",
+      _description: "List runtime apps from server-xvm and optionally write them to XData.",
+      _params: {
+        _env: "Optional environment. Defaults to current client env.",
+        _include_system: "Include system apps when true.",
+        _output: "Optional XData key to write apps array into."
+      }
+    },
+    "load-server-app": {
+      _name: "load-server-app",
+      _scope: "module",
+      _description: "Load and open a server-backed XVM app by app id.",
+      _params: {
+        _app_id: "Target app id.",
+        _env: "Optional environment. Defaults to current client env."
+      }
+    },
+
   };
 
   private _current_view_object: XUIObject | null = null;
@@ -318,6 +339,7 @@ class _XVM extends XModule {
   private _factories: Record<string, XVMViewFactory> = {};
   private _routes: Record<string, XVMRouteSpec> = {};
   private _active: ActiveMap = {};
+  private _routerCleanups: Array<() => void> = [];
 
   private _regions: Record<RegionName, RegionConfig> = {};
   private _defaultRegion: RegionName = "main";
@@ -342,6 +364,69 @@ class _XVM extends XModule {
         }
       }
     }, { _owner: this });
+    _xem.fire("xvm:loaded", { _ts: Date.now() });
+  }
+
+  resetAppRuntime() {
+    for (const cleanup of this._routerCleanups.splice(0)) {
+      try {
+        cleanup();
+      } catch (err) {
+        this.log("Router cleanup failed", err);
+      }
+    }
+
+    const object_ids = new Set<string>();
+
+    for (const active_id of Object.values(this._active)) {
+      if (typeof active_id === "string" && active_id.trim()) {
+        object_ids.add(active_id);
+      }
+    }
+
+    for (const history of Object.values(this._history)) {
+      for (const view of history ?? []) {
+        if (typeof view?._id === "string" && view._id.trim()) {
+          object_ids.add(view._id);
+        }
+      }
+    }
+
+    for (const container_id of Object.keys(this._containers)) {
+      try {
+        this.clearActive(container_id);
+      } catch { }
+      object_ids.add(container_id);
+    }
+
+    for (const view_id of Object.keys(this._rawViews)) {
+      if (view_id.trim()) object_ids.add(view_id);
+    }
+
+    for (const route of Object.values(this._routes)) {
+      const view_id = (route as any)?._view_id ?? (route as any)?._id;
+      if (typeof view_id === "string" && view_id.trim()) {
+        object_ids.add(view_id);
+      }
+    }
+
+    for (const object_id of object_ids) {
+      try {
+        XUI.remove(object_id);
+      } catch { }
+    }
+
+    this._current_view_object = null;
+    this._containers = {};
+    this._history = {};
+    this._rawViews = {};
+    this._factories = {};
+    this._routes = {};
+    this._active = {};
+    this._regions = {};
+    this._defaultRegion = "main";
+
+    this.log("App runtime reset");
   }
 
   /* ------------------------------------------------------------------------ */
@@ -816,7 +901,9 @@ class _XVM extends XModule {
     };
 
     void runHash();
-    window.addEventListener("hashchange", () => void runHash());
+    const on_hash_change = () => void runHash();
+    window.addEventListener("hashchange", on_hash_change);
+    this._routerCleanups.push(() => window.removeEventListener("hashchange", on_hash_change));
 
     this.log("Router initialized for container:", t.containerId, "region:", t.region);
   }
@@ -1123,33 +1210,7 @@ class _XVM extends XModule {
   }
 
   help(op?: string) {
-    const ops: Record<string, any> = {
-      load_app: {
-        cli: `xvm load_app _app:{...}`,
-        params: ["_app (required)"],
-        note: "Loads an app manifest: creates containers/regions, registers views/routes, optional router/start."
-      },
-      show: {
-        cli: `xvm show _id:"view1" _region:"main" _container_id:"c1" _allow_create_from_raw:true`,
-        params: ["_id (routeId or viewId, required)", "_region", "_container_id", "_allow_create_from_raw"],
-        note: "Stacks into region container. Does not touch URL hash."
-      },
-      navigate: {
-        cli: `xvm navigate _to:"route-or-view" _region:"main" _replace:false _silent:false _container_id:"c1" _params:{...}`,
-        params: ["_to (or _id)", "_region", "_replace", "_silent", "_container_id", "_params"],
-        note: "Stacks and updates hash only if region hashSync=true and _silent=false."
-      },
-      back: {
-        cli: `xvm back _region:"modal" _sync_hash:false _if_empty_close:true _container_id:"c1"`,
-        params: ["_region", "_sync_hash", "_if_empty_close", "_container_id"],
-        note: "Pops history and shows previous. Optionally syncs hash."
-      },
-      close: {
-        cli: `xvm close _region:"modal" _clear_history:false _container_id:"c1"`,
-        params: ["_region (default modal)", "_clear_history", "_container_id"],
-        note: "Closes the active view in region (implementation-defined)."
-      }
-    };
+    const ops: Record<string, any> = (this.constructor as typeof _XVM)._ops;
 
     if (op) return ops[op] ?? { error: `Unknown op '${op}'`, available: Object.keys(ops) };
 
@@ -1158,6 +1219,113 @@ class _XVM extends XModule {
       usage: [`xvm help`, `xvm help _op:"navigate"`],
       available: Object.keys(ops),
       note: "snake_case params are canonical. Read via XParams."
+    };
+  }
+
+  async _list_apps(cmd: any) {
+    const p = cmd?._params ?? cmd ?? {};
+
+    const client = (window as any)?.__xvm_client;
+    if (!client) {
+      throw new Error("xvm list-apps: missing __xvm_client");
+    }
+
+    const env = XParams.str(p, "_env", "env") || client._env || "default";
+    const output = XParams.str(p, "_output", "output") || "";
+
+    const res = await client.studioSendServerXVMCommand("list-apps", {
+      _env: env,
+      _include_system: p._include_system === true
+    });
+
+    const apps = Array.isArray(res?._apps) ? res._apps : [];
+
+    if (output) {
+      _xd.set(output, apps, { source: "xvm:list-apps" });
+    }
+
+    return {
+      _ok: true,
+      _result: {
+        _apps: apps,
+        _app_ids: apps.map((app: any) => app._app_id).filter(Boolean)
+      }
+    };
+  }
+
+  async _load_server_app(cmd: any) {
+    const p = cmd?._params ?? cmd ?? {};
+
+    const app_id =
+      XParams.str(
+        p,
+        "_app_id",
+        "app_id",
+        "_appId",
+        "appId"
+      ) || "";
+
+    if (!app_id) {
+      throw new Error("xvm load-server-app: missing _app_id");
+    }
+
+    const client = (window as any)?.__xvm_client;
+    if (!client || typeof client.load_server_app !== "function") {
+      throw new Error("xvm load-server-app: missing __xvm_client.load_server_app");
+    }
+
+    const env =
+      XParams.str(
+        p,
+        "_env",
+        "env"
+      ) || client._env || "default";
+
+    const result =
+      await client.load_server_app(
+        app_id,
+        env
+      );
+
+    return {
+      _ok: true,
+      _result: result
+    };
+  }
+
+  async _set_default_app(xcmd: any) {
+    const params = _xu.ensure_params(xcmd._params);
+
+    const app_id =
+      _xu.ensure_string(params._app_id, "_app_id");
+
+    const env =
+      _xu.read_optional_string(params._env, "_env") ||
+      this._env ||
+      "default";
+
+    const value = {
+      _app_id: app_id,
+      _env: env,
+      _ts: Date.now()
+    };
+
+    await _x.execute({
+      "_module": "xdb-client",
+      "_op": "save_string",
+      "_params": {
+        "_key": "xvibe.active_app",
+        "_value": app_id,
+      }
+    });
+
+   
+
+    _xd.set("xvibe.active_app", app_id, { source: "xvm:set_default_app" });
+
+    return {
+      _ok: true,
+      _default_app: value
     };
   }
 }

@@ -776,6 +776,53 @@ export class XVMClient {
     return view_ids[0] ?? "";
   }
 
+  _ordered_view_ids(entry: string, view_ids: string[]) {
+    return [entry, ...view_ids.filter((view_id) => view_id !== entry)];
+  }
+
+  _set_app_scope(app_id: string, env: string) {
+    this._app_id = app_id;
+    this._env = env;
+    this._cache_key_app = `xvm:last_app:${env}:${app_id}`;
+    this._cache_key_version = `xvm:version:${env}:${app_id}`;
+
+    _xd.set(_XD_KEYS.XVM_APP_ID, app_id, { source: "xvm-client" });
+    _xd.set(_XD_KEYS.XVM_ENV, env, { source: "xvm-client" });
+  }
+
+  _reset_app_state_for_switch() {
+    this._views_cache.clear();
+    this._flows.clear();
+    this._known_view_ids.clear();
+    this._current_view_id = "";
+    this._app_view_id = "";
+    this._current_version = 0;
+    this._app = null;
+    this._app_needs_refresh = true;
+    this._app_mounted = false;
+    this._has_rendered_view = false;
+    this._active_generation_id = "";
+    this._active_generation_view_id = "";
+  }
+
+  _log_load_server_app_failure(
+    stage: string,
+    app_id: string,
+    env: string,
+    previous_app_id: string,
+    previous_env: string,
+    err: any
+  ) {
+    this._error("load_server_app failed", {
+      _stage: stage,
+      _app_id: app_id,
+      _env: env,
+      _current_app_id: previous_app_id,
+      _current_env: previous_env,
+      _error: to_err(err),
+    });
+  }
+
   async _send_cmd(_op: string, _params: Record<string, any>) {
     const req_id = ++this._cmd_seq;
     this._log(`-> [${req_id}] server-xvm.${_op}`, _params);
@@ -952,6 +999,16 @@ export class XVMClient {
     };
 
 
+    const app_theme =
+      typeof (this._app as any)?._theme === "string" &&
+        (this._app as any)._theme.trim()
+        ? (this._app as any)._theme.trim()
+        : undefined;
+
+    const fallback_theme =
+      typeof this._theme === "string" && this._theme.trim()
+        ? this._theme.trim()
+        : this._theme;
 
     const base_app: XVMApp = {
       _player: is_obj((config as any)._player)
@@ -963,7 +1020,7 @@ export class XVMClient {
 
       _shell: (config as any)._shell,
 
-      _theme: this._theme ?? (this._app as any)?._theme,
+      _theme: app_theme ?? fallback_theme,
 
       _containers: Array.isArray((config as any)._containers)
         ? (config as any)._containers
@@ -1440,7 +1497,7 @@ export class XVMClient {
         throw new Error("Server app has no entry view");
       }
 
-      const ordered_view_ids = [entry, ...app_apply._view_ids.filter((v) => v !== entry)];
+      const ordered_view_ids = this._ordered_view_ids(entry, app_apply._view_ids);
       this._log("bootstrap hydrate views", {
         _count: ordered_view_ids.length,
         _entry: entry,
@@ -1484,6 +1541,118 @@ export class XVMClient {
 
   async sendXcmd(xcmd: any) {
     return await Wormholes.sendXcmd(xcmd);
+  }
+
+
+  async load_server_app(app_id: string, env = this._env) {
+    const target_app_id = typeof app_id === "string" ? app_id.trim() : "";
+    if (!target_app_id) {
+      throw new Error("xvm.load_server_app: missing app_id");
+    }
+
+    const target_env = typeof env === "string" && env.trim() ? env.trim() : "default";
+    const previous_app_id = this._app_id;
+    const previous_env = this._env;
+    let stage = "requested";
+
+    this._log("load_server_app requested", {
+      _app_id: target_app_id,
+      _env: target_env,
+      _current_app_id: previous_app_id,
+      _current_env: previous_env,
+    });
+
+    try {
+      stage = "get-app";
+      const out = await this._send_cmd("get-app", {
+        _app_id: target_app_id,
+        _env: target_env,
+        _include_views: false,
+        _include_flows: true,
+      }) as ServerGetAppRes;
+
+      if (!is_obj(out) || !is_obj(out._app)) {
+        throw new Error("Invalid get-app response");
+      }
+
+      const target_app = out._app as ServerXVMApp;
+      const target_view_ids = this._normalize_view_ids(out._view_ids);
+      const target_entry = this._pick_entry_view_id(target_app, target_view_ids);
+
+      this._log("load_server_app get-app result summary", {
+        _app_id: target_app._app_id,
+        _env: target_app._env,
+        _version: target_app?._meta?._version,
+        _view_ids_count: target_view_ids.length,
+        _flows_count: is_obj(out._flows) ? Object.keys(out._flows).length : 0,
+      });
+
+      if (!target_entry) {
+        throw new Error("Server app has no entry view");
+      }
+
+      this._log("load_server_app entry selected", {
+        _app_id: target_app_id,
+        _env: target_env,
+        _entry_view_id: target_entry,
+      });
+
+      stage = "commit-state";
+      this._set_app_scope(target_app_id, target_env);
+      this._reset_app_state_for_switch();
+
+      const app_apply = this._apply_server_get_app(out);
+      const entry = this._pick_entry_view_id(this._app, app_apply._view_ids);
+
+      if (!entry) {
+        throw new Error("Server app has no entry view");
+      }
+
+      stage = "hydrate";
+      const ordered_view_ids = this._ordered_view_ids(entry, app_apply._view_ids);
+      for (const view_id of ordered_view_ids) {
+        await this._fetch_view_from_server(view_id, "load-server-app");
+      }
+      this._log("load_server_app hydrated views", {
+        _app_id: target_app_id,
+        _env: target_env,
+        _entry_view_id: entry,
+        _count: ordered_view_ids.length,
+      });
+
+      stage = "reset-runtime";
+      (XVM as any).resetAppRuntime?.();
+
+      stage = "mount";
+      await this._mount_runtime_app();
+      this._log("load_server_app mounted", {
+        _app_id: target_app_id,
+        _env: target_env,
+        _entry_view_id: entry,
+      });
+
+      stage = "render";
+      await this.render_view(entry);
+
+      stage = "subscribe";
+      await this._send_cmd("subscribe", { _app_id: target_app_id, _env: target_env });
+      this._set_connection_status("connected", "load-server-app");
+      this._log("load_server_app subscribed", {
+        _app_id: target_app_id,
+        _env: target_env,
+      });
+
+      this._log("load_server_app completed", {
+        _app_id: target_app_id,
+        _env: target_env,
+        _entry_view_id: entry,
+      });
+
+      return { _ok: true, _app_id: target_app_id, _env: target_env, _entry_view_id: entry };
+    } catch (err) {
+      this._log_load_server_app_failure(stage, target_app_id, target_env, previous_app_id, previous_env, err);
+      throw err;
+    }
   }
 }
 

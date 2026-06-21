@@ -9,30 +9,36 @@
  * XDashboard and other packs consume these tokens.
  * ========================================================================= */
 
-
 /* =========================================================================
  * Base Shared Tokens
  * ========================================================================= */
 
 :root,
 [data-theme] {
-
     /* Colors */
     --x-primary: #2563eb;
+    --x-accent: #2563eb;
     --x-danger: #dc2626;
     --x-success: #16a34a;
     --x-warning: #d97706;
 
     /* Radius */
-    --x-radius-sm: 4px;
-    --x-radius-md: 8px;
-    --x-radius-lg: 14px;
+    --x-radius-sm: 0.25rem;
+    /* 4px */
+    --x-radius-md: 0.5rem;
+    /* 8px */
+    --x-radius-lg: 0.875rem;
+    /* 14px */
 
     /* Spacing */
-    --x-spacing-xs: 4px;
-    --x-spacing-sm: 8px;
-    --x-spacing-md: 16px;
-    --x-spacing-lg: 24px;
+    --x-spacing-xs: 0.25rem;
+    /* 4px */
+    --x-spacing-sm: 0.5rem;
+    /* 8px */
+    --x-spacing-md: 1rem;
+    /* 16px */
+    --x-spacing-lg: 1.5rem;
+    /* 24px */
 
     /* Shadows */
     --x-shadow-sm:
@@ -50,7 +56,6 @@
 :root,
 :root[data-theme="light"],
 [data-theme="light"] {
-
     --x-bg: #ffffff;
 
     --x-surface: #f5f5f5;
@@ -61,6 +66,9 @@
 
     --x-border:
         rgba(17, 17, 17, .08);
+
+    --x-primary: #2563eb;
+    --x-accent: #2563eb;
 
     --x-shadow-md:
         0 8px 24px rgba(0, 0, 0, .12);
@@ -73,7 +81,6 @@
 
 :root[data-theme="dark"],
 [data-theme="dark"] {
-
     --x-bg: #0f1115;
 
     --x-surface: #171a21;
@@ -85,12 +92,39 @@
     --x-border:
         rgba(255, 255, 255, .08);
 
+    --x-primary: #4f46e5;
+    --x-accent: #6366f1;
+
     --x-shadow-md:
         0 12px 32px rgba(0, 0, 0, .32);
-
-    --x-primary: #4f46e5;
 }
 
+
+/* =========================================================================
+ * Terminal Theme
+ * ========================================================================= */
+:root[data-theme="terminal"],
+[data-theme="terminal"] {
+    --x-bg: #020804;
+    --x-surface: #031308;
+    --x-surface-2: #06200d;
+
+    --x-text: #b6ffcc;
+    --x-text-muted: rgba(182, 255, 204, .68);
+
+    --x-border: rgba(34, 255, 120, .32);
+
+    --x-primary: #8dffb0;
+    --x-accent: #22ff78;
+
+    --x-radius-md: 0.125rem;
+    /* 2px */
+    --x-radius-lg: 0.25rem;
+    /* 4px */
+
+    --x-shadow-md:
+        0 12px 32px rgba(0, 0, 0, .45);
+}
 
 /* =========================================================================
  * Xpell Base Layout
@@ -104,17 +138,24 @@ body {
     width: 100%;
     height: 100%;
 
-    background: var(--x-bg);
-    color: var(--x-text);
+    background:
+        var(--x-bg);
+
+    color:
+        var(--x-text);
 }
 
 
 #xplayer,
 .xplayer {
-    width:100%;
-    height:100%;
-    background:var(--x-bg);
-    color:var(--x-text);
+    width: 100%;
+    height: 100%;
+
+    background:
+        var(--x-bg);
+
+    color:
+        var(--x-text);
 }
 
 
@@ -133,8 +174,8 @@ body {
  * ========================================================================= */
 
 .xview {
-    box-sizing:border-box;
-    min-width:0;
+    box-sizing: border-box;
+    min-width: 0;
 }
 
 .xbutton {
@@ -144,10 +185,19 @@ body {
         var(--x-radius-md);
     background:
         var(--x-primary);
-    color:
-        var(--x-text);
+    color: var(--x-text);
     padding:
         var(--x-spacing-sm) var(--x-spacing-md);
+}
+
+[data-theme="terminal"] .xbutton {
+    background: transparent;
+    color: var(--x-accent);
+    border: 1px solid var(--x-border);
+}
+
+[data-theme="terminal"] .xbutton:hover {
+    background: rgba(34, 255, 120, .12);
 }
 
 .ximage {
@@ -157,18 +207,22 @@ body {
 
 .xvm-open,
 .xregion {
-    width:100%;
-    height:100%;
+    width: 100%;
+    height: 100%;
 }
 
 .xview--root {
-    width:100%;
-    height:100%;
-    display:flex;
-    flex-direction:column;
-    background:var(--x-bg);
-    color:var(--x-text);
+    width: 100%;
+    height: 100%;
 
+    display: flex;
+    flex-direction: column;
+
+    background:
+        var(--x-bg);
+
+    color:
+        var(--x-text);
 }
 
 /* =========================================================================
@@ -197,10 +251,10 @@ body {
     min-width: 0;
     min-height: 0;
     overflow: hidden;
-    border-left: 1px solid rgba(34, 255, 120, .35);
-    background: #020804;
-    color: #b6ffcc;
-    box-shadow: inset 1px 0 0 rgba(34, 255, 120, .18);
+    border-left: 1px solid var(--x-border);
+    background: var(--x-bg);
+    color: var(--x-accent);
+    box-shadow: inset 1px 0 0 var(--x-border);
 }
 
 /* =========================================================================
@@ -213,39 +267,37 @@ body {
     padding-left: 16px;
     padding-right: 16px;
     overflow: auto;
-    background:
-        radial-gradient(circle at center center, rgba(34,255,120,.12), transparent 32%),
-        #020804;
-    color: #b6ffcc;
+    background: var(--xstudio-bg);
+    color: var(--xstudio-text);
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
 .xstudio-editor .xfield__label,
 .xstudio-editor .xfield__hint,
 .xstudio-editor .xlabel {
-    color: #8dffb0;
+    color: var(--x-accent);
 }
 
 .xstudio-editor .xtextarea,
 .xstudio-editor textarea,
 .xstudio-editor input {
     width: 100%;
-    background: #031308;
-    color: #b6ffcc;
-    border: 1px solid rgba(34,255,120,.35);
+     background: var(--xstudio-surface);
+    color: var(--xstudio-text);
+    border: 1px solid var(--xstudio-border);
     border-radius: 8px;
     font-family: inherit;
 }
 
 .xstudio-editor .xbutton {
     background: transparent;
-    color: #8dffb0;
-    border: 1px solid rgba(34,255,120,.45);
+    color: var(--x-accent);
+    border: 1px solid var(--x-border);
     font-family: inherit;
 }
 
 .xstudio-editor .xbutton:hover {
-    background: rgba(34,255,120,.12);
+    background: rgba(34, 255, 120, .12);
 }
 
 .xstudio-more-options {
@@ -254,3 +306,32 @@ body {
     flex-direction: column;
     margin-top: 16px;
 }
+
+/**xpell link*/
+.xlink {
+    cursor: pointer;
+    color: var(--x-accent);
+    text-decoration: underline;
+}
+
+.xlink:hover {
+    color: var(--x-primary);
+}
+
+.xlink:visited {
+    color: var(--x-accent);
+}
+
+.xlink:active {
+    color: var(--x-primary);
+}
+
+.xstudio-theme-terminal {
+    --xstudio-bg: #020804;
+    --xstudio-surface: #031308;
+    --xstudio-text: #b6ffcc;
+    --xstudio-accent: #22ff78;
+    --xstudio-border: rgba(34, 255, 120, .35);
+}
+
+

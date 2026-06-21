@@ -29,6 +29,7 @@
     "dev": "vite",
     "build": "vite build && pnpm run build:types",
     "build:types": "tsc --project tsconfig.types.json",
+    "test": "pnpm build && node tests/xuiobject-dom-projection.test.mjs",
     "docs": "typedoc --options ./typedoc.json --tsconfig ./",
     "publish-alpha-next": "pnpm version prerelease --preid=alpha  && pnpm publish --tag alpha",
     "check:xdata-legacy": "sh -c 'rg -n \"_xd\\._o\\[\" src && { echo \"Legacy XData write detected\" >&2; exit 1; } || true'"

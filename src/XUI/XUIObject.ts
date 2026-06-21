@@ -24,6 +24,22 @@ import XUIRuntime from "./XUIRuntime";
 
 const reservedWords = { _children: "child objects" };
 const xpellObjectHtmlFieldsMapping: { [k: string]: string } = { "_id": "id", "css-class": "class", "animation": "xyz", "input-type": "type" };
+const semanticProjectionFields = [
+    "_variant",
+    "_tone",
+    "_size",
+    "_density",
+    "_elevation"
+] as const;
+const domProjectionFields = [
+    "class",
+    "_class",
+    "css-class",
+    "style",
+    "_style",
+    "_visible",
+    ...semanticProjectionFields
+] as const;
 const RESERVED_DOM_EVENT_ALIASES: Record<string, string> = {
             "_click": "click",
             "_change": "change",
@@ -97,6 +113,8 @@ export interface XUIObjectData extends XObjectData {
     _html?: string;
     _visible?: boolean;
     _parent_element?: string;
+    _class?: string | null;
+    _style?: Record<string, string | number | null | undefined> | null;
     // _on_click?: XUIHandler;
     _on_show?: XUIHandler;
     _on_hide?: XUIHandler;
@@ -188,6 +206,11 @@ export class XUIObject extends XObject {
     _html?: string | undefined;
     _base_display?: string | undefined | null;
     #_text: string = "";
+    #_project_text_on_dom_projection = false;
+    #_preserve_children_on_dom_projection = false;
+    #_has_explicit_visible_projection = false;
+    #_reset_style_on_dom_projection = false;
+    #_style_projection_keys = new Set<string>();
     _visible: boolean;
     _parent_element?: string;
     // _on_click?: XUIHandler;
@@ -232,6 +255,13 @@ export class XUIObject extends XObject {
             delete (data as any)._on_click;
             _xlog.warn("[XUIObject] _on_click is deprecated. Use _on.click instead.");
         }
+        if (
+            data &&
+            typeof data === "object" &&
+            Object.prototype.hasOwnProperty.call(data, "_visible")
+        ) {
+            this.#_has_explicit_visible_projection = true;
+        }
         super.parse(data, ignore);
     }
 
@@ -269,31 +299,251 @@ export class XUIObject extends XObject {
         }
     }
 
+    private applyDomProjection() {
+        const dom_object = this._dom_object as HTMLElement | undefined | null;
+        if (!dom_object) return;
+
+        for (const field of Object.keys(this)) {
+            if (!Object.prototype.hasOwnProperty.call(this, field)) continue;
+            const val = (this as any)[field];
+            if (val == null) continue;
+
+            let outName = field;
+            if (xpellObjectHtmlFieldsMapping.hasOwnProperty(field)) {
+                outName = xpellObjectHtmlFieldsMapping[field];
+            }
+
+            if (
+                outName === "class" ||
+                outName === "style" ||
+                field === "_class" ||
+                field === "_style"
+            ) {
+                continue;
+            }
+
+            if (typeof val === "object" || typeof val === "function") {
+                continue;
+            }
+
+            if (!outName.startsWith("_")) {
+                dom_object.setAttribute(outName, String(val));
+            }
+        }
+
+        this.applyClassProjection(dom_object);
+        this.applyStyleProjection(dom_object);
+
+        if (this.#_project_text_on_dom_projection) {
+            this.#_text = String((this as any)["_text"] ?? "");
+
+            if (
+                this.#_preserve_children_on_dom_projection &&
+                dom_object.childNodes.length > 0
+            ) {
+                const firstChild = dom_object.firstChild;
+
+                if (firstChild?.nodeType === Node.TEXT_NODE) {
+                    firstChild.textContent = this.#_text;
+                } else {
+                    dom_object.insertBefore(
+                        document.createTextNode(this.#_text),
+                        firstChild
+                    );
+                }
+            } else {
+                dom_object.textContent = this.#_text;
+            }
+        }
+
+        this.#_project_text_on_dom_projection = false;
+        this.#_preserve_children_on_dom_projection = false;
+
+        this.applyVisibilityProjection(dom_object);
+    }
+
+    private applyClassProjection(el: HTMLElement) {
+        const currentTokens = this.splitClass(el.getAttribute("class") || "");
+        const projectedTokens = new Set<string>();
+
+        for (const token of this.getClassProjectionTokens()) {
+            projectedTokens.add(token);
+        }
+
+        for (const token of currentTokens) {
+            if (
+                this.isPreservedRuntimeClass(token) &&
+                !this.isSemanticRuntimeClass(token)
+            ) {
+                projectedTokens.add(token);
+            }
+        }
+
+        for (const token of this.getSemanticClassTokens()) {
+            projectedTokens.add(token);
+        }
+
+        el.setAttribute("class", Array.from(projectedTokens).join(" "));
+    }
+
+    private getClassProjectionTokens(): string[] {
+        const tokens: string[] = [];
+
+        for (const field of ["class", "_class", "css-class"]) {
+            const value = (this as any)[field];
+
+            if (
+                value == null ||
+                typeof value === "object" ||
+                typeof value === "function"
+            ) {
+                continue;
+            }
+
+            tokens.push(...this.splitClass(String(value)));
+        }
+
+        return tokens;
+    }
+
+    private getSemanticClassTokens(): string[] {
+        const tokens = [`x${this._type}`];
+
+        for (const field of semanticProjectionFields) {
+            const value = (this as any)[field];
+
+            if (!value) continue;
+
+            const cleanField = field.replace("_", "");
+
+            tokens.push(`x${this._type}--${cleanField}-${value}`);
+        }
+
+        return tokens;
+    }
+
+    private isSemanticRuntimeClass(token: string): boolean {
+        return /^x[^-\s]+--(?:variant|tone|size|density|elevation)-/.test(token);
+    }
+
+    private isPreservedRuntimeClass(token: string): boolean {
+        return token === `x${this._type}` || token.startsWith("animate__");
+    }
+
+    private applyStyleProjection(el: HTMLElement) {
+        const styleValue = (this as any).style;
+        const hasStyleField = Object.prototype.hasOwnProperty.call(this, "style");
+
+        if (this.#_reset_style_on_dom_projection) {
+            el.removeAttribute("style");
+            this.#_style_projection_keys.clear();
+            this.#_reset_style_on_dom_projection = false;
+        }
+
+        // Projection order is intentional: the style string is applied first,
+        // then _style overrides individual CSS properties.
+        if (hasStyleField) {
+            if (typeof styleValue === "string") {
+                el.setAttribute("style", styleValue);
+            } else if (styleValue == null || typeof styleValue === "object" || typeof styleValue === "function") {
+                el.removeAttribute("style");
+            } else {
+                el.setAttribute("style", String(styleValue));
+            }
+
+            this.#_style_projection_keys.clear();
+        }
+
+        const styleObject = (this as any)._style;
+        const nextStyleProjectionKeys = new Set<string>();
+        if (!styleObject || typeof styleObject !== "object" || Array.isArray(styleObject)) {
+            for (const key of this.#_style_projection_keys) {
+                el.style.removeProperty(key);
+            }
+
+            this.#_style_projection_keys.clear();
+            return;
+        }
+
+        for (const [name, value] of Object.entries(styleObject)) {
+            if (
+                value == null ||
+                typeof value === "object" ||
+                typeof value === "function"
+            ) {
+                continue;
+            }
+
+            const styleName = this.normalizeStylePropertyName(name);
+            nextStyleProjectionKeys.add(styleName);
+
+            el.style.setProperty(
+                styleName,
+                String(value)
+            );
+        }
+
+        for (const key of this.#_style_projection_keys) {
+            if (!nextStyleProjectionKeys.has(key)) {
+                el.style.removeProperty(key);
+            }
+        }
+
+        this.#_style_projection_keys = nextStyleProjectionKeys;
+    }
+
+    private normalizeStylePropertyName(name: string): string {
+        if (name.startsWith("--")) return name;
+
+        return name.replace(/[A-Z]/g, match => `-${match.toLowerCase()}`);
+    }
+
+    private applyVisibilityProjection(el: HTMLElement) {
+        if (this.#_has_explicit_visible_projection) {
+            if (this._visible === false) {
+                const currentDisplay = el.style.display;
+                if (currentDisplay && currentDisplay !== "none") {
+                    this._base_display = currentDisplay;
+                }
+
+                el.style.display = "none";
+                return;
+            }
+
+            if (this._visible === true) {
+                if (
+                    this._base_display &&
+                    this._base_display !== "none" &&
+                    (!el.style.display || el.style.display === "none")
+                ) {
+                    el.style.display = this._base_display;
+                } else if (el.style.display === "none") {
+                    el.style.removeProperty("display");
+                }
+
+                return;
+            }
+        }
+
+        if (el.hasAttribute("hidden") || el.style.display === "none") {
+            this._visible = false;
+            if (el.hasAttribute("hidden") && el.style.display !== "none") {
+                el.style.display = "none";
+            }
+            return;
+        }
+
+        this._visible = true;
+        if (!this._base_display && el.style.display && el.style.display !== "none") {
+            this._base_display = el.style.display;
+        }
+    }
+
     getDOMObject(): HTMLElement {
         if (!this._dom_object) {
             const dom_object = (this._html_ns)
                 ? document.createElementNS(this._html_ns, this._html_tag)
                 : document.createElement(this._html_tag);
-
-            for (const field of Object.keys(this)) {
-                if (!this.hasOwnProperty(field)) continue;
-                const val = (this as any)[field];
-                if (val == null) continue;
-
-                let outName = field;
-                if (xpellObjectHtmlFieldsMapping.hasOwnProperty(field)) {
-                    outName = xpellObjectHtmlFieldsMapping[field];
-                }
-
-                if (!outName.startsWith("_")) {
-                    dom_object.setAttribute(outName, String(val));
-                }
-            }
-
-            if ((this as any)["_text"] && String((this as any)["_text"]).length > 0) {
-                this.#_text = String((this as any)["_text"]);
-                dom_object.textContent = this.#_text;
-            }
 
             if (this._children.length > 0) {
                 this._children.forEach((child: any) => {
@@ -301,22 +551,17 @@ export class XUIObject extends XObject {
                 });
             }
 
-            const el = dom_object as HTMLElement;
-            this.applySemanticClasses(el);
+            this._dom_object = dom_object;
 
-            if (el.hasAttribute("hidden") || el.style.display === "none") {
-                this._visible = false;
-                if (el.hasAttribute("hidden") && el.style.display !== "none") {
-                    el.style.display = "none";
-                }
-            } else {
-                this._visible = true;
-                if (!this._base_display && el.style.display && el.style.display !== "none") {
-                    this._base_display = el.style.display;
-                }
+            this.#_project_text_on_dom_projection = false;
+            this.#_preserve_children_on_dom_projection = false;
+
+            if ((this as any)["_text"] && String((this as any)["_text"]).length > 0) {
+                this.#_project_text_on_dom_projection = true;
+                this.#_preserve_children_on_dom_projection = true;
             }
 
-            this._dom_object = dom_object;
+            this.applyDomProjection();
         }
         return this._dom_object;
     }
@@ -327,9 +572,8 @@ export class XUIObject extends XObject {
 
     set _text(text: string) {
         this.#_text = text;
-        if (this._dom_object instanceof HTMLElement) {
-            this._dom_object.textContent = text;
-        }
+        this.#_project_text_on_dom_projection = true;
+        this.applyDomProjection();
     }
 
     get _text() {
@@ -938,19 +1182,11 @@ export class XUIObject extends XObject {
         // -------------------------
 
         if (next._text !== undefined) {
-            this.setText(next._text as any);
+            this.#_text = next._text as any;
+            this.#_project_text_on_dom_projection = true;
         }
 
-        if ((next as any).class !== undefined) {
-            (this as any).class = (next as any).class;
-            if (this._dom_object instanceof HTMLElement) {
-                this._dom_object.className = (next as any).class;
-            }
-        }
-
-        if (next.style !== undefined && this._dom_object instanceof HTMLElement) {
-            this._dom_object.setAttribute("style", next.style as any);
-        }
+        this.replaceDomProjectionFields(next);
 
         // -------------------------
         // generic attributes (🔥 important)
@@ -958,16 +1194,15 @@ export class XUIObject extends XObject {
 
         for (const key of Object.keys(next)) {
             if (key.startsWith("_")) continue;
+            if ((domProjectionFields as readonly string[]).includes(key)) continue;
 
             const val = (next as any)[key];
             if (val == null) continue;
 
-            if (this._dom_object instanceof HTMLElement) {
-                this._dom_object.setAttribute(key, String(val));
-            }
-
             (this as any)[key] = val;
         }
+
+        this.applyDomProjection();
 
         // -------------------------
         // children patch
@@ -976,6 +1211,38 @@ export class XUIObject extends XObject {
         if (Array.isArray(next._children)) {
             this.patchChildren(next._children as any[]);
         }
+    }
+
+    private replaceDomProjectionFields(next: XUIObjectData) {
+        this.#_reset_style_on_dom_projection = true;
+
+        for (const field of domProjectionFields) {
+            if (!Object.prototype.hasOwnProperty.call(next, field)) {
+                delete (this as any)[field];
+                continue;
+            }
+
+            const value = (next as any)[field];
+
+            if (value === undefined || value === null) {
+                delete (this as any)[field];
+                continue;
+            }
+
+            (this as any)[field] = value;
+        }
+
+        if (Object.prototype.hasOwnProperty.call(next, "_visible")) {
+            const visible = (next as any)._visible;
+
+            if (typeof visible === "boolean") {
+                this._visible = visible;
+                this.#_has_explicit_visible_projection = true;
+                return;
+            }
+        }
+
+        this.#_has_explicit_visible_projection = false;
     }
 
     private patchChildren(nextChildren: XObjectData[]) {

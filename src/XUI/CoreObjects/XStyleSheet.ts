@@ -1,10 +1,4 @@
-import {
-    XObject,
-    type XObjectData,
-    type XpellSkill,
-    createNanoCommandWithSkill,
-    _xd, _xlog
-} from "@xpell/core";
+import { type XpellSkill } from "@xpell/core";
 
 import XUIObject, { type XUIObjectData } from "../XUIObject";
 
@@ -17,6 +11,7 @@ export type XStyleSheetRules =
 
 export type XStyleSheetData =
     XUIObjectData & {
+        _href?: string | string[];
         _classes?: Record<string, string | XStyleSheetRules>;
         _vars?: Record<string, string>;
         _media?: Record<string, Record<string, string | XStyleSheetRules>>;
@@ -35,9 +30,11 @@ export class XStyleSheet extends XUIObject {
         _requires: ["xuiobject"],
 
         _description:
-            "Runtime-managed stylesheet object. Defines CSS classes, CSS variables, and optional media rules for XUI views without inline style strings.",
+            "Runtime-managed stylesheet object. Defines CSS classes, CSS variables, optional media rules, or external stylesheet links for XUI views.",
 
         _fields: {
+            _href:
+                "Optional external stylesheet URL or list of URLs. When present, XStyleSheet injects stylesheet links instead of generating inline CSS.",
             _classes:
                 "Map of class names to CSS declarations. Values may be CSS strings or style objects.",
             _vars:
@@ -45,7 +42,7 @@ export class XStyleSheet extends XUIObject {
             _media:
                 "Optional map of media queries to class rule maps.",
             class:
-                "Class applied to the generated <style> DOM element only. Not used for styling application UI objects."
+                "Class applied to the generated stylesheet DOM element only. Not used for styling application UI objects."
         },
 
         _core_rules: [
@@ -53,12 +50,16 @@ export class XStyleSheet extends XUIObject {
             "Use class fields on XUI objects to apply generated classes.",
             "Prefer style-sheet over repeated inline style strings.",
             "Do not use style-sheet for JavaScript logic.",
-            "Do not inject external imports, @import, or remote URLs.",
+            "Use _href for external stylesheet links instead of @import in inline CSS.",
             "Keep generated CSS deterministic and data-only.",
             "Do not place application classes on the style-sheet object itself."
         ],
 
         _canonical_examples: [
+            {
+                _type: "style-sheet",
+                _href: "styles/common.css"
+            },
             {
                 _type: "style-sheet",
                 _id: "system-styles",
@@ -85,6 +86,7 @@ export class XStyleSheet extends XUIObject {
         ]
     };
 
+    _href?: string | string[];
     _classes?: Record<string, string | XStyleSheetRules>;
     _vars?: Record<string, string>;
     _media?: Record<string, Record<string, string | XStyleSheetRules>>;
@@ -100,17 +102,116 @@ export class XStyleSheet extends XUIObject {
     }
 
     override getDOMObject(): HTMLElement {
+        if (this.hasStyleHref()) {
+            if (!this._dom_object) {
+                this._dom_object = this.createLinkDOMObject();
+            }
+
+            return this._dom_object;
+        }
+
         const dom = super.getDOMObject();
         dom.textContent = this.renderCSS();
         return dom;
     }
 
     override update(data: Partial<XStyleSheetData>) {
+        const hrefChanged =
+            Object.prototype.hasOwnProperty.call(data, "_href");
+
         super.update(data);
 
-        if (this._dom_object) {
+        if (hrefChanged) {
+            this._href = data._href;
+        }
+
+        if (this._dom_object && hrefChanged) {
+            const old_dom = this._dom_object as HTMLElement;
+            const parent = old_dom.parentNode;
+            this._dom_object = null;
+            const next_dom = this.getDOMObject();
+
+            if (parent) {
+                parent.replaceChild(next_dom, old_dom);
+            }
+
+            return;
+        }
+
+        if (this._dom_object && !this.hasStyleHref()) {
             this.dom.textContent = this.renderCSS();
         }
+    }
+
+    private hasStyleHref(): boolean {
+        if (Array.isArray(this._href)) {
+            return this._href.some(
+                href =>
+                    typeof href === "string" &&
+                    href.trim().length > 0
+            );
+        }
+
+        return (
+            typeof this._href === "string" &&
+            this._href.trim().length > 0
+        );
+    }
+
+    private createLinkDOMObject(): HTMLElement {
+        const hrefs =
+            (Array.isArray(this._href)
+                ? this._href
+                : [this._href])
+                .filter(
+                    (href): href is string =>
+                        typeof href === "string" &&
+                        href.trim().length > 0
+                );
+
+        if (hrefs.length === 1) {
+            return this.createLinkElement(
+                hrefs[0]
+            );
+        }
+
+        const container =
+            document.createElement("div");
+
+        for (const href of hrefs) {
+            container.appendChild(
+                this.createLinkElement(href)
+            );
+        }
+
+        return container;
+    }
+
+    private createLinkElement(href: string): HTMLLinkElement {
+        if (!href.trim()) {
+            throw new Error(
+                "Invalid stylesheet href"
+            );
+        }
+
+        const link = document.createElement("link");
+        link.rel = "stylesheet";
+        link.href = this.resolveStyleHref(href);
+        return link;
+    }
+
+    private resolveStyleHref(href: string): string {
+        const value = href.trim();
+
+        if (
+            value.startsWith("/") ||
+            value.startsWith("//") ||
+            /^[a-zA-Z][a-zA-Z\d+\-.]*:/.test(value)
+        ) {
+            return value;
+        }
+
+        return `/${value}`;
     }
 
     private renderCSS(): string {

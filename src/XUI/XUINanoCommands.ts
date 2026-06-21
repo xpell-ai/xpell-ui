@@ -5,6 +5,7 @@ import {
   XD_FRAME_NUMBER,
   createNanoCommandWithSkill
 } from "@xpell/core";
+import { XUI } from "./XUI";
 
 import XUIObject from "./XUIObject";
 
@@ -102,36 +103,108 @@ export const _xuiobject_basic_nano_commands: XNanoCommandPack = {
     (cmd, obj?: XObject) => {
       if (!obj) return;
 
-      const data = (cmd as any)._params?.data;
-      if (data === undefined) return;
+      const rawData = (cmd as any)._params?.data;
+      if (rawData === undefined) return;
+
+      const xpath =
+        (cmd as any)._params?.xpath ??
+        (cmd as any)._params?.path;
+
+      let data: any = rawData;
+
+      if (typeof xpath === "string" && xpath.trim()) {
+        data = xpath
+          .split(".")
+          .filter(Boolean)
+          .reduce(
+            (acc: any, key: string) =>
+              acc == null
+                ? undefined
+                : acc[key],
+            rawData
+          );
+
+        if (data === undefined) {
+          return;
+        }
+      }
 
       let text: any = data;
-      const pattern = (cmd as any)._params?.pattern;
 
-      if (typeof text === "object" && text !== null) {
-        text = JSON.stringify(text, null, 2);
+      const map =
+        (cmd as any)._params?.map;
+
+      if (
+        map &&
+        typeof map === "object"
+      ) {
+        const key =
+          String(text);
+
+        if (
+          Object.prototype.hasOwnProperty.call(
+            map,
+            key
+          )
+        ) {
+          text = map[key];
+        }
+      }
+
+      const pattern =
+        (cmd as any)._params?.pattern;
+
+      if (
+        typeof text === "object" &&
+        text !== null
+      ) {
+        text = JSON.stringify(
+          text,
+          null,
+          2
+        );
       }
 
       if (pattern) {
-        text = String(pattern).replace("$data", String(text ?? ""));
+        text = String(pattern)
+          .replace(
+            "$data",
+            String(text ?? "")
+          );
       }
 
-      const empty = (cmd as any)._params?.empty;
+      const empty =
+        (cmd as any)._params?.empty;
 
-      if (empty === true || empty === "true") {
+      if (
+        empty === true ||
+        empty === "true"
+      ) {
         obj.emptyDataSource();
       }
 
-      (obj as XUIObject)._text = String(text ?? "");
+
+
+      (obj as XUIObject)._text =
+        String(text ?? "");
     },
     {
       _name: "set-text-from-data",
       _scope: "ui-object",
-      _description: "Set text from event/data payload.",
+      _description:
+        "Set text from event/data payload.",
+
       _params: {
         data: "Source data.",
-        pattern: "Optional pattern using $data placeholder.",
-        empty: "If true, clear the object's data source after setting text."
+        map: "Optional mapping object to transform data values.",
+        xpath:
+          "Optional dot-path inside the source data, e.g. '_email' or '_account._plan'.",
+        path:
+          "Alias for xpath.",
+        pattern:
+          "Optional pattern using $data placeholder.",
+        empty:
+          "If true, clear the object's data source after setting text."
       }
     }
   ),
@@ -342,14 +415,45 @@ export const _xuiobject_basic_nano_commands: XNanoCommandPack = {
       }
     }
   ),
-  "animate":createNanoCommandWithSkill(
-     (cmd, obj?: XObject) => {
-      
+  "scroll-to": createNanoCommandWithSkill(
+    (cmd) => {
+      const id = (cmd as any)._params?._id;
+      if (!id) return;
+
+      const target = XUI.getObject(id) as XUIObject | undefined;
+      const el = target?.dom as any;
+
+      if (!el?.scrollIntoView) return;
+
+      const behavior = (cmd as any)._params?.behavior;
+      const block = (cmd as any)._params?.block;
+
+      el.scrollIntoView({
+        behavior: behavior === "smooth" ? "smooth" : "auto",
+        block: ["start", "center", "end", "nearest"].includes(block)
+          ? block
+          : "start"
+      });
+    },
+    {
+      _name: "scroll-to",
+      _scope: "ui",
+      _description: "Scroll to a UI object by its _id.",
+      _params: {
+        _id: "Target XUI object id to scroll to.",
+        behavior: "auto or smooth.",
+        block: "start, center, end, or nearest."
+      }
+    }
+  ),
+  "animate": createNanoCommandWithSkill(
+    (cmd, obj?: XObject) => {
+
 
       const animation = (cmd as any)._params?.animation ? String((cmd as any)._params?.animation) : ""
       const infinite = (cmd as any)._params?.infinite ? (cmd as any)._params?.infinite : false;
       (obj as XUIObject)?.animate(animation, infinite);
-      
+
     },
     {
       _name: "animate",
@@ -358,6 +462,37 @@ export const _xuiobject_basic_nano_commands: XNanoCommandPack = {
       _params: {
         animation: "Animation name.",
         infinite: "Whether the animation should loop infinitely."
+      }
+    }
+  ),
+  "open-object": createNanoCommandWithSkill(
+    (cmd) => {
+      const id = (cmd as any)._params?._id;
+      const obj = XUI.getObject(id) as any;
+      obj?.open?.();
+    },
+    {
+      _name: "open-object",
+      _scope: "ui",
+      _description: "Open an object by id if it supports open().",
+      _params: {
+        _id: "Object id."
+      }
+    }
+  ),
+
+  "close-object": createNanoCommandWithSkill(
+    (cmd) => {
+      const id = (cmd as any)._params?._id;
+      const obj = XUI.getObject(id) as any;
+      obj?.close?.();
+    },
+    {
+      _name: "close-object",
+      _scope: "ui",
+      _description: "Close an object by id if it supports close().",
+      _params: {
+        _id: "Object id."
       }
     }
   )

@@ -9,7 +9,7 @@ const fire_event = (event: string) => ({
 export const studio_editor_view: any = {
   _id: "xstudio-editor",
   _type: "view",
-  class: "xstudio-editor",
+  class: "xstudio-editor  xstudio-theme-terminal",
   _children: [
     {
       _type: "toolbar",
@@ -79,9 +79,9 @@ export const studio_editor_view: any = {
       _type: "view",
       _id: "more_options_container",
       class: "xstudio-more-options",
-      _on_mount:{_op:"hide"},
-      _on:{
-        "_studio:more-options-toggle":{_op:"toggle"},
+      _on_mount: { _op: "hide" },
+      _on: {
+        "_studio:more-options-toggle": { _op: "toggle" },
       },
       _children: [
         {
@@ -276,6 +276,27 @@ export const studio_editor_view: any = {
         },
 
       ]
+    },
+    {
+      _type: "toolbar",
+      _justify: "end",
+      _children: [
+
+        {
+          "_type": "button",
+          "_text": "home",
+          "_on": {
+            "click": {
+              "_module": "xvm",
+              "_op": "load-server-app",
+              "_params": {
+                "_app_id": "vibe-system",
+                "_env": "default"
+              }
+            }
+          }
+        }]
     }
+
   ]
 };

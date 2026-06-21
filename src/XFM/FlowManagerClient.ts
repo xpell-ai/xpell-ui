@@ -35,15 +35,65 @@ type XFlowTriggerPayload = {
 
 /* -------------------------------------------------------------------------- */
 
-const run_command_or_list = async (cmd: any) => {
-    if (Array.isArray(cmd)) {
-        for (const item of cmd) {
+type XFlowCommandContext = {
+    flow?: any;
+    event?: any;
+};
+
+const read_path = (obj: any, path: string) => {
+    return path
+        .split(".")
+        .filter(Boolean)
+        .reduce((acc, key) => acc?.[key], obj);
+};
+
+const resolve_flow_value = (
+    value: any,
+    ctx: XFlowCommandContext
+): any => {
+    if (typeof value === "string") {
+        if (value.startsWith("$flow.")) {
+            return read_path(ctx.flow, value.slice("$flow.".length));
+        }
+
+        if (value.startsWith("$event.")) {
+            return read_path(ctx.event, value.slice("$event.".length));
+        }
+
+        return value;
+    }
+
+    if (Array.isArray(value)) {
+        return value.map((item) => resolve_flow_value(item, ctx));
+    }
+
+    if (value && typeof value === "object") {
+        const out: Record<string, any> = {};
+
+        for (const key of Object.keys(value)) {
+            out[key] = resolve_flow_value(value[key], ctx);
+        }
+
+        return out;
+    }
+
+    return value;
+};
+
+const run_command_or_list = async (
+    cmd: any,
+    ctx: XFlowCommandContext = {}
+) => {
+    const resolved_cmd = resolve_flow_value(cmd, ctx);
+
+    if (Array.isArray(resolved_cmd)) {
+        for (const item of resolved_cmd) {
             await _x.execute(item);
         }
         return;
     }
 
-    await _x.execute(cmd);
+    await _x.execute(resolved_cmd);
 };
 
 export class FlowManagerClient extends XModule {
@@ -334,36 +384,16 @@ export class FlowManagerClient extends XModule {
 
             client
                 .sendXcmd(payload)
-                .then((res: any) => {
+                .then(async (res: any) => {
 
                     log_debug(
                         "[flow-client] async flow response",
                         res
                     );
-
-                    const generated_app_id =
-                        res?._flow?._last?._result?._app_id ??
-                        res?._result?._flow?._last?._result?._app_id;
-
-                    if (
-                        typeof generated_app_id === "string" &&
-                        generated_app_id.trim().length > 0 &&
-                        generated_app_id !== app_id
-                    ) {
-                        log_debug("[flow-client] generated app detected", {
-                            _app_id: generated_app_id
-                        });
-
-                        _xd.set("xvibe.active_app", generated_app_id, {
-                            source: "flow-client"
-                        });
-
-                        _xem.fire("studio:open-app", {
-                            _app_id: generated_app_id,
-                            _env: env ?? "default"
-                        });
-                    }
-
+                    log_debug(
+                        "[flow-client] raw flow response",
+                        JSON.parse(JSON.stringify(res))
+                    );
                     const flow =
                         res?._flow ??
                         res?._result?._flow;
@@ -372,6 +402,17 @@ export class FlowManagerClient extends XModule {
                         client?._flows?.get(
                             normalized._flow_id
                         );
+
+                    const last =
+                        flow?._last;
+
+                    const generated_app_id =
+                        flow?._last?._result?._app_id;
+
+                    const handler_context = {
+                        flow,
+                        event: normalized._event_payload
+                    };
 
                     /* -------------------------------------- */
                     /* APPLY FLOW OUTPUTS                     */
@@ -409,17 +450,15 @@ export class FlowManagerClient extends XModule {
                     /* SUCCESS / ERROR HANDLERS               */
                     /* -------------------------------------- */
 
-                    const last =
-                        flow?._last;
-
                     if (
                         last &&
                         last._ok === true &&
                         flow_definition?._on_success
                     ) {
 
-                        run_command_or_list(
-                            flow_definition._on_success
+                        await run_command_or_list(
+                            flow_definition._on_success,
+                            handler_context
                         ).catch((error) => {
 
                             _xlog.error(
@@ -436,8 +475,9 @@ export class FlowManagerClient extends XModule {
                         flow_definition?._on_error
                     ) {
 
-                        run_command_or_list(
-                            flow_definition._on_error
+                        await run_command_or_list(
+                            flow_definition._on_error,
+                            handler_context
                         ).catch((error) => {
 
                             _xlog.error(
@@ -445,6 +485,33 @@ export class FlowManagerClient extends XModule {
                                 error
                             );
 
+                        });
+                    }
+
+                    await _xem.fire("flow:completed", {
+                        _flow_id: normalized._flow_id,
+                        _app_id: app_id,
+                        _env: env ?? "default",
+                        _event_payload: normalized._event_payload,
+                        _result: res
+                    });
+
+                    if (
+                        typeof generated_app_id === "string" &&
+                        generated_app_id.trim().length > 0 &&
+                        generated_app_id !== app_id
+                    ) {
+                        log_debug("[flow-client] generated app detected", {
+                            _app_id: generated_app_id
+                        });
+
+                        _xd.set("xvibe.active_app", generated_app_id, {
+                            source: "flow-client"
+                        });
+
+                        _xem.fire("studio:open-app", {
+                            _app_id: generated_app_id,
+                            _env: env ?? "default"
                         });
                     }
 
