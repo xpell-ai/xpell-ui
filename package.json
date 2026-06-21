@@ -44,7 +44,7 @@
     "url": "git+https://github.com/xpell-ai/xpell-ui.git"
   },
   "peerDependencies": {
-    "@xpell/core": "workspace:*",
+    "@xpell/core": "^2.0.3",
     "animate.css": "^4.1.1"
   },
   "devDependencies": {
