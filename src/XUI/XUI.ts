@@ -123,6 +123,30 @@ export class XUIModule extends XModule {
         _set_as_main_player: "Whether to set as main XUI player.",
         _theme: "Optional theme name or token map."
       }
+    },
+    "show": {
+      _name: "show",
+      _scope: "module",
+      _description: "Show a XUI object by id.",
+      _params: {
+        _id: "XUI object id."
+      }
+    },
+    "hide": {
+      _name: "hide",
+      _scope: "module",
+      _description: "Hide a XUI object by id.",
+      _params: {
+        _id: "XUI object id."
+      }
+    },
+    "toggle": {
+      _name: "toggle",
+      _scope: "module",
+      _description: "Toggle visibility of a XUI object by id.",
+      _params: {
+        _id: "XUI object id."
+      }
     }
   };
 
@@ -489,6 +513,34 @@ export class XUIModule extends XModule {
   /**
    * ops
    */
+
+  async _show(cmd: any) {
+    const p = cmd?._params ?? cmd;
+    const id = p?._id ?? p?.id;
+    if (!id) throw new Error("xui show: missing _id");
+    this.show(String(id));
+    return { _ok: true, _result: { _id: id } };
+  }
+
+  async _hide(cmd: any) {
+    const p = cmd?._params ?? cmd;
+    const id = p?._id ?? p?.id;
+    if (!id) throw new Error("xui hide: missing _id");
+    this.hide(String(id));
+    return { _ok: true, _result: { _id: id } };
+  }
+
+  async _toggle(cmd: any) {
+    const p = cmd?._params ?? cmd;
+    const id = p?._id ?? p?.id;
+    if (!id) throw new Error("xui toggle: missing _id");
+    this.toggle(String(id));
+    return { _ok: true, _result: { _id: id } };
+  }
+  
+
+
+
   async _register_theme(cmd: any) {
     const p = cmd?._params ?? cmd;
 

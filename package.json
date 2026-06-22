@@ -1,6 +1,6 @@
 {
   "name": "@xpell/ui",
-  "version": "2.0.3",
+  "version": "2.0.4",
   "description": "Xpell UI JS Framework",
   "publishConfig": {
     "access": "public"
@@ -44,7 +44,7 @@
     "url": "git+https://github.com/xpell-ai/xpell-ui.git"
   },
   "peerDependencies": {
-    "@xpell/core": "^2.0.3",
+    "@xpell/core": "^2.0.4",
     "animate.css": "^4.1.1"
   },
   "devDependencies": {
