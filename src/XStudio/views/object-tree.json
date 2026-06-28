@@ -1,0 +1,12 @@
+{
+  "_id": "xstudio-object-tree",
+  "_type": "view",
+  "class": "xstudio-object-tree",
+  "_children": [
+    {
+      "_type": "label",
+      "class": "xstudio-dock-placeholder",
+      "_text": "No active view loaded."
+    }
+  ]
+}

@@ -262,7 +262,24 @@ globalThis.getComputedStyle = el => ({
   getPropertyValue: name => el.style.getPropertyValue(name)
 });
 
-const { XButton, XView } = await import("../dist/xpell-ui.es.js");
+const ui = await import("../dist/xpell-ui.es.js");
+const { _x, XButton, XUI, XUIObject, XVM, XView } = ui;
+
+assert.equal("XVMView" in ui, false);
+
+await _x.loadModuleAsync(XUI);
+await _x.loadModuleAsync(XVM);
+
+{
+  const registeredViewRef = XUI.create({
+    _type: "xvm-view",
+    _view_id: "registered-smoke-view"
+  });
+
+  assert.equal(registeredViewRef instanceof XUIObject, true);
+  assert.equal(registeredViewRef._type, "xvm-view");
+  assert.equal(typeof registeredViewRef.resolveView, "function");
+}
 
 function assertClass(el, className) {
   assert.equal(

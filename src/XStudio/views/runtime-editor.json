@@ -1,0 +1,66 @@
+{
+  "_id": "xstudio-editor",
+  "_type": "view",
+  "class": "xstudio-portlet xstudio-editor xstudio-prompt-portlet",
+  "_children": [
+    {
+      "_type": "toolbar",
+      "class": "xstudio-portlet-header",
+      "_justify": "space-between",
+      "_children": [
+        {
+          "_type": "label",
+          "class": "xstudio-section-title",
+          "_text": "Vibe Prompt"
+        },
+        {
+          "_type": "view",
+          "class": "xstudio-portlet-actions",
+          "_children": [
+            {
+              "_type": "label",
+              "_id": "xstudio-generation-status",
+              "class": "xstudio-generation-status",
+              "_text": ""
+            },
+            {
+              "_type": "button",
+              "_id": "xstudio-preview-button",
+              "_text": "Go",
+              "_variant": "primary",
+              "_on": {
+                "click": {
+                  "_module": "xem",
+                  "_op": "fire",
+                  "_params": {
+                    "event": "studio:preview-request"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "_type": "view",
+      "class": "xstudio-portlet-body",
+      "_children": [
+        {
+          "_type": "field",
+          "_label": "Prompt",
+          "_hint": "Describe the change you want to make to the current view.",
+          "_control": {
+            "_id": "xstudio-prompt",
+            "_type": "textarea",
+            "placeholder": "Example: make this dashboard use KPI cards and add a table...",
+            "rows": "6",
+            "_data_source": "studio:prompt",
+            "_data_output": "studio:prompt",
+            "_update_data_source_event": "input"
+          }
+        }
+      ]
+    }
+  ]
+}

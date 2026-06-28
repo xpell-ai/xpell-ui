@@ -148,6 +148,7 @@ export type {
 } from "./XVM/XVM";
 export { XVMClient } from "./XVM/XVMClient";
 export type { XVMClientOptions, XVMClientConnectionChange } from "./XVM/XVMClient";
+export type { XVMView, XVMViewData, XVMViewPack, XVMViewResolver } from "./XVM/XVMView";
 
 /* -------------------------------------------------------------------------- */
 /* XStudio                                                                    */

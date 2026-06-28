@@ -1,0 +1,57 @@
+{
+  "_id": "xstudio-runtime-inspector-section",
+  "_type": "view",
+  "class": "xstudio-portlet xstudio-section xstudio-runtime-inspector-section",
+  "_children": [
+    {
+      "_type": "toolbar",
+      "class": "xstudio-portlet-header",
+      "_justify": "space-between",
+      "_children": [
+        {
+          "_type": "label",
+          "class": "xstudio-section-title",
+          "_text": "Runtime Inspector"
+        },
+        {
+          "_type": "button",
+          "_id": "xstudio-inspect-last-run-button",
+          "_text": "Inspect Last Run",
+          "_on": {
+            "click": {
+              "_module": "xem",
+              "_op": "fire",
+              "_params": {
+                "event": "studio:inspect-last-run"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "_type": "view",
+      "class": "xstudio-portlet-body",
+      "_children": [
+        {
+          "_type": "label",
+          "_id": "xstudio-run-inspector-status",
+          "class": "xstudio-status",
+          "_text": ""
+        },
+        {
+          "_type": "field",
+          "_label": "JSON Preview",
+          "_control": {
+            "_id": "xstudio-run-inspector",
+            "_type": "textarea",
+            "rows": "12",
+            "_data_source": "studio:run_inspector",
+            "_data_output": "studio:run_inspector",
+            "_update_data_source_event": "input"
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,74 @@
+{
+  "_id": "xstudio-json-section",
+  "_type": "view",
+  "class": "xstudio-portlet xstudio-section xstudio-json-section",
+  "_children": [
+    {
+      "_type": "toolbar",
+      "class": "xstudio-portlet-header",
+      "_justify": "space-between",
+      "_children": [
+        {
+          "_type": "label",
+          "class": "xstudio-section-title",
+          "_text": "JSON Viewer"
+        },
+        {
+          "_type": "view",
+          "class": "xstudio-portlet-actions",
+          "_children": [
+            {
+              "_type": "button",
+              "_id": "xstudio-load-view-button",
+              "_text": "Load Current View",
+              "_on": {
+                "click": {
+                  "_module": "xem",
+                  "_op": "fire",
+                  "_params": {
+                    "event": "studio:load-current-view"
+                  }
+                }
+              }
+            },
+            {
+              "_type": "button",
+              "_id": "xstudio-save-view-button",
+              "_text": "Save View",
+              "_variant": "primary",
+              "_on": {
+                "click": {
+                  "_module": "xem",
+                  "_op": "fire",
+                  "_params": {
+                    "event": "studio:save-view"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "_type": "view",
+      "class": "xstudio-portlet-body",
+      "_children": [
+        {
+          "_type": "field",
+          "_label": "JSON",
+          "_hint": "Edit the current view JSON.",
+          "_control": {
+            "_id": "xstudio-json",
+            "_type": "textarea",
+            "placeholder": "Load the current view or paste view JSON...",
+            "rows": "16",
+            "_data_source": "studio:json",
+            "_data_output": "studio:json",
+            "_update_data_source_event": "input"
+          }
+        }
+      ]
+    }
+  ]
+}

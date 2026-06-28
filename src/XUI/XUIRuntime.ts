@@ -71,7 +71,7 @@ export class XUIRuntime {
     }
 
     if (load_studio) {
-      await _x.loadModuleAsync(new XStudioModule(this));
+      await _x.loadModuleAsync(new XStudioModule());
     }
 
     if (load_xai_client) {

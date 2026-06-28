@@ -1,0 +1,178 @@
+{
+  "_id": "xstudio-shell",
+  "_type": "view",
+  "_theme": "terminal",
+  "class": "xstudio-shell xstudio-theme-terminal",
+  "data-xstudio-theme": "terminal",
+  "_children": [
+    {
+      "_id": "xstudio-topbar",
+      "_type": "xvm-view",
+      "_view_id": "xstudio-topbar",
+      "class": "xstudio-topbar"
+    },
+    {
+      "_id": "xstudio-body",
+      "_type": "view",
+      "class": "xstudio-body",
+      "_children": [
+        {
+          "_id": "xstudio-left-dock",
+          "_type": "view",
+          "class": "xstudio-left-dock",
+          "_children": [
+            {
+              "_id": "xstudio-object-tree-portlet",
+              "_type": "view",
+              "class": "xstudio-portlet xstudio-object-tree-portlet",
+              "_children": [
+                {
+                  "_type": "view",
+                  "class": "xstudio-portlet-header",
+                  "_children": [
+                    {
+                      "_type": "label",
+                      "class": "xstudio-section-title",
+                      "_text": "Object Tree"
+                    }
+                  ]
+                },
+                {
+                  "_type": "view",
+                  "class": "xstudio-portlet-body xstudio-object-tree-body",
+                  "_children": [
+                    {
+                      "_id": "xstudio-object-tree",
+                      "_type": "xvm-view",
+                      "_view_id": "xstudio-object-tree",
+                      "class": "xstudio-object-tree"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "_id": "xstudio-selected-object-panel",
+              "_type": "xvm-view",
+              "_view_id": "xstudio-selected-object-panel",
+              "class": "xstudio-portlet xstudio-selected-object-panel"
+            }
+          ]
+        },
+        {
+          "_id": "xstudio-canvas",
+          "_type": "view",
+          "class": "xstudio-canvas",
+          "_children": [
+            {
+              "_type": "view",
+              "_id": "xstudio-main-container-placeholder",
+              "class": "xstudio-main-container"
+            }
+          ]
+        },
+        {
+          "_id": "xstudio-right-dock",
+          "_type": "view",
+          "class": "xstudio-right-dock",
+          "_children": [
+            {
+              "_id": "region-studio",
+              "_type": "view",
+              "class": "xstudio-portlet-stack",
+              "_children": [
+                {
+                  "_id": "xstudio-editor",
+                  "_type": "xvm-view",
+                  "_view_id": "xstudio-editor",
+                  "class": "xstudio-portlet xstudio-editor xstudio-prompt-portlet"
+                },
+                {
+                  "_id": "xstudio-runtime-inspector-section",
+                  "_type": "xvm-view",
+                  "_view_id": "xstudio-runtime-inspector-section",
+                  "class": "xstudio-portlet xstudio-section xstudio-runtime-inspector-section"
+                },
+                {
+                  "_id": "xstudio-json-section",
+                  "_type": "xvm-view",
+                  "_view_id": "xstudio-json-section",
+                  "class": "xstudio-portlet xstudio-section xstudio-json-section"
+                },
+                {
+                  "_id": "xstudio-generated-modules-section",
+                  "_type": "xvm-view",
+                  "_view_id": "xstudio-generated-modules-section",
+                  "class": "xstudio-portlet xstudio-section xstudio-generated-modules-section"
+                },
+                {
+                  "_id": "xstudio-runtime-section",
+                  "_type": "view",
+                  "class": "xstudio-portlet xstudio-section xstudio-runtime-section",
+                  "_children": [
+                    {
+                      "_type": "toolbar",
+                      "class": "xstudio-portlet-header",
+                      "_justify": "space-between",
+                      "_children": [
+                        {
+                          "_type": "label",
+                          "class": "xstudio-section-title",
+                          "_text": "Runtime"
+                        },
+                        {
+                          "_type": "button",
+                          "_id": "xstudio-refresh-button",
+                          "_text": "Refresh",
+                          "_on": {
+                            "click": {
+                              "_module": "xem",
+                              "_op": "fire",
+                              "_params": {
+                                "event": "studio:runtime-refresh"
+                              }
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "_type": "view",
+                      "class": "xstudio-portlet-body",
+                      "_children": [
+                        {
+                          "_type": "label",
+                          "_id": "xstudio-status",
+                          "class": "xstudio-status",
+                          "_text": ""
+                        },
+                        {
+                          "_type": "label",
+                          "_id": "xstudio-views-list",
+                          "class": "xstudio-runtime-list",
+                          "_text": "Views: -"
+                        },
+                        {
+                          "_type": "label",
+                          "_id": "xstudio-flows-list",
+                          "class": "xstudio-runtime-list",
+                          "_text": "Flows: -"
+                        },
+                        {
+                          "_type": "label",
+                          "_id": "xstudio-modules-list",
+                          "class": "xstudio-runtime-list",
+                          "_text": "Modules: -"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

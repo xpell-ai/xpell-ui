@@ -321,7 +321,8 @@ class _XVM extends XModule {
       _description: "Load and open a server-backed XVM app by app id.",
       _params: {
         _app_id: "Target app id.",
-        _env: "Optional environment. Defaults to current client env."
+        _env: "Optional environment. Defaults to current client env.",
+        _edit: "Optional edit-mode flag. true opens in XStudio, false opens in run mode."
       }
     },
 
@@ -343,6 +344,8 @@ class _XVM extends XModule {
 
   private _regions: Record<RegionName, RegionConfig> = {};
   private _defaultRegion: RegionName = "main";
+  private _xvm_view_pack_loaded = false;
+  private _xvm_view_resolver_bound = false;
 
   constructor() {
     super({ _name: _XVM._module_name });
@@ -353,7 +356,30 @@ class _XVM extends XModule {
     _xlog.log("XVM", ...args);
   }
 
+  private async registerXVMViewSupport() {
+    if (this._xvm_view_pack_loaded) return;
+
+    const { XVMView, XVMViewPack } = await import("./XVMView");
+
+    XUI.importObjectPack(XVMViewPack);
+
+    if (!this._xvm_view_resolver_bound) {
+      _xem.on("xvm:view-resolver-ready", (payload: any) => {
+        const resolver = payload?.resolver ?? null;
+        if (typeof resolver === "function" || resolver === null) {
+          XVMView.setViewResolver(resolver);
+        }
+      }, { _owner: this });
+
+      this._xvm_view_resolver_bound = true;
+    }
+
+    this._xvm_view_pack_loaded = true;
+  }
+
   async onLoad(): Promise<void> {
+    await this.registerXVMViewSupport();
+
     // Listen to hash changes for router (only if region policy allows it)    // register once when module is loaded (safe point)
     _xem.on("xvm:update", (payload: any) => {
       if (payload?._view_id && payload?._view) {
@@ -1233,7 +1259,7 @@ class _XVM extends XModule {
     const env = XParams.str(p, "_env", "env") || client._env || "default";
     const output = XParams.str(p, "_output", "output") || "";
 
-    const res = await client.studioSendServerXVMCommand("list-apps", {
+    const res = await client.sendServerXVMCommand("list-apps", {
       _env: env,
       _include_system: p._include_system === true
     });
@@ -1281,10 +1307,20 @@ class _XVM extends XModule {
         "env"
       ) || client._env || "default";
 
+    const edit =
+      typeof p._edit === "boolean"
+        ? p._edit
+        : typeof p.edit === "boolean"
+          ? p.edit
+          : undefined;
+
     const result =
       await client.load_server_app(
         app_id,
-        env
+        env,
+        {
+          _edit: edit
+        }
       );
 
     return {

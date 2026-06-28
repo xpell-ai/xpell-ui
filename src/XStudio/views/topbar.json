@@ -1,0 +1,190 @@
+{
+  "_id": "xstudio-topbar",
+  "_type": "view",
+  "class": "xstudio-topbar",
+  "_children": [
+    {
+      "_type": "label",
+      "class": "xstudio-topbar-title",
+      "_text": "Xpell Vibe Studio"
+    },
+    {
+      "_id": "xstudio-theme-selector",
+      "_type": "select",
+      "class": "toolbar-theme-select",
+      "_value": "terminal",
+      "value": "terminal",
+      "_options": [
+        {
+          "value": "terminal",
+          "label": "Terminal",
+          "selected": true
+        },
+        {
+          "value": "dark",
+          "label": "Dark"
+        },
+        {
+          "value": "light",
+          "label": "Light"
+        }
+      ],
+      "_on": {
+        "change": {
+          "_module": "xstudio",
+          "_op": "set-studio-theme",
+          "_params": {
+            "_theme": "$data"
+          }
+        }
+      }
+    },
+    {
+      "_type": "view",
+      "class": "xstudio-topbar-spacer"
+    },
+    {
+      "_id": "xstudio-apps-button",
+      "_type": "button",
+      "class": "xstudio-apps-button",
+      "_text": "Apps",
+      "_variant": "ghost",
+      "title": "Open Apps",
+      "_on": {
+        "click": {
+          "_module": "xvm",
+          "_op": "load-server-app",
+          "_params": {
+            "_app_id": "vibe-system",
+            "_env": "default",
+            "_edit": false
+          }
+        }
+      }
+    },
+    {
+      "_id": "xstudio-portlet-toggle-prompt",
+      "_type": "button",
+      "class": "xstudio-portlet-toggle",
+      "_text": "Prompt",
+      "_variant": "ghost",
+      "title": "Hide Prompt",
+      "_on": {
+        "click": {
+          "_module": "xstudio",
+          "_op": "toggle-portlet",
+          "_params": {
+            "_portlet": "prompt"
+          }
+        }
+      }
+    },
+    {
+      "_id": "xstudio-portlet-toggle-inspector",
+      "_type": "button",
+      "class": "xstudio-portlet-toggle",
+      "_text": "Inspector",
+      "_variant": "ghost",
+      "title": "Hide Inspector",
+      "_on": {
+        "click": {
+          "_module": "xstudio",
+          "_op": "toggle-portlet",
+          "_params": {
+            "_portlet": "inspector"
+          }
+        }
+      }
+    },
+    {
+      "_id": "xstudio-portlet-toggle-json",
+      "_type": "button",
+      "class": "xstudio-portlet-toggle",
+      "_text": "JSON",
+      "_variant": "ghost",
+      "title": "Show JSON",
+      "_on": {
+        "click": {
+          "_module": "xstudio",
+          "_op": "toggle-portlet",
+          "_params": {
+            "_portlet": "json"
+          }
+        }
+      }
+    },
+    {
+      "_id": "xstudio-portlet-toggle-modules",
+      "_type": "button",
+      "class": "xstudio-portlet-toggle",
+      "_text": "Modules",
+      "_variant": "ghost",
+      "title": "Show Modules",
+      "_on": {
+        "click": {
+          "_module": "xstudio",
+          "_op": "toggle-portlet",
+          "_params": {
+            "_portlet": "modules"
+          }
+        }
+      }
+    },
+    {
+      "_id": "xstudio-portlet-toggle-runtime",
+      "_type": "button",
+      "class": "xstudio-portlet-toggle",
+      "_text": "Runtime",
+      "_variant": "ghost",
+      "title": "Show Runtime",
+      "_on": {
+        "click": {
+          "_module": "xstudio",
+          "_op": "toggle-portlet",
+          "_params": {
+            "_portlet": "runtime"
+          }
+        }
+      }
+    },
+    {
+      "_id": "xstudio-toggle-left-dock",
+      "_type": "button",
+      "class": "xstudio-dock-toggle",
+      "_text": "◀",
+      "_variant": "ghost",
+      "title": "Collapse left dock",
+      "_on": {
+        "click": {
+          "_module": "xem",
+          "_op": "fire",
+          "_params": {
+            "event": "studio:toggle-left-dock"
+          }
+        }
+      }
+    },
+    {
+      "_id": "xstudio-toggle-right-dock",
+      "_type": "button",
+      "class": "xstudio-dock-toggle",
+      "_text": "▶",
+      "_variant": "ghost",
+      "title": "Collapse right dock",
+      "_on": {
+        "click": {
+          "_module": "xem",
+          "_op": "fire",
+          "_params": {
+            "event": "studio:toggle-right-dock"
+          }
+        }
+      }
+    },
+    {
+      "_type": "label",
+      "class": "xstudio-edit-mode",
+      "_text": "EDIT MODE"
+    }
+  ]
+}

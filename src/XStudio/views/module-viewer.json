@@ -1,0 +1,139 @@
+{
+  "_id": "xstudio-generated-modules-section",
+  "_type": "view",
+  "class": "xstudio-portlet xstudio-section xstudio-generated-modules-section",
+  "_children": [
+    {
+      "_type": "toolbar",
+      "class": "xstudio-portlet-header",
+      "_justify": "space-between",
+      "_children": [
+        {
+          "_type": "label",
+          "class": "xstudio-section-title",
+          "_text": "Generated Modules"
+        },
+        {
+          "_type": "view",
+          "class": "xstudio-portlet-actions",
+          "_children": [
+            {
+              "_type": "button",
+              "_id": "xstudio-load-module-button",
+              "_text": "Load",
+              "_on": {
+                "click": {
+                  "_module": "xem",
+                  "_op": "fire",
+                  "_params": {
+                    "event": "studio:load-module"
+                  }
+                }
+              }
+            },
+            {
+              "_type": "button",
+              "_id": "xstudio-save-module-button",
+              "_text": "Save",
+              "_variant": "primary",
+              "_on": {
+                "click": {
+                  "_module": "xem",
+                  "_op": "fire",
+                  "_params": {
+                    "event": "studio:save-module"
+                  }
+                }
+              }
+            },
+            {
+              "_type": "button",
+              "_id": "xstudio-repair-module-button",
+              "_text": "Repair",
+              "_on": {
+                "click": {
+                  "_module": "xem",
+                  "_op": "fire",
+                  "_params": {
+                    "event": "studio:repair-module"
+                  }
+                }
+              }
+            },
+            {
+              "_type": "button",
+              "_id": "xstudio-disable-module-button",
+              "_text": "Disable",
+              "_on": {
+                "click": {
+                  "_module": "xem",
+                  "_op": "fire",
+                  "_params": {
+                    "event": "studio:disable-module"
+                  }
+                }
+              }
+            },
+            {
+              "_type": "button",
+              "_id": "xstudio-delete-module-button",
+              "_text": "Delete",
+              "_on": {
+                "click": {
+                  "_module": "xem",
+                  "_op": "fire",
+                  "_params": {
+                    "event": "studio:delete-module"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "_type": "view",
+      "class": "xstudio-portlet-body",
+      "_children": [
+        {
+          "_type": "field",
+          "_label": "Selected Module",
+          "_control": {
+            "_id": "xstudio-selected-module",
+            "_type": "text",
+            "placeholder": "tic-tac-toe",
+            "_text": "tic-tac-toe",
+            "_data_source": "studio:selected_module",
+            "_data_output": "studio:selected_module",
+            "_update_data_source_event": "input"
+          }
+        },
+        {
+          "_type": "field",
+          "_label": "Module Source",
+          "_control": {
+            "_id": "xstudio-module-source",
+            "_type": "textarea",
+            "rows": 18,
+            "_data_source": "studio:module_source",
+            "_data_output": "studio:module_source",
+            "_update_data_source_event": "input"
+          }
+        },
+        {
+          "_type": "field",
+          "_label": "Repair Prompt",
+          "_control": {
+            "_id": "xstudio-module-repair-prompt",
+            "_type": "textarea",
+            "rows": 5,
+            "_data_source": "studio:module_repair_prompt",
+            "_data_output": "studio:module_repair_prompt",
+            "_update_data_source_event": "input"
+          }
+        }
+      ]
+    }
+  ]
+}

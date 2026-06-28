@@ -743,11 +743,6 @@ export class XUISVGObjectPack extends XObjectPack {
         }
     }
 }
-
-
-
-
-
 export default XUIObjectPack
 
 

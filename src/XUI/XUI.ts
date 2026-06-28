@@ -171,7 +171,6 @@ export class XUIModule extends XModule {
   }
 
 
-
   loadSVGPack() {
     this.importObjectPack(XUISVGObjectPack);
   }
