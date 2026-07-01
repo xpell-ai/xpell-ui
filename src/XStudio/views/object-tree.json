@@ -4,9 +4,33 @@
   "class": "xstudio-object-tree",
   "_children": [
     {
-      "_type": "label",
-      "class": "xstudio-dock-placeholder",
-      "_text": "No active view loaded."
+      "_id": "xstudio-object-tree-search",
+      "_type": "text",
+      "class": "xstudio-object-tree-search",
+      "placeholder": "Search objects...",
+      "_on": {
+        "input": {
+          "_op": "fire",
+          "_params": {
+            "event": "studio:object-tree-search",
+            "data": {
+              "_value": "$event.target.value"
+            }
+          }
+        }
+      }
+    },
+    {
+      "_id": "xstudio-object-tree-results",
+      "_type": "view",
+      "class": "xstudio-object-tree-results",
+      "_children": [
+        {
+          "_type": "label",
+          "class": "xstudio-dock-placeholder",
+          "_text": "No active view loaded."
+        }
+      ]
     }
   ]
 }

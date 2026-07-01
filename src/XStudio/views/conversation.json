@@ -1,0 +1,160 @@
+{
+  "_id": "xstudio-conversation-section",
+  "_type": "view",
+  "class": "xstudio-portlet xstudio-section xstudio-conversation-section",
+  "_children": [
+    {
+      "_id": "xstudio-conversation-header",
+      "_type": "toolbar",
+      "class": "xstudio-portlet-header xstudio-conversation-header",
+      "_justify": "space-between",
+      "_children": [
+        {
+          "_type": "label",
+          "class": "xstudio-section-title",
+          "_text": "Conversation"
+        },
+        {
+          "_type": "view",
+          "class": "xstudio-portlet-actions",
+          "_children": [
+            {
+              "_type": "button",
+              "_id": "xstudio-conversation-clear-button",
+              "_text": "New Conversation",
+              "_on": {
+                "click": {
+                  "_module": "xem",
+                  "_op": "fire",
+                  "_params": {
+                    "event": "studio:conversation-new"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "_type": "view",
+      "class": "xstudio-portlet-body xstudio-conversation-body",
+      "_children": [
+        {
+          "_id": "xstudio-conversation-title",
+          "_type": "label",
+          "class": "xstudio-conversation-title",
+          "_text": "No conversation open"
+        },
+        {
+          "_id": "xstudio-conversation-selector",
+          "_type": "select",
+          "class": "xstudio-conversation-selector",
+          "_options": [
+            {
+              "label": "No conversation",
+              "value": "",
+              "selected": true
+            }
+          ],
+          "_on": {
+            "change": {
+              "_module": "xem",
+              "_op": "fire",
+              "_params": {
+                "event": "studio:conversation-select",
+                "data": {
+                  "_conversation_id": "$event.target.value"
+                }
+              }
+            }
+          }
+        },
+        {
+          "_id": "xstudio-conversation-messages",
+          "_type": "view",
+          "class": "xstudio-conversation-messages",
+          "_children": [
+            {
+              "_id": "xstudio-conversation-empty",
+              "_type": "label",
+              "class": "xstudio-conversation-empty",
+              "_text": "No messages yet."
+            }
+          ]
+        },
+        {
+          "_id": "xstudio-conversation-composer",
+          "_type": "view",
+          "class": "xstudio-conversation-composer",
+          "_children": [
+            {
+              "_id": "xstudio-conversation-input",
+              "_type": "textarea",
+              "class": "xstudio-conversation-input",
+              "placeholder": "Type a message...",
+              "rows": 4,
+              "_data_source": "studio:conversation_input",
+              "_data_output": "studio:conversation_input",
+              "_update_data_source_event": "input",
+              "_on": {
+                "input": {
+                  "_module": "xem",
+                  "_op": "fire",
+                  "_params": {
+                    "event": "studio:conversation-input",
+                    "data": {
+                      "_value": "$event.target.value"
+                    }
+                  }
+                },
+                "keyup": {
+                  "_module": "xem",
+                  "_op": "fire",
+                  "_params": {
+                    "event": "studio:conversation-keyup",
+                    "data": {
+                      "_key": "$event.key",
+                      "_meta_key": "$event.metaKey",
+                      "_ctrl_key": "$event.ctrlKey",
+                      "_value": "$event.target.value"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "_type": "view",
+              "class": "xstudio-conversation-actions",
+              "_children": [
+                {
+                  "_type": "button",
+                  "_id": "xstudio-conversation-attach-button",
+                  "_text": "Attach",
+                  "disabled": true,
+                  "title": "Attachments are not available in this local panel"
+                },
+                {
+                  "_type": "button",
+                  "_id": "xstudio-conversation-send-button",
+                  "_text": "Send",
+                  "_variant": "primary",
+                  "disabled": true,
+                  "_on": {
+                    "click": {
+                      "_module": "xem",
+                      "_op": "fire",
+                      "_params": {
+                        "event": "studio:conversation-send"
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -13,6 +13,7 @@ import {
   create_studio_editor_view,
   studio_editor_views,
 } from "./XSEditor";
+import conversation_view from "./views/conversation.json";
 import object_tree_view from "./views/object-tree.json";
 import selected_object_inspector_view from "./views/selected-object-inspector.json";
 import shell_view from "./views/shell.json";
@@ -38,8 +39,16 @@ const STUDIO_TOPBAR_ID = "xstudio-topbar";
 const STUDIO_CANVAS_ID = "xstudio-canvas";
 const STUDIO_TOGGLE_LEFT_DOCK_ID = "xstudio-toggle-left-dock";
 const STUDIO_TOGGLE_RIGHT_DOCK_ID = "xstudio-toggle-right-dock";
+const STUDIO_OBJECT_TREE_PORTLET_ID = "xstudio-object-tree-portlet";
 const STUDIO_OBJECT_TREE_ID = "xstudio-object-tree";
+const STUDIO_OBJECT_TREE_BODY_ID = "xstudio-object-tree-body";
+const STUDIO_OBJECT_TREE_RESULTS_ID = "xstudio-object-tree-results";
+const STUDIO_OBJECT_TREE_SEARCH_ID = "xstudio-object-tree-search";
+const STUDIO_OBJECT_TREE_SECTION_TOGGLE_ID = "xstudio-object-tree-section-toggle";
 const STUDIO_SELECTED_OBJECT_PANEL_ID = "xstudio-selected-object-panel";
+const STUDIO_SELECTED_OBJECT_SUMMARY_PORTLET_ID = "xstudio-selected-object-summary-portlet";
+const STUDIO_SELECTED_OBJECT_SUMMARY_BODY_ID = "xstudio-selected-object-summary-body";
+const STUDIO_SELECTED_OBJECT_SECTION_TOGGLE_ID = "xstudio-selected-object-section-toggle";
 const STUDIO_SELECTED_OBJECT_SUMMARY_LINE_ID = "xstudio-selected-object-summary-line";
 const STUDIO_SELECTED_OBJECT_SUMMARY_TEXT_ID = "xstudio-selected-object-summary-text";
 const STUDIO_SELECTED_OBJECT_TYPE_ID = "xstudio-selected-object-type";
@@ -76,21 +85,57 @@ const STUDIO_SELECTED_OBJECT_DELETE_CANCEL_ID = "xstudio-selected-object-delete-
 const STUDIO_SELECTED_OBJECT_DELETE_CONFIRM_ID = "xstudio-selected-object-delete-confirm";
 const STUDIO_SELECTED_OBJECT_UPDATE_JSON_ID = "xstudio-selected-object-update-json";
 const STUDIO_SELECTED_OBJECT_RESET_JSON_ID = "xstudio-selected-object-reset-json";
+const STUDIO_SELECTED_OBJECT_PROPERTIES_PORTLET_ID = "xstudio-selected-object-properties-portlet";
+const STUDIO_SELECTED_OBJECT_PROPERTIES_BODY_ID = "xstudio-selected-object-properties-body";
+const STUDIO_SELECTED_OBJECT_PROPERTIES_SECTION_TOGGLE_ID = "xstudio-selected-object-properties-section-toggle";
+const STUDIO_SELECTED_OBJECT_RAW_SECTION_ID = "xstudio-selected-object-raw-section";
+const STUDIO_SELECTED_OBJECT_RAW_BODY_ID = "xstudio-selected-object-raw-body";
+const STUDIO_SELECTED_OBJECT_RAW_SECTION_TOGGLE_ID = "xstudio-selected-object-raw-section-toggle";
 const STUDIO_SELECTED_OBJECT_ROW_CLASS = "xstudio-object-tree-row-selected";
 const STUDIO_SELECTED_CANVAS_CLASS = "xstudio-selected-object";
-const STUDIO_THEME_DEFAULT = "terminal";
+const STUDIO_THEME_DEFAULT = "dark";
 const STUDIO_THEME_SELECTOR_ID = "xstudio-theme-selector";
 const STUDIO_THEME_CLASS_PREFIX = "xstudio-theme-";
 const STUDIO_THEME_OPTIONS = ["terminal", "dark", "light"] as const;
 const STUDIO_RUNTIME_SECTION_ID = "xstudio-runtime-section";
+const STUDIO_CONVERSATION_SECTION_ID = "xstudio-conversation-section";
+const STUDIO_CONVERSATION_TITLE_ID = "xstudio-conversation-title";
+const STUDIO_CONVERSATION_SELECTOR_ID = "xstudio-conversation-selector";
+const STUDIO_CONVERSATION_MESSAGES_ID = "xstudio-conversation-messages";
+const STUDIO_CONVERSATION_INPUT_ID = "xstudio-conversation-input";
+const STUDIO_CONVERSATION_SEND_BUTTON_ID = "xstudio-conversation-send-button";
+const STUDIO_CONVERSATION_INPUT_XD_KEY = "studio:conversation_input";
+const STUDIO_CONVERSATION_LAST_MESSAGES_LIMIT = 100;
+const STUDIO_INTENT_ACTION_STATUS_SUGGESTED = "suggested";
+const STUDIO_INTENT_ACTION_STATUS_DISMISSED = "dismissed";
+const STUDIO_INTENT_ACTION_STATUS_RUNNING = "running";
+const STUDIO_INTENT_ACTION_STATUS_DONE = "done";
+const STUDIO_INTENT_ACTION_STATUS_FAILED = "failed";
+const STUDIO_INTENT_ACTION_UNSUPPORTED_MESSAGE = "Execution not supported yet.";
+const STUDIO_SUPPORTED_INTENT_APPLY_VIEW_EDIT_ACTIONS = new Set([
+  "hide-object",
+  "show-object",
+  "remove-object",
+  "duplicate-object",
+]);
+const STUDIO_INTENT_APPLY_VIEW_EDIT_REFRESH_ACTIONS = new Set([
+  "hide-object",
+  "show-object",
+  "remove-object",
+  "duplicate-object",
+  "move-object",
+]);
 const STUDIO_RUNTIME_INSPECTOR_SECTION_ID = "xstudio-runtime-inspector-section";
 const STUDIO_JSON_SECTION_ID = "xstudio-json-section";
 const STUDIO_MODULES_SECTION_ID = "xstudio-generated-modules-section";
 const STUDIO_PORTLET_TOGGLE_ACTIVE_CLASS = "xstudio-portlet-toggle-active";
+const STUDIO_PORTLET_HIDDEN_CLASS = "xstudio-portlet-hidden";
 const STUDIO_SELECTED_OBJECT_DETAILS_EXPANDED_CLASS = "xstudio-selected-object-details-expanded";
+const STUDIO_EXPLORER_SECTION_COLLAPSED_CLASS = "xstudio-explorer-section-collapsed";
 
 type XStudioTheme = typeof STUDIO_THEME_OPTIONS[number];
-type XStudioPortletId = "selected" | "prompt" | "runtime" | "inspector" | "json" | "modules";
+type XStudioPortletId = "selected" | "prompt" | "conversation" | "runtime" | "inspector" | "json" | "modules";
+type XStudioExplorerSectionId = "object_tree" | "selected_object" | "properties" | "raw_json";
 
 const STUDIO_PORTLETS: Record<XStudioPortletId, {
   _object_id: string;
@@ -105,6 +150,11 @@ const STUDIO_PORTLETS: Record<XStudioPortletId, {
     _object_id: STUDIO_VIEW_ID,
     _button_id: "xstudio-portlet-toggle-prompt",
     _label: "Prompt",
+  },
+  conversation: {
+    _object_id: STUDIO_CONVERSATION_SECTION_ID,
+    _button_id: "xstudio-portlet-toggle-conversation",
+    _label: "Conversation",
   },
   runtime: {
     _object_id: STUDIO_RUNTIME_SECTION_ID,
@@ -129,6 +179,53 @@ const STUDIO_PORTLETS: Record<XStudioPortletId, {
 };
 
 const STUDIO_PORTLET_IDS = Object.keys(STUDIO_PORTLETS) as XStudioPortletId[];
+const STUDIO_DEFAULT_PORTLET_VISIBILITY: Record<XStudioPortletId, boolean> = {
+  selected: true,
+  prompt: false,
+  conversation: true,
+  runtime: false,
+  inspector: false,
+  json: false,
+  modules: false,
+};
+const STUDIO_EXPLORER_SECTIONS: Record<XStudioExplorerSectionId, {
+  _section_id: string;
+  _body_id: string;
+  _toggle_id: string;
+  _label: string;
+}> = {
+  object_tree: {
+    _section_id: STUDIO_OBJECT_TREE_PORTLET_ID,
+    _body_id: STUDIO_OBJECT_TREE_BODY_ID,
+    _toggle_id: STUDIO_OBJECT_TREE_SECTION_TOGGLE_ID,
+    _label: "Object Tree",
+  },
+  selected_object: {
+    _section_id: STUDIO_SELECTED_OBJECT_SUMMARY_PORTLET_ID,
+    _body_id: STUDIO_SELECTED_OBJECT_SUMMARY_BODY_ID,
+    _toggle_id: STUDIO_SELECTED_OBJECT_SECTION_TOGGLE_ID,
+    _label: "Selected Object",
+  },
+  properties: {
+    _section_id: STUDIO_SELECTED_OBJECT_PROPERTIES_PORTLET_ID,
+    _body_id: STUDIO_SELECTED_OBJECT_PROPERTIES_BODY_ID,
+    _toggle_id: STUDIO_SELECTED_OBJECT_PROPERTIES_SECTION_TOGGLE_ID,
+    _label: "Properties",
+  },
+  raw_json: {
+    _section_id: STUDIO_SELECTED_OBJECT_RAW_SECTION_ID,
+    _body_id: STUDIO_SELECTED_OBJECT_RAW_BODY_ID,
+    _toggle_id: STUDIO_SELECTED_OBJECT_RAW_SECTION_TOGGLE_ID,
+    _label: "Raw JSON",
+  },
+};
+const STUDIO_EXPLORER_SECTION_IDS = Object.keys(STUDIO_EXPLORER_SECTIONS) as XStudioExplorerSectionId[];
+const STUDIO_DEFAULT_EXPLORER_SECTION_OPEN: Record<XStudioExplorerSectionId, boolean> = {
+  object_tree: true,
+  selected_object: false,
+  properties: true,
+  raw_json: false,
+};
 const STUDIO_SELECTED_OBJECT_INSPECTOR_CONTROL_IDS = [
   STUDIO_SELECTED_OBJECT_EDIT_TEXT_ID,
   STUDIO_SELECTED_OBJECT_EDIT_CLASS_ID,
@@ -157,6 +254,7 @@ const XSTUDIO_PACKAGE_VIEWS: Record<string, Record<string, any>> = {
   [STUDIO_TOPBAR_ID]: topbar_view as Record<string, any>,
   [STUDIO_OBJECT_TREE_ID]: object_tree_view as Record<string, any>,
   [STUDIO_SELECTED_OBJECT_PANEL_ID]: selected_object_inspector_view as Record<string, any>,
+  [STUDIO_CONVERSATION_SECTION_ID]: conversation_view as Record<string, any>,
   ...studio_editor_views,
 };
 
@@ -171,6 +269,13 @@ type XStudioClientRuntime = {
   is_edit_mode_enabled?(): boolean;
   note_structured_view_edit?(edit: { _view_id?: string; _action?: string; _target_id?: string }): void;
   clear_pending_structured_view_edit?(edit: { _view_id?: string; _action?: string; _target_id?: string }): void;
+  request_structured_view_edit_refresh?(edit: {
+    _view_id?: string;
+    _action?: string;
+    _target_id?: string;
+    _version?: number;
+    _result?: any;
+  }): Promise<Record<string, any> | void>;
   sendXcmd(xcmd: any): Promise<any>;
 };
 
@@ -236,6 +341,52 @@ type XStudioSelectedObjectInspectorField =
   | "disabled"
   | "placeholder";
 
+type XStudioConversationMessage = {
+  _role: "user" | "assistant" | "system" | "tool";
+  _text: string;
+  _created_at: string;
+  _id?: string;
+  _intent?: Record<string, any>;
+};
+
+type XStudioIntentActionLocalStatus =
+  | typeof STUDIO_INTENT_ACTION_STATUS_DISMISSED
+  | typeof STUDIO_INTENT_ACTION_STATUS_RUNNING
+  | typeof STUDIO_INTENT_ACTION_STATUS_DONE
+  | typeof STUDIO_INTENT_ACTION_STATUS_FAILED;
+
+type XStudioIntentActionView = {
+  _key: string;
+  _render_key: string;
+  _id: string;
+  _message_id: string;
+  _action_index: number;
+  _title: string;
+  _description: string;
+  _action_type: string;
+  _confidence: string;
+  _status: string;
+  _requires_approval?: boolean;
+  _params: Record<string, any> | null;
+  _error: string;
+};
+
+type XStudioIntentActionParamsResult = {
+  _ok: boolean;
+  _error: string;
+  _params: Record<string, any> | null;
+};
+
+type XStudioConversationSummary = {
+  _id: string;
+  _created_at?: string;
+  _updated_at?: string;
+  _message_count?: number;
+  _last_message_at?: string;
+  _title?: string;
+  _metadata?: unknown;
+};
+
 type XStudioSelectedObjectApplyViewEditParams = {
   _app_id: string;
   _env: string;
@@ -254,7 +405,10 @@ type XStudioSelectedObjectApplyViewEditParams = {
 
 type XStudioObjectTreeNode = {
   _key: string;
+  _node_key: string;
+  _parent_node_key: string;
   _label: string;
+  _search_text: string;
   _meta: XStudioSelectedObject | null;
   _object: Record<string, any> | null;
   _depth: number;
@@ -349,7 +503,7 @@ export class XStudioModule extends XModule {
       _scope: "module",
       _description: "Toggle a right-dock XStudio portlet without recreating it.",
       _params: {
-        _portlet: "Portlet id: prompt, runtime, inspector, json, or modules."
+        _portlet: "Portlet id: prompt, conversation, runtime, inspector, json, or modules."
       }
     },
   };
@@ -374,14 +528,21 @@ export class XStudioModule extends XModule {
   private _selected_canvas_element: HTMLElement | null = null;
   private _object_tree_render_seq = 0;
   private _object_tree_nodes: XStudioObjectTreeNode[] = [];
+  private _object_tree_search_query = "";
   private _studio_theme: XStudioTheme = STUDIO_THEME_DEFAULT;
+  private _conversation_messages: XStudioConversationMessage[] = [];
+  private _conversation_app_id = "";
+  private _conversation_env = "";
+  private _conversation_id = "";
+  private _conversation_list: XStudioConversationSummary[] = [];
+  private _conversation_ready: Promise<void> | null = null;
+  private _conversation_action_status: Record<string, XStudioIntentActionLocalStatus> = {};
+  private _conversation_action_error: Record<string, string> = {};
   private _portlet_visibility: Record<XStudioPortletId, boolean> = {
-    selected: true,
-    prompt: true,
-    runtime: false,
-    inspector: true,
-    json: false,
-    modules: false,
+    ...STUDIO_DEFAULT_PORTLET_VISIBILITY,
+  };
+  private _explorer_section_open: Record<XStudioExplorerSectionId, boolean> = {
+    ...STUDIO_DEFAULT_EXPLORER_SECTION_OPEN,
   };
 
   constructor(client?: XStudioClientRuntime | null) {
@@ -422,6 +583,7 @@ export class XStudioModule extends XModule {
       if (evt._app_id !== this._client().getActiveAppId()) return;
       if (evt._env !== this._client().getActiveEnv()) return;
       this._refresh_object_tree_for_current_view();
+      void this._ensure_conversation_for_current_context();
     });
 
     _xem.on("xvm:view-cache-updated", (payload: any) => {
@@ -464,6 +626,27 @@ export class XStudioModule extends XModule {
       this._toggle_right_dock();
     });
 
+    _xem.on("studio:explorer-section:toggle", (payload: any) => {
+      const evt = this._normalize_event_payload(payload);
+      const section_id = this._normalize_explorer_section_id(
+        is_obj(evt) ? evt._section ?? evt.section ?? evt._id ?? evt.id : evt,
+      );
+      if (!section_id) {
+        this._log("explorer section toggle ignored", { _payload: evt });
+        return;
+      }
+
+      this._toggle_explorer_section(section_id);
+    });
+
+    _xem.on("studio:object-tree-search", (payload: any) => {
+      this._log("studio:object-tree-search payload received", { _payload: payload });
+      const evt = this._normalize_event_payload(payload);
+      const value = this._object_tree_search_event_value(evt);
+      this._log("studio:object-tree-search value for _update_object_tree_search", { _value: value });
+      this._update_object_tree_search(value);
+    });
+
     _xem.on("studio:preview-request", async () => {
       const prompt = String(_xd.get("studio:prompt") ?? "").trim();
       if (!prompt) {
@@ -476,6 +659,34 @@ export class XStudioModule extends XModule {
         this._resolve_studio_target_view_id() || "main",
         "studio-preview",
       );
+    });
+
+    _xem.on("studio:conversation-send", async () => {
+      await this._send_conversation_message();
+    });
+
+    _xem.on("studio:conversation-new", async () => {
+      await this._create_and_open_new_conversation();
+    });
+
+    _xem.on("studio:conversation-select", async (payload: any) => {
+      await this._switch_conversation(payload);
+    });
+
+    _xem.on("studio:conversation-input", (payload: any) => {
+      this._update_conversation_input_state(payload);
+    });
+
+    _xem.on("studio:conversation-keyup", (payload: any) => {
+      this._handle_conversation_keyup(payload);
+    });
+
+    _xem.on("studio:intent-action-apply", (payload: any) => {
+      void this._apply_conversation_intent_action(payload);
+    });
+
+    _xem.on("studio:intent-action-dismiss", (payload: any) => {
+      void this._dismiss_conversation_intent_action(payload);
     });
 
     _xem.on("studio:apply-request", () => {
@@ -678,6 +889,20 @@ export class XStudioModule extends XModule {
     return this._right_dock_collapsed ? "Expand right dock" : "Collapse right dock";
   }
 
+  private _explorer_section_is_open(section_id: XStudioExplorerSectionId) {
+    return this._explorer_section_open[section_id] === true;
+  }
+
+  private _explorer_section_toggle_text(section_id: XStudioExplorerSectionId) {
+    const config = STUDIO_EXPLORER_SECTIONS[section_id];
+    return `${this._explorer_section_is_open(section_id) ? "▾" : "▸"} ${config._label}`;
+  }
+
+  private _explorer_section_toggle_title(section_id: XStudioExplorerSectionId) {
+    const config = STUDIO_EXPLORER_SECTIONS[section_id];
+    return `${this._explorer_section_is_open(section_id) ? "Collapse" : "Expand"} ${config._label}`;
+  }
+
   private _clone_studio_package_view(view_id: string) {
     const view = XSTUDIO_PACKAGE_VIEWS[view_id];
     return view ? _xu.clone_json(view) : null;
@@ -735,6 +960,28 @@ export class XStudioModule extends XModule {
     obj.class = Array.from(classes).join(" ");
   }
 
+  private _set_view_data_display_visible(obj: Record<string, any>, visible: boolean) {
+    obj._visible = visible;
+    obj["aria-hidden"] = String(!visible);
+    this._set_class_token_on_data(obj, STUDIO_PORTLET_HIDDEN_CLASS, !visible);
+
+    const raw_style = typeof obj.style === "string" ? obj.style : "";
+    const declarations = raw_style
+      .split(";")
+      .map((item) => item.trim())
+      .filter((item) => item && !/^display\s*:/i.test(item));
+
+    if (!visible) {
+      declarations.push("display: none");
+    }
+
+    if (declarations.length > 0) {
+      obj.style = `${declarations.join("; ")};`;
+    } else {
+      delete obj.style;
+    }
+  }
+
   private _set_view_data_portlet_button_state(root: Record<string, any>, portlet_id: XStudioPortletId) {
     const config = STUDIO_PORTLETS[portlet_id];
     if (!config._button_id) return;
@@ -754,7 +1001,38 @@ export class XStudioModule extends XModule {
       const config = STUDIO_PORTLETS[portlet_id];
       const portlet = this._find_view_data(root, config._object_id);
       if (!portlet) continue;
-      portlet._visible = this._portlet_visibility[portlet_id] === true;
+      this._set_view_data_display_visible(
+        portlet,
+        this._portlet_visibility[portlet_id] === true,
+      );
+    }
+  }
+
+  private _set_view_data_explorer_section_state(root: Record<string, any>, section_id: XStudioExplorerSectionId) {
+    const config = STUDIO_EXPLORER_SECTIONS[section_id];
+    const open = this._explorer_section_is_open(section_id);
+
+    const section = this._find_view_data(root, config._section_id);
+    if (section) {
+      this._set_class_token_on_data(section, STUDIO_EXPLORER_SECTION_COLLAPSED_CLASS, !open);
+    }
+
+    const body = this._find_view_data(root, config._body_id);
+    if (body) {
+      this._set_view_data_display_visible(body, open);
+    }
+
+    const toggle = this._find_view_data(root, config._toggle_id);
+    if (toggle) {
+      toggle._text = this._explorer_section_toggle_text(section_id);
+      toggle.title = this._explorer_section_toggle_title(section_id);
+      toggle["aria-expanded"] = String(open);
+    }
+  }
+
+  private _apply_explorer_section_state_to_view_data(root: Record<string, any>) {
+    for (const section_id of STUDIO_EXPLORER_SECTION_IDS) {
+      this._set_view_data_explorer_section_state(root, section_id);
     }
   }
 
@@ -788,6 +1066,7 @@ export class XStudioModule extends XModule {
       if (view_id === STUDIO_TOPBAR_ID) {
         this._apply_topbar_state_to_view_data(local_view);
       }
+      this._apply_explorer_section_state_to_view_data(local_view);
       return local_view;
     }
 
@@ -823,6 +1102,7 @@ export class XStudioModule extends XModule {
     }
 
     this._apply_portlet_state_to_view_data(shell);
+    this._apply_explorer_section_state_to_view_data(shell);
 
     return shell;
   }
@@ -911,6 +1191,30 @@ export class XStudioModule extends XModule {
     }
   }
 
+  private _set_portlet_visible(object_id: string, visible: boolean) {
+    const object = XUI.getObject(object_id) as any;
+    if (!object) return;
+
+    object._visible = visible;
+    if (visible) {
+      object.removeClass?.(STUDIO_PORTLET_HIDDEN_CLASS);
+    } else {
+      object.addClass?.(STUDIO_PORTLET_HIDDEN_CLASS);
+    }
+
+    object["aria-hidden"] = String(!visible);
+    object.dom?.setAttribute?.("aria-hidden", String(!visible));
+
+    const dom = object.dom;
+    if (dom instanceof HTMLElement) {
+      if (visible) {
+        dom.style.removeProperty("display");
+      } else {
+        dom.style.display = "none";
+      }
+    }
+  }
+
   private _set_portlet_button_state(portlet_id: XStudioPortletId) {
     const config = STUDIO_PORTLETS[portlet_id];
     if (!config._button_id) return;
@@ -922,11 +1226,1755 @@ export class XStudioModule extends XModule {
     this._set_object_class_token(config._button_id, STUDIO_PORTLET_TOGGLE_ACTIVE_CLASS, visible);
   }
 
+  private _local_conversation_text(value: any) {
+    return String(value ?? "").trim();
+  }
+
+  private _current_conversation_context() {
+    return {
+      _app_id: this._client().getActiveAppId(),
+      _env: this._client().getActiveEnv(),
+    };
+  }
+
+  private _conversation_context_matches(app_id: string, env: string) {
+    return (
+      this._conversation_app_id === app_id &&
+      this._conversation_env === env &&
+      this._conversation_id.length > 0
+    );
+  }
+
+  private _conversation_action_key_part(value: string) {
+    return encodeURIComponent(value);
+  }
+
+  private _conversation_message_id(message: XStudioConversationMessage, index: number) {
+    return typeof message._id === "string" && message._id.trim()
+      ? message._id.trim()
+      : `${message._role}-${index}-${message._created_at || "no-time"}`;
+  }
+
+  private _conversation_action_key(
+    message: XStudioConversationMessage,
+    message_index: number,
+    raw_action: Record<string, any>,
+    action_index: number,
+  ) {
+    const action_id = this._intent_action_persisted_id(raw_action);
+    const render_action_id = action_id || `action-${action_index + 1}`;
+    const parts = [
+      this._conversation_app_id || "no-app",
+      this._conversation_env || "no-env",
+      this._conversation_id || "no-conversation",
+      this._conversation_message_id(message, message_index),
+      render_action_id,
+    ].map((part) => this._conversation_action_key_part(part));
+
+    return parts.join(":");
+  }
+
+  private _reset_conversation_action_transient_state() {
+    this._conversation_action_status = {};
+    this._conversation_action_error = {};
+    this._log("conversation action transient state reset", {
+      _app_id: this._conversation_app_id,
+      _env: this._conversation_env,
+      _conversation_id: this._conversation_id,
+    });
+  }
+
+  private _normalize_conversation_summary(value: any): XStudioConversationSummary | null {
+    if (!is_obj(value) || typeof value._id !== "string" || !value._id.trim()) {
+      return null;
+    }
+
+    return {
+      _id: value._id.trim(),
+      ...(typeof value._created_at === "string" ? { _created_at: value._created_at } : {}),
+      ...(typeof value._updated_at === "string" ? { _updated_at: value._updated_at } : {}),
+      ...(typeof value._message_count === "number" ? { _message_count: value._message_count } : {}),
+      ...(typeof value._last_message_at === "string" ? { _last_message_at: value._last_message_at } : {}),
+      ...(typeof value._title === "string" ? { _title: value._title } : {}),
+      ...(value._metadata !== undefined ? { _metadata: value._metadata } : {}),
+    };
+  }
+
+  private _normalize_conversation_message(value: any): XStudioConversationMessage | null {
+    if (!is_obj(value)) return null;
+
+    const role = String(value._role ?? "").trim();
+    if (role !== "user" && role !== "assistant" && role !== "system" && role !== "tool") {
+      return null;
+    }
+
+    if (typeof value._text !== "string") return null;
+
+    return {
+      _role: role,
+      _text: value._text,
+      _created_at:
+        typeof value._created_at === "string" && value._created_at.trim()
+          ? value._created_at.trim()
+          : "",
+      ...(typeof value._id === "string" && value._id.trim() ? { _id: value._id.trim() } : {}),
+      ...(is_obj(value._intent) ? { _intent: { ...value._intent } } : {}),
+    };
+  }
+
+  private _conversation_artifact_id(item: any) {
+    if (typeof item === "string" && item.trim()) return item.trim();
+    if (!is_obj(item)) return "";
+
+    const id =
+      typeof item._id === "string" && item._id.trim()
+        ? item._id.trim()
+        : typeof item.id === "string" && item.id.trim()
+          ? item.id.trim()
+          : typeof item._name === "string" && item._name.trim()
+            ? item._name.trim()
+            : "";
+
+    return id;
+  }
+
+  private _conversation_artifact_ids(key: string, mapper = (item: any) => this._conversation_artifact_id(item)) {
+    const items = _xd.get(key);
+    if (!Array.isArray(items)) return [];
+
+    return items
+      .map((item) => mapper(item))
+      .filter((item): item is string => typeof item === "string" && item.length > 0);
+  }
+
+  private _conversation_selected_object_context() {
+    const selected = this._selected_object;
+    if (!selected) return null;
+
+    const type = typeof selected._type === "string" ? selected._type.trim() : "";
+    const json_id = typeof selected._json_id === "string" ? selected._json_id.trim() : "";
+    const id = typeof selected._id === "string" ? selected._id.trim() : "";
+    const source_view_id = typeof selected._source_view_id === "string" ? selected._source_view_id.trim() : "";
+    const path = typeof selected._path === "string" ? selected._path.trim() : "";
+
+    if (!type || !json_id || !source_view_id) return null;
+
+    return {
+      _type: type,
+      _json_id: json_id,
+      ...(id ? { _id: id } : {}),
+      _source_view_id: source_view_id,
+      ...(path ? { _path: path } : {}),
+    };
+  }
+
+  private _conversation_selected_object_log_detail(selected_object: Record<string, any> | undefined) {
+    return {
+      _has_selected_object: is_obj(selected_object),
+      _type: typeof selected_object?._type === "string" ? selected_object._type : "",
+      _json_id: typeof selected_object?._json_id === "string" ? selected_object._json_id : "",
+      _id: typeof selected_object?._id === "string" ? selected_object._id : "",
+      _source_view_id: typeof selected_object?._source_view_id === "string" ? selected_object._source_view_id : "",
+      _path: typeof selected_object?._path === "string" ? selected_object._path : "",
+    };
+  }
+
+  private _conversation_runtime_context() {
+    const active_view_id = this._resolve_studio_target_view_id();
+    const selected_object = this._conversation_selected_object_context();
+    const views = this._conversation_artifact_ids(_XD_KEYS.STUDIO_VIEWS);
+    const flows = this._conversation_artifact_ids(_XD_KEYS.STUDIO_FLOWS);
+    const modules = this._conversation_artifact_ids(
+      _XD_KEYS.STUDIO_MODULES,
+      (item: any) => this._get_studio_module_name(item),
+    );
+    const available_artifacts: Record<string, string[]> = {};
+
+    if (views.length > 0) available_artifacts._views = views;
+    if (flows.length > 0) available_artifacts._flows = flows;
+    if (modules.length > 0) available_artifacts._modules = modules;
+
+    return {
+      ...(active_view_id ? { _active_view_id: active_view_id } : {}),
+      ...(selected_object ? { _selected_object: selected_object } : {}),
+      ...(Object.keys(available_artifacts).length > 0
+        ? { _available_artifacts: available_artifacts }
+        : {}),
+    };
+  }
+
+  private _conversation_append_message_id(result: any) {
+    const message = is_obj(result?._message)
+      ? result._message
+      : is_obj(result?._result?._message)
+        ? result._result._message
+        : null;
+    return typeof message?._id === "string" && message._id.trim()
+      ? message._id.trim()
+      : "";
+  }
+
+  private async _analyze_conversation_message(text: string, message_id: string) {
+    const runtime_context = this._conversation_runtime_context();
+    const params: Record<string, any> = {
+      _app_id: this._conversation_app_id,
+      _env: this._conversation_env,
+      _conversation_id: this._conversation_id,
+      _message: text,
+      _runtime_context: runtime_context,
+    };
+
+    if (message_id) {
+      params._message_id = message_id;
+    }
+
+    this._log(
+      "analyze-message selected object detail",
+      this._conversation_selected_object_log_detail(runtime_context._selected_object),
+    );
+
+    this._log("analyze-message runtime context", {
+      _active_view_id: runtime_context._active_view_id,
+      _selected_object: runtime_context._selected_object,
+    });
+
+    this._log("analyze-message requested", {
+      _app_id: this._conversation_app_id,
+      _env: this._conversation_env,
+      _conversation_id: this._conversation_id,
+      ...(message_id ? { _message_id: message_id } : {}),
+    });
+
+    const result = await this._send_xvibe_command("analyze-message", params);
+    this._log("analyze-message completed", {
+      _app_id: this._conversation_app_id,
+      _env: this._conversation_env,
+      _conversation_id: this._conversation_id,
+      ...(is_obj(result?._intent) ? { _intent: result._intent } : {}),
+    });
+    return result;
+  }
+
+  private _conversation_label(conversation: XStudioConversationSummary) {
+    const title = typeof conversation._title === "string" ? conversation._title.trim() : "";
+    const count = typeof conversation._message_count === "number" ? conversation._message_count : 0;
+    const name = title || conversation._id;
+    return count > 0 ? `${name} (${count})` : name;
+  }
+
+  private _active_conversation_summary() {
+    return this._conversation_list.find((item) => item._id === this._conversation_id) ?? null;
+  }
+
+  private _render_conversation_title() {
+    const conversation = this._active_conversation_summary();
+    const title = conversation
+      ? `Conversation: ${this._conversation_label(conversation)}`
+      : this._conversation_id
+        ? `Conversation: ${this._conversation_id}`
+        : "No conversation open";
+    this._set_studio_label(STUDIO_CONVERSATION_TITLE_ID, title);
+  }
+
+  private _render_conversation_selector() {
+    const selector = XUI.getObject(STUDIO_CONVERSATION_SELECTOR_ID) as any;
+    if (!selector) return;
+
+    const conversations = this._conversation_list.length > 0
+      ? this._conversation_list
+      : this._conversation_id
+        ? [{ _id: this._conversation_id } as XStudioConversationSummary]
+        : [];
+
+    const options = conversations.length > 0
+      ? conversations.map((conversation) => ({
+        label: this._conversation_label(conversation),
+        value: conversation._id,
+        selected: conversation._id === this._conversation_id,
+      }))
+      : [
+        {
+          label: "No conversation",
+          value: "",
+          selected: true,
+        },
+      ];
+
+    selector._options = options;
+    selector.renderOptions?.();
+    selector.setValue?.(this._conversation_id);
+    selector.value = this._conversation_id;
+    this._render_conversation_title();
+  }
+
+  private async _list_conversations(app_id: string, env: string) {
+    const result = await this._send_xvibe_command("list-conversations", {
+      _app_id: app_id,
+      _env: env,
+    });
+    const conversations = Array.isArray(result?._conversations)
+      ? result._conversations
+        .map((item: any) => this._normalize_conversation_summary(item))
+        .filter((item: XStudioConversationSummary | null): item is XStudioConversationSummary => item !== null)
+      : [];
+
+    this._conversation_list = conversations;
+    this._render_conversation_selector();
+    return conversations;
+  }
+
+  private async _create_conversation(app_id: string, env: string) {
+    const result = await this._send_xvibe_command("create-conversation", {
+      _app_id: app_id,
+      _env: env,
+      _title: "XStudio Conversation",
+      _metadata: {
+        _source: "xstudio",
+      },
+    });
+    const conversation = this._normalize_conversation_summary(result?._conversation);
+    if (!conversation) {
+      throw new Error("xvibe.create-conversation returned no conversation");
+    }
+
+    this._conversation_list = [
+      conversation,
+      ...this._conversation_list.filter((item) => item._id !== conversation._id),
+    ];
+    return conversation;
+  }
+
+  private async _load_conversation_messages() {
+    if (!this._conversation_app_id || !this._conversation_env || !this._conversation_id) {
+      this._conversation_messages = [];
+      this._render_conversation_messages();
+      return;
+    }
+
+    const result = await this._send_xvibe_command("get-last-messages", {
+      _app_id: this._conversation_app_id,
+      _env: this._conversation_env,
+      _conversation_id: this._conversation_id,
+      _limit: STUDIO_CONVERSATION_LAST_MESSAGES_LIMIT,
+    });
+    const messages = Array.isArray(result?._messages)
+      ? result._messages
+        .map((item: any) => this._normalize_conversation_message(item))
+        .filter((item: XStudioConversationMessage | null): item is XStudioConversationMessage => item !== null)
+      : [];
+
+    this._conversation_messages = messages;
+    this._reset_conversation_action_transient_state();
+    this._render_conversation_messages();
+  }
+
+  private async _open_conversation(
+    app_id: string,
+    env: string,
+    conversation_id: string,
+    options: { _log_switch?: boolean; _refresh_list?: boolean } = {},
+  ) {
+    const next_id = String(conversation_id ?? "").trim();
+    if (!next_id) return;
+
+    this._conversation_app_id = app_id;
+    this._conversation_env = env;
+    this._conversation_id = next_id;
+
+    if (options._refresh_list) {
+      await this._list_conversations(app_id, env);
+    } else {
+      this._render_conversation_selector();
+    }
+
+    this._log("conversation opened", {
+      _app_id: app_id,
+      _env: env,
+      _conversation_id: next_id,
+    });
+    if (options._log_switch) {
+      this._log("conversation switched", {
+        _app_id: app_id,
+        _env: env,
+        _conversation_id: next_id,
+      });
+    }
+
+    await this._load_conversation_messages();
+  }
+
+  private async _ensure_conversation_for_current_context() {
+    if (!this._can_edit()) return;
+
+    if (this._conversation_ready) {
+      await this._conversation_ready;
+      return;
+    }
+
+    this._conversation_ready = (async () => {
+      const { _app_id: app_id, _env: env } = this._current_conversation_context();
+
+      if (this._conversation_context_matches(app_id, env)) {
+        await this._load_conversation_messages();
+        return;
+      }
+
+      this._conversation_app_id = app_id;
+      this._conversation_env = env;
+      this._conversation_id = "";
+      this._conversation_messages = [];
+      this._render_conversation_messages();
+
+      const conversations = await this._list_conversations(app_id, env);
+      const active = conversations[0] ?? await this._create_conversation(app_id, env);
+      await this._open_conversation(app_id, env, active._id);
+    })();
+
+    try {
+      await this._conversation_ready;
+    } finally {
+      this._conversation_ready = null;
+    }
+  }
+
+  private async _create_and_open_new_conversation() {
+    if (!this._can_edit()) return;
+    if (this._conversation_ready) {
+      await this._conversation_ready;
+    }
+
+    const { _app_id: app_id, _env: env } = this._current_conversation_context();
+    const conversation = await this._create_conversation(app_id, env);
+    this._conversation_messages = [];
+    this._render_conversation_messages();
+    await this._open_conversation(app_id, env, conversation._id, {
+      _log_switch: true,
+      _refresh_list: true,
+    });
+  }
+
+  private async _switch_conversation(payload?: any) {
+    if (!this._can_edit()) return;
+    if (this._conversation_ready) {
+      await this._conversation_ready;
+    }
+
+    const conversation_id =
+      is_obj(payload) && typeof payload._conversation_id === "string"
+        ? payload._conversation_id.trim()
+        : "";
+    if (!conversation_id) return;
+
+    const { _app_id: app_id, _env: env } = this._current_conversation_context();
+    if (this._conversation_context_matches(app_id, env) && this._conversation_id === conversation_id) {
+      await this._load_conversation_messages();
+      return;
+    }
+
+    await this._open_conversation(app_id, env, conversation_id, {
+      _log_switch: true,
+    });
+  }
+
+  private async _append_conversation_message(text: string) {
+    if (!this._can_edit()) return;
+    await this._ensure_conversation_for_current_context();
+    if (!this._conversation_app_id || !this._conversation_env || !this._conversation_id) return;
+
+    const append_result = await this._send_xvibe_command("append-message", {
+      _app_id: this._conversation_app_id,
+      _env: this._conversation_env,
+      _conversation_id: this._conversation_id,
+      _message: {
+        _role: "user",
+        _text: text,
+      },
+    });
+    this._log("conversation message appended", {
+      _app_id: this._conversation_app_id,
+      _env: this._conversation_env,
+      _conversation_id: this._conversation_id,
+      _role: "user",
+    });
+
+    this._set_conversation_input_value("");
+
+    try {
+      await this._analyze_conversation_message(
+        text,
+        this._conversation_append_message_id(append_result),
+      );
+    } catch (err) {
+      const message = `Analyze message failed: ${to_err(err)}`;
+      this._write_studio_status(message);
+      this._error("analyze-message failed", {
+        _app_id: this._conversation_app_id,
+        _env: this._conversation_env,
+        _conversation_id: this._conversation_id,
+        _error: to_err(err),
+      });
+    } finally {
+      await this._list_conversations(this._conversation_app_id, this._conversation_env);
+      await this._load_conversation_messages();
+    }
+  }
+
+  private _conversation_intent_summary(message: XStudioConversationMessage) {
+    if (!is_obj(message._intent)) return message._text;
+
+    return message._text || "Intent analyzed.";
+  }
+
+  private _conversation_intent_value(intent: Record<string, any>, key: string) {
+    return intent[`_${key}`] ?? intent[key];
+  }
+
+  private _conversation_debug_value(value: any) {
+    if (value === undefined || value === null || value === "") return "-";
+    if (typeof value === "string") return value;
+    if (typeof value === "number" || typeof value === "boolean") return String(value);
+    return _xu.safe_compact_inline_json(value, 4000) || String(value);
+  }
+
+  private _conversation_debug_json(value: any) {
+    if (value === undefined || value === null || value === "") return "-";
+    try {
+      return _xu.compact_json(value, 6000);
+    } catch {
+      return _xu.safe_compact_inline_json(value, 6000) || String(value);
+    }
+  }
+
+  private _conversation_raw_action_params(intent: Record<string, any>) {
+    const raw_actions = intent._actions ?? intent.actions;
+    if (!Array.isArray(raw_actions)) return null;
+
+    const params = raw_actions
+      .map((raw_action) => is_obj(raw_action) && is_obj(raw_action._params) ? raw_action._params : null)
+      .filter((raw_params): raw_params is Record<string, any> => raw_params !== null);
+
+    if (params.length === 0) return null;
+    return params.length === 1 ? params[0] : params;
+  }
+
+  private _conversation_debug_row(label: string, value: any, block = false) {
+    return {
+      _type: "view",
+      class: `xstudio-conversation-debug-row${block ? " xstudio-conversation-debug-row-block" : ""}`,
+      _children: [
+        {
+          _type: "label",
+          class: "xstudio-conversation-debug-label",
+          _text: `${label}:`,
+        },
+        {
+          _type: "label",
+          class: "xstudio-conversation-debug-value",
+          _text: block ? this._conversation_debug_json(value) : this._conversation_debug_value(value),
+        },
+      ],
+    };
+  }
+
+  private _conversation_intent_debug_view(message: XStudioConversationMessage, index: number) {
+    if (!is_obj(message._intent)) return null;
+
+    const intent = message._intent;
+    return {
+      _type: "xhtml",
+      _html_tag: "details",
+      _id: `xstudio-conversation-debug-${index}`,
+      class: "xstudio-conversation-debug",
+      _children: [
+        {
+          _type: "xhtml",
+          _html_tag: "summary",
+          class: "xstudio-conversation-debug-summary",
+          _text: "Debug ▼",
+        },
+        {
+          _type: "view",
+          class: "xstudio-conversation-debug-content",
+          _children: [
+            this._conversation_debug_row("processor", this._conversation_intent_value(intent, "processor")),
+            this._conversation_debug_row("processor_chain", this._conversation_intent_value(intent, "processor_chain")),
+            this._conversation_debug_row("message_type", this._conversation_intent_value(intent, "message_type")),
+            this._conversation_debug_row("execution_level", this._conversation_intent_value(intent, "execution_level")),
+            this._conversation_debug_row("confidence", this._conversation_intent_value(intent, "confidence")),
+            this._conversation_debug_row("raw intent", intent, true),
+            this._conversation_debug_row("raw action params", this._conversation_raw_action_params(intent), true),
+          ],
+        },
+      ],
+    };
+  }
+
+  private _conversation_message_key(message: XStudioConversationMessage, index: number) {
+    const message_id = typeof message._id === "string" && message._id.trim()
+      ? message._id.trim()
+      : `${message._role}-${index}-${message._created_at || "no-time"}`;
+
+    return [
+      this._conversation_app_id || "no-app",
+      this._conversation_env || "no-env",
+      this._conversation_id || "no-conversation",
+      message_id,
+    ].join("::");
+  }
+
+  private _intent_action_text(action: Record<string, any>, key: string, fallback = "") {
+    const raw = action[`_${key}`] ?? action[key];
+    if (raw === undefined || raw === null) return fallback;
+    const value = String(raw).trim();
+    return value || fallback;
+  }
+
+  private _intent_action_persisted_id(action: Record<string, any>) {
+    const raw = action._id;
+    if (raw === undefined || raw === null) return "";
+    return String(raw).trim();
+  }
+
+  private _missing_intent_action_persisted_id_error() {
+    return "Cannot update conversation action: missing persisted action._id.";
+  }
+
+  private _intent_action_natural_title(edit_action: string) {
+    switch (edit_action) {
+      case "hide-object":
+        return "Hide selected object";
+      case "show-object":
+        return "Show selected object";
+      case "remove-object":
+        return "Delete selected object";
+      case "duplicate-object":
+        return "Duplicate selected object";
+      case "move-object":
+        return "Move selected object";
+      default:
+        return "";
+    }
+  }
+
+  private _intent_action_display_title(raw_action: Record<string, any>, action_type: string, action_index: number) {
+    const edit_action = is_obj(raw_action._params) && typeof raw_action._params._edit_action === "string"
+      ? raw_action._params._edit_action.trim()
+      : "";
+    const natural_title = this._intent_action_natural_title(edit_action);
+    const raw_title = this._intent_action_text(raw_action, "title");
+
+    if (raw_title && raw_title !== action_type && raw_title !== edit_action) return raw_title;
+    if (natural_title) return natural_title;
+    if (action_type && action_type !== "-" && action_type !== "apply-view-edit") return action_type;
+    return `Action ${action_index + 1}`;
+  }
+
+  private _conversation_intent_actions(message: XStudioConversationMessage, message_index: number) {
+    if (message._role !== "tool" || !is_obj(message._intent)) return [];
+
+    const raw_actions = message._intent._actions ?? message._intent.actions;
+    if (!Array.isArray(raw_actions)) return [];
+
+    return raw_actions
+      .map((raw_action, action_index): XStudioIntentActionView | null => {
+        if (!is_obj(raw_action)) return null;
+
+        const action_id = this._intent_action_persisted_id(raw_action);
+        const message_id = this._conversation_message_id(message, message_index);
+        const action_key = this._conversation_action_key(
+          message,
+          message_index,
+          raw_action,
+          action_index,
+        );
+        const action_type = this._intent_action_text(raw_action, "action_type", "-");
+        const title = this._intent_action_display_title(raw_action, action_type, action_index);
+        const source_status = this._intent_action_text(
+          raw_action,
+          "status",
+          STUDIO_INTENT_ACTION_STATUS_SUGGESTED,
+        );
+
+        return {
+          _key: action_key,
+          _render_key: action_key,
+          _id: action_id,
+          _message_id: message_id,
+          _action_index: action_index,
+          _title: title,
+          _description: this._intent_action_text(raw_action, "description"),
+          _action_type: action_type,
+          _confidence: this._intent_action_text(raw_action, "confidence"),
+          _status: this._conversation_action_status[action_key] ?? source_status,
+          ...(typeof raw_action._requires_approval === "boolean"
+            ? { _requires_approval: raw_action._requires_approval }
+            : {}),
+          _params: is_obj(raw_action._params) ? { ...raw_action._params } : null,
+          _error:
+            this._conversation_action_error[action_key] ||
+            this._intent_action_text(raw_action, "error") ||
+            this._intent_action_text(raw_action, "reason"),
+        };
+      })
+      .filter((action): action is XStudioIntentActionView => action !== null);
+  }
+
+  private _intent_action_event_payload(action: XStudioIntentActionView) {
+    return {
+      _action_key: action._key,
+      _action_id: action._id,
+      _action_title: action._title,
+      _action_type: action._action_type,
+    };
+  }
+
+  private _normalize_intent_action_event_payload(payload?: any) {
+    if (!is_obj(payload)) return null;
+    const action_key = typeof payload._action_key === "string" ? payload._action_key.trim() : "";
+    if (!action_key) return null;
+
+    return {
+      _action_key: action_key,
+      _action_id: typeof payload._action_id === "string" ? payload._action_id.trim() : "",
+      _action_title: typeof payload._action_title === "string" ? payload._action_title.trim() : "",
+      _action_type: typeof payload._action_type === "string" ? payload._action_type.trim() : "",
+    };
+  }
+
+  private _intent_action_edit_action(action: XStudioIntentActionView) {
+    return typeof action._params?._edit_action === "string"
+      ? action._params._edit_action.trim()
+      : "";
+  }
+
+  private _is_supported_intent_apply_view_edit_action(action: XStudioIntentActionView) {
+    const edit_action = this._intent_action_edit_action(action);
+    if (STUDIO_SUPPORTED_INTENT_APPLY_VIEW_EDIT_ACTIONS.has(edit_action)) return true;
+
+    if (edit_action !== "move-object" || !is_obj(action._params)) return false;
+
+    const direction = typeof action._params._move_direction === "string"
+      ? action._params._move_direction.trim().toLowerCase()
+      : "";
+    return action._params._requires_resolution === true &&
+      (direction === "up" || direction === "down");
+  }
+
+  private _intent_action_card_execute_state(action: XStudioIntentActionView) {
+    if (action._action_type !== "apply-view-edit") {
+      return {
+        _can_execute: false,
+        _disabled_reason: "unsupported action type",
+      };
+    }
+
+    if (
+      action._status !== STUDIO_INTENT_ACTION_STATUS_SUGGESTED &&
+      action._status !== STUDIO_INTENT_ACTION_STATUS_FAILED
+    ) {
+      return {
+        _can_execute: false,
+        _disabled_reason: `status is ${action._status || "unknown"}`,
+      };
+    }
+
+    if (!is_obj(action._params)) {
+      return {
+        _can_execute: false,
+        _disabled_reason: "missing params",
+      };
+    }
+
+    if (!this._is_supported_intent_apply_view_edit_action(action)) {
+      return {
+        _can_execute: false,
+        _disabled_reason: "unsupported edit action",
+      };
+    }
+
+    if (action._requires_approval === false) {
+      return {
+        _can_execute: false,
+        _disabled_reason: "approval disabled",
+      };
+    }
+
+    return {
+      _can_execute: true,
+      _disabled_reason: "",
+    };
+  }
+
+  private _find_conversation_intent_action(action_key: string) {
+    for (let index = 0; index < this._conversation_messages.length; index += 1) {
+      const action = this._conversation_intent_actions(this._conversation_messages[index], index)
+        .find((item) => item._key === action_key);
+      if (action) return action;
+    }
+
+    return null;
+  }
+
+  private _set_conversation_action_status(
+    action_key: string,
+    status: XStudioIntentActionLocalStatus,
+    error = "",
+  ) {
+    if (!action_key) return;
+
+    this._conversation_action_status[action_key] = status;
+    if (error) {
+      this._conversation_action_error[action_key] = error;
+    } else {
+      delete this._conversation_action_error[action_key];
+    }
+
+    this._render_conversation_messages();
+  }
+
+  private async _update_conversation_action_status(
+    action: XStudioIntentActionView,
+    status: XStudioIntentActionLocalStatus,
+    error = "",
+  ) {
+    if (!this._conversation_app_id || !this._conversation_env || !this._conversation_id) {
+      throw new Error("No active conversation selected.");
+    }
+
+    const action_id = action._id.trim();
+    if (!action_id) {
+      throw new Error(this._missing_intent_action_persisted_id_error());
+    }
+
+    const params: Record<string, any> = {
+      _app_id: this._conversation_app_id,
+      _env: this._conversation_env,
+      _conversation_id: this._conversation_id,
+      _message_id: action._message_id,
+      _action_id: action_id,
+      _action_index: action._action_index,
+      _status: status,
+    };
+
+    if (error) {
+      params._error = error;
+      params._reason = error;
+    }
+
+    this._log("conversation action status update requested", {
+      _conversation_id: this._conversation_id,
+      _message_id: action._message_id,
+      _action_id: action_id,
+      _action_index: action._action_index,
+      _status: status,
+      ...(error ? { _error: error } : {}),
+    });
+    this._log("update conversation action", {
+      _message_id: action._message_id,
+      _action_id: action_id,
+      _status: status,
+    });
+    const result = await this._send_xvibe_command("update-conversation-action", params);
+    this._log("conversation action status update completed", {
+      _conversation_id: this._conversation_id,
+      _message_id: action._message_id,
+      _action_id: action_id,
+      _action_index: action._action_index,
+      _status: status,
+      _result: result,
+    });
+    return result;
+  }
+
+  private async _persist_conversation_action_status_and_reload(
+    action: XStudioIntentActionView,
+    status: XStudioIntentActionLocalStatus,
+    error = "",
+  ) {
+    if (!action._id.trim()) {
+      const message = this._missing_intent_action_persisted_id_error();
+      this._set_conversation_action_status(
+        action._key,
+        STUDIO_INTENT_ACTION_STATUS_FAILED,
+        message,
+      );
+      this._write_studio_status(message);
+      this._error("conversation action status update skipped", {
+        _conversation_id: this._conversation_id,
+        _message_id: action._message_id,
+        _action_id: "",
+        _action_index: action._action_index,
+        _status: status,
+        _error: message,
+      });
+      return false;
+    }
+
+    try {
+      await this._update_conversation_action_status(action, status, error);
+      await this._load_conversation_messages();
+      return true;
+    } catch (err) {
+      this._set_conversation_action_status(
+        action._key,
+        status,
+        error || to_err(err),
+      );
+      this._error("conversation action status update failed", {
+        _conversation_id: this._conversation_id,
+        _message_id: action._message_id,
+        _action_id: action._id,
+        _action_index: action._action_index,
+        _status: status,
+        _error: to_err(err),
+      });
+      return false;
+    }
+  }
+
+  private _conversation_apply_result_message(edit_action: string) {
+    switch (edit_action) {
+      case "hide-object":
+        return "Hidden selected object.";
+      case "duplicate-object":
+        return "Duplicated selected object.";
+      case "remove-object":
+        return "Deleted selected object.";
+      case "move-object":
+        return "Moved selected object.";
+      default:
+        return "";
+    }
+  }
+
+  private _append_conversation_apply_result_message(edit_action: string) {
+    const text = this._conversation_apply_result_message(edit_action);
+    if (!text) return;
+
+    this._conversation_messages.push({
+      _role: "assistant",
+      _text: text,
+      _created_at: new Date().toISOString(),
+    });
+    this._render_conversation_messages();
+  }
+
+  private _resolve_conversation_intent_move_params(
+    params: Record<string, any>,
+  ): XStudioIntentActionParamsResult {
+    const direction = typeof params._move_direction === "string"
+      ? params._move_direction.trim().toLowerCase()
+      : "";
+
+    if (direction !== "up" && direction !== "down") {
+      return {
+        _ok: false,
+        _error: "Move direction is not supported.",
+        _params: null,
+      };
+    }
+
+    const selected = this._selected_object;
+    if (!selected) {
+      return {
+        _ok: false,
+        _error: "Select an object first",
+        _params: null,
+      };
+    }
+
+    const selected_target_id = this._selected_object_json_id(selected);
+    const target_id =
+      typeof params._target_id === "string" && params._target_id.trim()
+        ? params._target_id.trim()
+        : selected_target_id;
+    if (!target_id) {
+      return {
+        _ok: false,
+        _error: "Action target is missing.",
+        _params: null,
+      };
+    }
+
+    if (!selected_target_id) {
+      return {
+        _ok: false,
+        _error: "selected object has no persisted JSON id",
+        _params: null,
+      };
+    }
+
+    if (target_id !== selected_target_id) {
+      return {
+        _ok: false,
+        _error: "Selected object does not match action target.",
+        _params: null,
+      };
+    }
+
+    const view_id =
+      typeof params._view_id === "string" && params._view_id.trim()
+        ? params._view_id.trim()
+        : selected._source_view_id.trim();
+    const selected_view_id = selected._source_view_id.trim();
+    if (!selected_view_id || (view_id && view_id !== selected_view_id)) {
+      return {
+        _ok: false,
+        _error: "Selected object does not match action source view.",
+        _params: null,
+      };
+    }
+
+    const sibling_context = this._selected_object_sibling_context(selected);
+    if (!sibling_context) {
+      return {
+        _ok: false,
+        _error: "Could not resolve selected object siblings.",
+        _params: null,
+      };
+    }
+
+    if (sibling_context._is_root) {
+      return {
+        _ok: false,
+        _error: "Root object cannot be moved.",
+        _params: null,
+      };
+    }
+
+    const anchor_id = direction === "up"
+      ? sibling_context._previous_sibling_id
+      : sibling_context._next_sibling_id;
+    if (!anchor_id) {
+      return {
+        _ok: false,
+        _error: direction === "up"
+          ? "Selected object is already the first child."
+          : "Selected object is already the last child.",
+        _params: null,
+      };
+    }
+
+    const resolved_params: Record<string, any> = {
+      ...params,
+      _edit_action: "move-object",
+      _view_id: view_id,
+      _target_id: target_id,
+      _target_type:
+        typeof params._target_type === "string" && params._target_type.trim()
+          ? params._target_type.trim()
+          : selected._type.trim() || "object",
+      ...(direction === "up"
+        ? { _before_id: anchor_id }
+        : { _after_id: anchor_id }),
+    };
+
+    delete resolved_params._move_direction;
+    delete resolved_params._requires_resolution;
+    if (direction === "up") {
+      delete resolved_params._after_id;
+    } else {
+      delete resolved_params._before_id;
+    }
+
+    return {
+      _ok: true,
+      _error: "",
+      _params: resolved_params,
+    };
+  }
+
+  private _prepare_conversation_intent_apply_view_edit_params(
+    action: XStudioIntentActionView,
+  ): XStudioIntentActionParamsResult {
+    if (action._action_type !== "apply-view-edit") {
+      return {
+        _ok: false,
+        _error: STUDIO_INTENT_ACTION_UNSUPPORTED_MESSAGE,
+        _params: null,
+      };
+    }
+
+    if (action._requires_approval === false) {
+      return {
+        _ok: false,
+        _error: "Action approval is disabled.",
+        _params: null,
+      };
+    }
+
+    if (!is_obj(action._params)) {
+      return {
+        _ok: false,
+        _error: "Action params are missing.",
+        _params: null,
+      };
+    }
+
+    const params = _xu.clone_json(action._params) as Record<string, any>;
+    if (!is_obj(params)) {
+      return {
+        _ok: false,
+        _error: "Action params are invalid.",
+        _params: null,
+      };
+    }
+
+    const edit_action = typeof params._edit_action === "string"
+      ? params._edit_action.trim()
+      : "";
+    params._edit_action = edit_action;
+
+    if (edit_action === "move-object") {
+      if (params._requires_resolution === true && typeof params._move_direction === "string" && params._move_direction.trim()) {
+        return this._resolve_conversation_intent_move_params(params);
+      }
+
+      return {
+        _ok: false,
+        _error: STUDIO_INTENT_ACTION_UNSUPPORTED_MESSAGE,
+        _params: null,
+      };
+    }
+
+    if (!STUDIO_SUPPORTED_INTENT_APPLY_VIEW_EDIT_ACTIONS.has(edit_action)) {
+      return {
+        _ok: false,
+        _error: STUDIO_INTENT_ACTION_UNSUPPORTED_MESSAGE,
+        _params: null,
+      };
+    }
+
+    return {
+      _ok: true,
+      _error: "",
+      _params: params,
+    };
+  }
+
+  private _merge_conversation_intent_apply_view_edit_context(
+    params: Record<string, any>,
+  ): XStudioIntentActionParamsResult {
+    const app_id = this._client().getActiveAppId();
+    const env = this._client().getActiveEnv();
+
+    if (!app_id) {
+      return {
+        _ok: false,
+        _error: "No active app selected",
+        _params: null,
+      };
+    }
+
+    if (!env) {
+      return {
+        _ok: false,
+        _error: "No active environment selected",
+        _params: null,
+      };
+    }
+
+    const selected = this._selected_object;
+    const selected_target_id = this._selected_object_json_id(selected);
+    const selected_view_id = selected?._source_view_id.trim() ?? "";
+    const current_view_id = this._resolve_studio_target_view_id();
+
+    const view_id =
+      typeof params._view_id === "string" && params._view_id.trim()
+        ? params._view_id.trim()
+        : selected_view_id || current_view_id;
+    const target_id =
+      typeof params._target_id === "string" && params._target_id.trim()
+        ? params._target_id.trim()
+        : selected_target_id;
+    const target_type =
+      typeof params._target_type === "string" && params._target_type.trim()
+        ? params._target_type.trim()
+        : selected?._type.trim() || "object";
+    const edit_action =
+      typeof params._edit_action === "string" && params._edit_action.trim()
+        ? params._edit_action.trim()
+        : "";
+
+    if (!view_id) {
+      return {
+        _ok: false,
+        _error: "Action source view is missing.",
+        _params: null,
+      };
+    }
+
+    if (!target_id) {
+      return {
+        _ok: false,
+        _error: "Action target is missing.",
+        _params: null,
+      };
+    }
+
+    if (!edit_action) {
+      return {
+        _ok: false,
+        _error: "Action edit type is missing.",
+        _params: null,
+      };
+    }
+
+    return {
+      _ok: true,
+      _error: "",
+      _params: {
+        ...params,
+        _app_id: app_id,
+        _env: env,
+        _view_id: view_id,
+        _target_id: target_id,
+        _target_type: target_type,
+        _edit_action: edit_action,
+      },
+    };
+  }
+
+  private async _apply_conversation_intent_action(payload?: any) {
+    const payload_action = this._normalize_intent_action_event_payload(payload);
+    if (!payload_action) return;
+
+    const action = this._find_conversation_intent_action(payload_action._action_key);
+    this._log("intent action execute requested", {
+      ...payload_action,
+      ...(action
+        ? {
+          _requires_approval: action._requires_approval,
+          _edit_action: action._params?._edit_action,
+        }
+        : {}),
+    });
+
+    if (!action) {
+      const message = "Action not found.";
+      this._set_conversation_action_status(
+        payload_action._action_key,
+        STUDIO_INTENT_ACTION_STATUS_FAILED,
+        message,
+      );
+      this._write_studio_status(message);
+      this._error("intent action execute failed", {
+        ...payload_action,
+        _message: message,
+      });
+      return;
+    }
+
+    if (!action._id.trim()) {
+      const message = this._missing_intent_action_persisted_id_error();
+      this._set_conversation_action_status(
+        action._key,
+        STUDIO_INTENT_ACTION_STATUS_FAILED,
+        message,
+      );
+      this._write_studio_status(message);
+      this._error("intent action execute failed", {
+        _action_key: action._key,
+        _message_id: action._message_id,
+        _action_id: "",
+        _action_type: action._action_type,
+        _reason: message,
+      });
+      return;
+    }
+
+    this._set_conversation_action_status(action._key, STUDIO_INTENT_ACTION_STATUS_RUNNING);
+
+    const prepared = this._prepare_conversation_intent_apply_view_edit_params(action);
+    if (!prepared._ok || !prepared._params) {
+      this._set_conversation_action_status(
+        action._key,
+        STUDIO_INTENT_ACTION_STATUS_FAILED,
+        prepared._error,
+      );
+      await this._persist_conversation_action_status_and_reload(
+        action,
+        STUDIO_INTENT_ACTION_STATUS_FAILED,
+        prepared._error,
+      );
+      this._write_studio_status(prepared._error);
+      this._error("intent action execute failed", {
+        _action_key: action._key,
+        _action_type: action._action_type,
+        _reason: prepared._error,
+      });
+      return;
+    }
+
+    const context_result = this._merge_conversation_intent_apply_view_edit_context(prepared._params);
+    if (!context_result._ok || !context_result._params) {
+      this._set_conversation_action_status(
+        action._key,
+        STUDIO_INTENT_ACTION_STATUS_FAILED,
+        context_result._error,
+      );
+      await this._persist_conversation_action_status_and_reload(
+        action,
+        STUDIO_INTENT_ACTION_STATUS_FAILED,
+        context_result._error,
+      );
+      this._write_studio_status(context_result._error);
+      this._error("intent action execute failed", {
+        _action_key: action._key,
+        _action_type: action._action_type,
+        _reason: context_result._error,
+      });
+      return;
+    }
+
+    const params = context_result._params;
+    this._write_studio_status(`Executing ${action._title || action._action_type}...`);
+    this._log("intent action apply-view-edit params", {
+      _app_id: params._app_id,
+      _env: params._env,
+      _view_id: params._view_id,
+      _target_id: params._target_id,
+      _target_type: params._target_type,
+      _edit_action: params._edit_action,
+    });
+
+    const structured_edit = {
+      _view_id: typeof params._view_id === "string" ? params._view_id : "",
+      _action: typeof params._edit_action === "string" ? params._edit_action : "",
+      _target_id: typeof params._target_id === "string" ? params._target_id : "",
+    };
+    const should_track_structured_edit =
+      STUDIO_INTENT_APPLY_VIEW_EDIT_REFRESH_ACTIONS.has(structured_edit._action);
+
+    try {
+      if (should_track_structured_edit) {
+        this._xvm_client?.note_structured_view_edit?.(structured_edit);
+      }
+
+      const result = await this._send_xvibe_command("apply-view-edit", params);
+      if (!is_obj(result) || result._ok !== true) {
+        if (should_track_structured_edit) {
+          this._xvm_client?.clear_pending_structured_view_edit?.(structured_edit);
+        }
+
+        const message = this._format_apply_view_edit_failure(result);
+        this._set_conversation_action_status(
+          action._key,
+          STUDIO_INTENT_ACTION_STATUS_FAILED,
+          message,
+        );
+        await this._persist_conversation_action_status_and_reload(
+          action,
+          STUDIO_INTENT_ACTION_STATUS_FAILED,
+          message,
+        );
+        this._write_studio_status(message);
+        this._error("intent action execute failed", {
+          _action_key: action._key,
+          _action_type: action._action_type,
+          _edit_action: params._edit_action,
+          _structured_error: result,
+        });
+        return;
+      }
+
+      const new_target_id = params._edit_action === "duplicate-object"
+        ? this._extract_new_target_id(result)
+        : "";
+      if (new_target_id) {
+        this._selected_object_pending_select_id = new_target_id;
+      }
+
+      await this._persist_conversation_action_status_and_reload(
+        action,
+        STUDIO_INTENT_ACTION_STATUS_DONE,
+      );
+      this._append_conversation_apply_result_message(params._edit_action);
+      this._write_studio_status("Action applied");
+      this._log("intent action execute completed", {
+        _action_key: action._key,
+        _action_type: action._action_type,
+        _edit_action: params._edit_action,
+        ...(new_target_id ? { _new_target_id: new_target_id } : {}),
+        _result: result,
+      });
+
+      const refresh_payload = this._intent_action_execute_refresh_payload(params, result);
+      this._log("intent action execute refresh requested", refresh_payload);
+      try {
+        const refresh_result = await this._request_intent_action_execute_refresh(params, result);
+        this._log("intent action execute refresh completed", {
+          ...refresh_payload,
+          _refresh: refresh_result ?? null,
+        });
+      } catch (refresh_err) {
+        this._log("intent action execute refresh completed", {
+          ...refresh_payload,
+          _refresh: {
+            _ok: false,
+            _error: to_err(refresh_err),
+          },
+        });
+        this._error("intent action execute refresh failed", {
+          ...refresh_payload,
+          _error: to_err(refresh_err),
+        });
+      }
+      this._refresh_object_tree_for_current_view();
+      this._clear_conversation_action_selection_if_hidden_or_removed(params);
+    } catch (err) {
+      if (should_track_structured_edit) {
+        this._xvm_client?.clear_pending_structured_view_edit?.(structured_edit);
+      }
+
+      const message = "Action execution failed.";
+      this._set_conversation_action_status(
+        action._key,
+        STUDIO_INTENT_ACTION_STATUS_FAILED,
+        message,
+      );
+      await this._persist_conversation_action_status_and_reload(
+        action,
+        STUDIO_INTENT_ACTION_STATUS_FAILED,
+        message,
+      );
+      this._write_studio_status(message);
+      this._error("intent action execute failed", {
+        _action_key: action._key,
+        _action_type: action._action_type,
+        _edit_action: params._edit_action,
+        _error: to_err(err),
+      });
+    }
+  }
+
+  private async _dismiss_conversation_intent_action(payload?: any) {
+    const payload_action = this._normalize_intent_action_event_payload(payload);
+    if (!payload_action) return;
+
+    const action = this._find_conversation_intent_action(payload_action._action_key);
+    if (!action) {
+      this._error("intent action dismiss failed", {
+        ...payload_action,
+        _message: "Action not found.",
+      });
+      return;
+    }
+
+    this._set_conversation_action_status(
+      action._key,
+      STUDIO_INTENT_ACTION_STATUS_DISMISSED,
+    );
+    await this._persist_conversation_action_status_and_reload(
+      action,
+      STUDIO_INTENT_ACTION_STATUS_DISMISSED,
+    );
+    this._log("intent action dismissed", {
+      _action_key: action._key,
+      _action_id: action._id,
+      _message_id: action._message_id,
+    });
+  }
+
+  private _conversation_intent_action_card(action: XStudioIntentActionView, message_index: number, action_index: number) {
+    const is_running = action._status === STUDIO_INTENT_ACTION_STATUS_RUNNING;
+    const is_done = action._status === STUDIO_INTENT_ACTION_STATUS_DONE;
+    const is_failed = action._status === STUDIO_INTENT_ACTION_STATUS_FAILED;
+    const execute_state = this._intent_action_card_execute_state(action);
+    const is_apply_disabled = !execute_state._can_execute;
+    const status_class = _xu.normalize_id(action._status) ?? "unknown";
+    const action_payload = this._intent_action_event_payload(action);
+    const apply_text = is_running ? "Running" : is_done ? "✓ Applied" : is_failed ? "Retry" : "Apply";
+    const apply_title = is_running
+      ? "Action is running"
+      : is_done
+        ? "Action completed"
+        : is_failed
+          ? execute_state._disabled_reason || "Retry action"
+          : execute_state._disabled_reason || "Execute approved action";
+    const edit_action = this._intent_action_edit_action(action);
+    this._log("intent action card state", {
+      _action_id: action._id,
+      _action_type: action._action_type,
+      _status: action._status,
+      _requires_approval: action._requires_approval,
+      _has_params: is_obj(action._params),
+      _edit_action: edit_action,
+      _can_execute: execute_state._can_execute,
+      _disabled_reason: execute_state._disabled_reason,
+    });
+
+    if (is_done) {
+      return {
+        _type: "view",
+        _id: `xstudio-intent-action-${message_index}-${action_index}`,
+        class: `xstudio-intent-action-card xstudio-intent-action-card-${status_class} xstudio-intent-action-card-compact`,
+        _children: [
+          {
+            _type: "label",
+            class: "xstudio-intent-action-success",
+            _text: `✓ Applied${action._title ? `: ${action._title}` : ""}`,
+          },
+        ],
+      };
+    }
+
+    const button_children = [
+      {
+        _type: "button",
+        _id: `xstudio-intent-action-apply-${message_index}-${action_index}`,
+        type: "button",
+        class: `xstudio-intent-action-button xstudio-intent-action-apply${is_done ? " xstudio-intent-action-applied" : ""}`,
+        _text: apply_text,
+        title: apply_title,
+        ...(is_apply_disabled ? { disabled: true } : {}),
+        _on: {
+          click: {
+            _module: "xem",
+            _op: "fire",
+            _params: {
+              event: "studio:intent-action-apply",
+              data: action_payload,
+            },
+          },
+        },
+      },
+      ...(!is_done && !is_running
+        ? [
+          {
+            _type: "button",
+            _id: `xstudio-intent-action-dismiss-${message_index}-${action_index}`,
+            type: "button",
+            class: "xstudio-intent-action-button xstudio-intent-action-dismiss",
+            _text: "Dismiss",
+            title: "Dismiss action",
+            _on: {
+              click: {
+                _module: "xem",
+                _op: "fire",
+                _params: {
+                  event: "studio:intent-action-dismiss",
+                  data: action_payload,
+                },
+              },
+            },
+          },
+        ]
+        : []),
+    ];
+
+    return {
+      _type: "view",
+      _id: `xstudio-intent-action-${message_index}-${action_index}`,
+      class: `xstudio-intent-action-card xstudio-intent-action-card-${status_class}`,
+      _children: [
+        {
+          _type: "view",
+          class: "xstudio-intent-action-content",
+          _children: [
+            {
+              _type: "label",
+              class: "xstudio-intent-action-title",
+              _text: action._title,
+            },
+            ...(action._description
+              ? [
+                {
+                  _type: "label",
+                  class: "xstudio-intent-action-description",
+                  _text: action._description,
+                },
+              ]
+              : []),
+            ...(action._error
+              ? [
+                {
+                  _type: "label",
+                  class: "xstudio-intent-action-error",
+                  _text: action._error,
+                },
+              ]
+              : []),
+          ],
+        },
+        {
+          _type: "view",
+          class: "xstudio-intent-action-buttons",
+          _children: button_children,
+        },
+      ],
+    };
+  }
+
+  private _conversation_intent_actions_view(message: XStudioConversationMessage, message_index: number) {
+    const actions = this._conversation_intent_actions(message, message_index)
+      .filter((action) =>
+        action._status !== STUDIO_INTENT_ACTION_STATUS_DISMISSED,
+      );
+
+    if (actions.length === 0) return null;
+
+    return {
+      _type: "view",
+      _id: `xstudio-intent-actions-${message_index}`,
+      class: "xstudio-intent-actions",
+      _children: [
+        {
+          _type: "label",
+          class: "xstudio-intent-actions-title",
+          _text: "Suggested actions:",
+        },
+        ...actions.map((action, action_index) =>
+          this._conversation_intent_action_card(action, message_index, action_index),
+        ),
+      ],
+    };
+  }
+
+  private _conversation_message_view(message: XStudioConversationMessage, index: number) {
+    const role =
+      message._role === "assistant" ||
+        message._role === "system" ||
+        message._role === "tool"
+        ? message._role
+        : "user";
+    const label =
+      role === "user"
+        ? "You"
+        : role === "assistant"
+          ? "Assistant"
+          : role === "system"
+            ? "System"
+            : "Tool";
+    const created_at = this._format_conversation_time(message._created_at);
+    const actions_view = this._conversation_intent_actions_view(message, index);
+    const debug_view = this._conversation_intent_debug_view(message, index);
+
+    return {
+      _type: "view",
+      _id: `xstudio-conversation-message-${index}`,
+      class: `xstudio-conversation-message xstudio-conversation-message-${role}`,
+      _children: [
+        {
+          _type: "view",
+          class: "xstudio-conversation-meta",
+          _children: [
+            {
+              _type: "label",
+              class: "xstudio-conversation-role",
+              _text: label,
+            },
+            {
+              _type: "label",
+              class: "xstudio-conversation-time",
+              _text: created_at,
+            },
+          ],
+        },
+        {
+          _type: "label",
+          class: "xstudio-conversation-bubble",
+          _text: this._conversation_intent_summary(message),
+        },
+        ...(debug_view ? [debug_view] : []),
+        ...(actions_view ? [actions_view] : []),
+      ],
+    };
+  }
+
+  private _format_conversation_time(value: string) {
+    const date = new Date(value);
+    if (!Number.isFinite(date.getTime())) return "";
+    return date.toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  }
+
+  private _scroll_conversation_to_bottom() {
+    const list = XUI.getObject(STUDIO_CONVERSATION_MESSAGES_ID) as any;
+    const dom = list?.dom;
+    if (!(dom instanceof HTMLElement)) return;
+    dom.scrollTop = dom.scrollHeight;
+  }
+
+  private _render_conversation_messages() {
+    const list = XUI.getObject(STUDIO_CONVERSATION_MESSAGES_ID) as any;
+    if (!list) return;
+
+    const messages = this._conversation_messages.map((message) => ({ ...message }));
+    const children = messages.length > 0
+      ? messages.map((message, index) => this._conversation_message_view(message, index))
+      : [
+        {
+          _id: "xstudio-conversation-empty",
+          _type: "label",
+          class: "xstudio-conversation-empty",
+          _text: "No messages yet.",
+        },
+      ];
+
+    list.update?.({ _children: children });
+    queueMicrotask(() => this._scroll_conversation_to_bottom());
+  }
+
+  private _set_conversation_send_enabled(enabled: boolean) {
+    this._set_studio_control_disabled(STUDIO_CONVERSATION_SEND_BUTTON_ID, !enabled);
+  }
+
+  private _update_conversation_input_state(payload?: any) {
+    const value = is_obj(payload) && typeof payload._value === "string"
+      ? payload._value
+      : this._read_conversation_input_value();
+    this._set_conversation_send_enabled(this._local_conversation_text(value).length > 0);
+  }
+
+  private _handle_conversation_keyup(payload?: any) {
+    this._update_conversation_input_state(payload);
+    if (!is_obj(payload)) return;
+
+    const key = String(payload._key ?? "");
+    const uses_command_modifier = payload._meta_key === true || payload._ctrl_key === true;
+    if (key !== "Enter" || !uses_command_modifier) return;
+
+    void this._send_conversation_message(payload._value);
+  }
+
+  private _read_conversation_input_value() {
+    const input = XUI.getObject(STUDIO_CONVERSATION_INPUT_ID) as any;
+    const value = input?.getValue?.() ?? input?.dom?.value ?? _xd.get(STUDIO_CONVERSATION_INPUT_XD_KEY) ?? "";
+    return String(value ?? "");
+  }
+
+  private _set_conversation_input_value(value: string) {
+    const input = XUI.getObject(STUDIO_CONVERSATION_INPUT_ID) as any;
+    if (input?.setValue) {
+      input.setValue(value);
+    } else if (input?.dom && "value" in input.dom) {
+      input.dom.value = value;
+    }
+    _xd.set(STUDIO_CONVERSATION_INPUT_XD_KEY, value, { source: "xstudio-conversation" });
+    this._set_conversation_send_enabled(this._local_conversation_text(value).length > 0);
+  }
+
   private _apply_portlet_state() {
     for (const portlet_id of STUDIO_PORTLET_IDS) {
       const config = STUDIO_PORTLETS[portlet_id];
-      this._set_object_visible(config._object_id, this._portlet_visibility[portlet_id] === true);
+      this._set_portlet_visible(config._object_id, this._portlet_visibility[portlet_id] === true);
       this._set_portlet_button_state(portlet_id);
+    }
+  }
+
+  private _apply_explorer_section_state() {
+    for (const section_id of STUDIO_EXPLORER_SECTION_IDS) {
+      const config = STUDIO_EXPLORER_SECTIONS[section_id];
+      const open = this._explorer_section_is_open(section_id);
+      this._set_object_class_token(config._section_id, STUDIO_EXPLORER_SECTION_COLLAPSED_CLASS, !open);
+      this._set_object_class_token(config._body_id, STUDIO_PORTLET_HIDDEN_CLASS, !open);
+      this._set_object_visible(config._body_id, open);
+      this._set_button_text(config._toggle_id, this._explorer_section_toggle_text(section_id));
+      this._set_button_title(config._toggle_id, this._explorer_section_toggle_title(section_id));
+      this._set_object_attribute(config._toggle_id, "aria-expanded", String(open));
     }
   }
 
@@ -934,6 +2982,13 @@ export class XStudioModule extends XModule {
     const portlet_id = String(value ?? "").trim().toLowerCase();
     return (STUDIO_PORTLET_IDS as readonly string[]).includes(portlet_id)
       ? (portlet_id as XStudioPortletId)
+      : "";
+  }
+
+  private _normalize_explorer_section_id(value: any): XStudioExplorerSectionId | "" {
+    const section_id = String(value ?? "").trim().toLowerCase().replace(/-/g, "_");
+    return (STUDIO_EXPLORER_SECTION_IDS as readonly string[]).includes(section_id)
+      ? (section_id as XStudioExplorerSectionId)
       : "";
   }
 
@@ -957,6 +3012,7 @@ export class XStudioModule extends XModule {
       this._right_dock_toggle_title(),
     );
     this._apply_portlet_state();
+    this._apply_explorer_section_state();
   }
 
   private _toggle_left_dock() {
@@ -967,6 +3023,16 @@ export class XStudioModule extends XModule {
   private _toggle_right_dock() {
     this._right_dock_collapsed = !this._right_dock_collapsed;
     this._apply_dock_state();
+  }
+
+  private _toggle_explorer_section(section_id: XStudioExplorerSectionId) {
+    const open = !this._explorer_section_is_open(section_id);
+    this._explorer_section_open[section_id] = open;
+    this._apply_explorer_section_state();
+    this._log("explorer section toggled", {
+      _section: section_id,
+      _open: open,
+    });
   }
 
   private async _toggle_studio() {
@@ -1043,6 +3109,19 @@ export class XStudioModule extends XModule {
     return parts.join(" | ");
   }
 
+  private _object_tree_search_text(obj: Record<string, any>) {
+    return [
+      obj._id,
+      obj._text,
+      obj._title,
+      obj._label,
+      obj._type,
+    ]
+      .map((value) => value === undefined || value === null ? "" : String(value).trim().toLowerCase())
+      .filter(Boolean)
+      .join("\n");
+  }
+
   private _selected_object_matches(a: XStudioSelectedObject | null, b: XStudioSelectedObject | null) {
     if (!a || !b) return false;
     if (a._source_view_id !== b._source_view_id) return false;
@@ -1093,6 +3172,7 @@ export class XStudioModule extends XModule {
     parent_path: string,
     previous_sibling_id: string,
     next_sibling_id: string,
+    parent_node_key: string,
     depth: number,
     is_xvm_ref_child: boolean,
     allow_xvm_refs: boolean,
@@ -1103,6 +3183,7 @@ export class XStudioModule extends XModule {
     const type = typeof obj._type === "string" && obj._type.trim() ? obj._type.trim() : "object";
     const json_id = typeof obj._id === "string" && obj._id.trim() ? obj._id.trim() : "";
     const text = typeof obj._text === "string" && obj._text.trim() ? obj._text.trim() : "";
+    const node_key = `xstudio-object-tree-node-${out.length}`;
     const meta: XStudioSelectedObject = {
       _id: json_id,
       _json_id: json_id,
@@ -1119,7 +3200,10 @@ export class XStudioModule extends XModule {
 
     out.push({
       _key: "",
+      _node_key: node_key,
+      _parent_node_key: parent_node_key,
       _label: this._format_object_tree_label(obj),
+      _search_text: this._object_tree_search_text(obj),
       _meta: meta,
       _object: obj,
       _depth: depth,
@@ -1137,6 +3221,7 @@ export class XStudioModule extends XModule {
           path,
           is_obj(previous) && typeof previous._id === "string" ? previous._id.trim() : "",
           is_obj(next) && typeof next._id === "string" ? next._id.trim() : "",
+          node_key,
           depth + 1,
           is_xvm_ref_child,
           allow_xvm_refs,
@@ -1154,7 +3239,10 @@ export class XStudioModule extends XModule {
     if (!is_obj(referenced_view) || !Array.isArray(referenced_view._children)) {
       out.push({
         _key: "",
+        _node_key: `xstudio-object-tree-node-${out.length}`,
+        _parent_node_key: node_key,
         _label: "referenced view not loaded",
+        _search_text: "",
         _meta: null,
         _object: null,
         _depth: depth + 1,
@@ -1174,6 +3262,7 @@ export class XStudioModule extends XModule {
         "$",
         is_obj(previous) && typeof previous._id === "string" ? previous._id.trim() : "",
         is_obj(next) && typeof next._id === "string" ? next._id.trim() : "",
+        node_key,
         depth + 1,
         true,
         false,
@@ -1182,13 +3271,66 @@ export class XStudioModule extends XModule {
     });
   }
 
+  private _normalized_object_tree_search_query() {
+    return this._object_tree_search_query.trim().toLowerCase();
+  }
+
+  private _filter_object_tree_nodes(nodes: XStudioObjectTreeNode[]) {
+    const query = this._normalized_object_tree_search_query();
+    if (!query) return nodes;
+
+    const nodes_by_key = new Map(nodes.map((node) => [node._node_key, node]));
+    const visible_keys = new Set<string>();
+
+    for (const node of nodes) {
+      if (!node._meta || !node._search_text.includes(query)) continue;
+
+      let current: XStudioObjectTreeNode | undefined = node;
+      while (current && !visible_keys.has(current._node_key)) {
+        visible_keys.add(current._node_key);
+        current = current._parent_node_key
+          ? nodes_by_key.get(current._parent_node_key)
+          : undefined;
+      }
+    }
+
+    return nodes.filter((node) => visible_keys.has(node._node_key));
+  }
+
+  private _render_cached_object_tree_nodes() {
+    this._render_object_tree_nodes(this._filter_object_tree_nodes(this._object_tree_nodes));
+  }
+
+  private _object_tree_search_event_value(evt: any) {
+    const value = is_obj(evt) ? evt._value ?? evt.value ?? "" : evt;
+    if (value !== "$event.target.value") return value;
+
+    const search = XUI.getObject(STUDIO_OBJECT_TREE_SEARCH_ID) as any;
+    const current_value = search?.getValue?.() ?? search?.dom?.value ?? "";
+    this._log("studio:object-tree-search unresolved $event.target.value; using XUI input value", {
+      _value: current_value,
+    });
+    return current_value;
+  }
+
+  private _update_object_tree_search(value: any) {
+    this._log("_update_object_tree_search value received", { _value: value });
+    const next_query = String(value ?? "");
+    if (next_query === this._object_tree_search_query) return;
+
+    this._object_tree_search_query = next_query;
+    this._render_cached_object_tree_nodes();
+  }
+
   private _render_object_tree_nodes(nodes: XStudioObjectTreeNode[]) {
-    const tree = XUI.getObject(STUDIO_OBJECT_TREE_ID) as any;
+    const tree_results = XUI.getObject(STUDIO_OBJECT_TREE_RESULTS_ID) as any;
+    const tree = tree_results ?? XUI.getObject(STUDIO_OBJECT_TREE_ID) as any;
     if (!tree) return;
 
     this._object_tree_render_seq += 1;
     const seq = this._object_tree_render_seq;
     let selected_row_id = "";
+    const search_active = Boolean(this._normalized_object_tree_search_query());
 
     if (nodes.length === 0) {
       tree.update?.({
@@ -1197,7 +3339,7 @@ export class XStudioModule extends XModule {
             _type: "label",
             _id: `xstudio-object-tree-empty-${seq}`,
             class: "xstudio-dock-placeholder",
-            _text: "No objects found.",
+            _text: search_active ? "No matching objects." : "No objects found.",
           },
         ],
       });
@@ -1763,6 +3905,48 @@ export class XStudioModule extends XModule {
     return selected?._json_id?.trim() ?? "";
   }
 
+  private _selected_object_matches_target_id(target_id: string) {
+    const selected = this._selected_object;
+    if (!selected) return false;
+
+    const normalized_target_id = target_id.trim();
+    if (!normalized_target_id) return false;
+
+    return selected._json_id.trim() === normalized_target_id ||
+      selected._id.trim() === normalized_target_id;
+  }
+
+  private _selected_canvas_target_is_visible(target_id: string) {
+    if (typeof document === "undefined" || typeof window === "undefined") return false;
+
+    const selected = this._selected_object;
+    const dom_id = selected?._id.trim() || target_id.trim();
+    if (!dom_id) return false;
+
+    const el = document.getElementById(dom_id);
+    if (!(el instanceof HTMLElement)) return false;
+
+    const canvas = document.getElementById(STUDIO_CANVAS_ID);
+    if (canvas instanceof HTMLElement && !canvas.contains(el)) return false;
+
+    const style = window.getComputedStyle(el);
+    return style.display !== "none" &&
+      style.visibility !== "hidden" &&
+      style.opacity !== "0";
+  }
+
+  private _clear_conversation_action_selection_if_hidden_or_removed(params: Record<string, any>) {
+    const edit_action = typeof params._edit_action === "string" ? params._edit_action.trim() : "";
+    if (edit_action !== "hide-object" && edit_action !== "remove-object") return;
+
+    const target_id = typeof params._target_id === "string" ? params._target_id.trim() : "";
+    if (!this._selected_object_matches_target_id(target_id)) return;
+
+    if (edit_action === "remove-object" || !this._selected_canvas_target_is_visible(target_id)) {
+      this._clear_selected_object();
+    }
+  }
+
   private _selected_object_persisted_id_error(context: string, selected: XStudioSelectedObject | null) {
     this._write_studio_status("selected object has no persisted JSON id");
     this._log(`${context} ignored`, {
@@ -1822,6 +4006,66 @@ export class XStudioModule extends XModule {
     }
 
     return "";
+  }
+
+  private _extract_apply_view_edit_version(result: any): number {
+    const candidates = [
+      result?._version,
+      result?._result?._version,
+      result?._payload?._version,
+      result?._mutation?._version,
+      result?._result?._mutation?._version,
+      result?._app?._meta?._version,
+      result?._result?._app?._meta?._version,
+    ];
+
+    for (const candidate of candidates) {
+      const value = Number(candidate);
+      if (Number.isFinite(value) && value > 0) return value;
+    }
+
+    return 0;
+  }
+
+  private _intent_action_execute_refresh_payload(
+    params: Record<string, any>,
+    result: any,
+  ) {
+    return {
+      _edit_action: typeof params._edit_action === "string" ? params._edit_action : "",
+      _view_id: typeof params._view_id === "string" ? params._view_id : "",
+      _target_id: typeof params._target_id === "string" ? params._target_id : "",
+      _ok: is_obj(result) && result._ok === true,
+      _version: this._extract_apply_view_edit_version(result),
+    };
+  }
+
+  private async _request_intent_action_execute_refresh(
+    params: Record<string, any>,
+    result: any,
+  ) {
+    const payload = this._intent_action_execute_refresh_payload(params, result);
+    if (!STUDIO_INTENT_APPLY_VIEW_EDIT_REFRESH_ACTIONS.has(payload._edit_action)) {
+      return {
+        _ok: false,
+        _reason: "unsupported edit action",
+      };
+    }
+
+    if (typeof this._xvm_client?.request_structured_view_edit_refresh !== "function") {
+      return {
+        _ok: false,
+        _reason: "refresh helper unavailable",
+      };
+    }
+
+    return this._xvm_client.request_structured_view_edit_refresh({
+      _view_id: payload._view_id,
+      _action: payload._edit_action,
+      _target_id: payload._target_id,
+      _version: payload._version,
+      _result: result,
+    });
   }
 
   private _build_selected_object_inspector_edit_params(
@@ -2663,7 +4907,7 @@ export class XStudioModule extends XModule {
 
     if (!view_id || !is_obj(view)) {
       this._object_tree_nodes = [];
-      const tree = XUI.getObject(STUDIO_OBJECT_TREE_ID) as any;
+      const tree = (XUI.getObject(STUDIO_OBJECT_TREE_RESULTS_ID) ?? XUI.getObject(STUDIO_OBJECT_TREE_ID)) as any;
       tree?.update?.({
         _children: [
           {
@@ -2679,7 +4923,7 @@ export class XStudioModule extends XModule {
     }
 
     const nodes: XStudioObjectTreeNode[] = [];
-    this._build_object_tree_nodes(view, view_id, "$", "$", "", "", 0, false, true, nodes);
+    this._build_object_tree_nodes(view, view_id, "$", "$", "", "", "", 0, false, true, nodes);
     this._object_tree_nodes = nodes;
 
     const previous_selected = this._selected_object;
@@ -2710,7 +4954,7 @@ export class XStudioModule extends XModule {
       this._log_selected_object_persisted_metadata(this._selected_object);
     }
 
-    this._render_object_tree_nodes(nodes);
+    this._render_cached_object_tree_nodes();
     this._update_selected_object_inspector();
   }
 
@@ -3307,6 +5551,16 @@ export class XStudioModule extends XModule {
         _visible: visible,
       },
     };
+  }
+
+  private async _send_conversation_message(raw_value?: any) {
+    const text = this._local_conversation_text(
+      raw_value === undefined ? this._read_conversation_input_value() : raw_value,
+    );
+    this._set_conversation_send_enabled(text.length > 0);
+    if (!text) return;
+
+    await this._append_conversation_message(text);
   }
 
   _set_studio_label(object_id: string, text: string) {

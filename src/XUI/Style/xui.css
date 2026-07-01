@@ -435,7 +435,7 @@ body {
     border-right: 1px solid var(--xstudio-border);
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 6px;
     height: 100%;
     max-height: 100%;
     overflow: hidden;
@@ -452,7 +452,10 @@ body {
     display: flex;
     flex-direction: column;
     gap: 12px;
-    overflow: auto;
+    height: 100%;
+    max-height: 100%;
+    min-height: 0;
+    overflow: hidden;
     scrollbar-gutter: stable;
 }
 
@@ -478,12 +481,22 @@ body {
 .xstudio-portlet-stack {
     box-sizing: border-box;
     width: 100%;
+    height: 100%;
+    max-height: 100%;
     min-width: 0;
     min-height: 0;
     flex: 1 1 auto;
     display: flex;
     flex-direction: column;
     gap: 12px;
+    overflow: hidden;
+}
+
+#region-studio.xstudio-portlet-stack {
+    height: 100%;
+    max-height: 100%;
+    min-height: 0;
+    flex: 1 1 0;
     overflow: hidden;
 }
 
@@ -501,6 +514,10 @@ body {
     border-radius: var(--xstudio-radius-md);
     background: var(--xstudio-surface);
     color: var(--xstudio-text);
+}
+
+.xstudio-portlet-hidden {
+    display: none !important;
 }
 
 .xstudio-portlet-header {
@@ -531,6 +548,92 @@ body {
     display: flex;
     flex-direction: column;
     gap: 10px;
+}
+
+.xstudio-left-dock .xstudio-explorer-section {
+    gap: 0;
+    padding: 0;
+    overflow: hidden;
+}
+
+.xstudio-left-dock .xstudio-explorer-section-collapsed {
+    flex: 0 0 auto;
+}
+
+.xstudio-left-dock .xstudio-explorer-section-header {
+    min-height: 24px;
+    align-items: stretch;
+    gap: 0;
+    padding: 0;
+    border-bottom: 0;
+}
+
+.xstudio-left-dock .xstudio-explorer-section:not(.xstudio-explorer-section-collapsed)>.xstudio-explorer-section-header {
+    border-bottom: 1px solid color-mix(in srgb, var(--xstudio-border) 58%, transparent);
+}
+
+.xstudio-left-dock .xstudio-explorer-section-toggle {
+    appearance: none;
+    box-sizing: border-box;
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 3px 8px;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: var(--xstudio-text);
+    font: inherit;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 16px;
+    letter-spacing: 0;
+    text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.xstudio-left-dock .xstudio-explorer-section-header:hover,
+.xstudio-left-dock .xstudio-explorer-section-toggle:hover {
+    background: color-mix(in srgb, var(--xstudio-accent) 10%, transparent);
+    color: var(--xstudio-accent);
+}
+
+.xstudio-left-dock .xstudio-explorer-section-actions {
+    box-sizing: border-box;
+    flex: 0 0 auto;
+    min-width: 24px;
+    min-height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 4px;
+    padding-right: 4px;
+}
+
+.xstudio-left-dock .xstudio-explorer-section-action {
+    min-height: 20px;
+    padding: 1px 5px;
+    border: 0;
+    border-radius: var(--xstudio-radius-sm);
+    background: transparent;
+    color: var(--xstudio-text-muted);
+    font-size: 10px;
+    line-height: 14px;
+}
+
+.xstudio-left-dock .xstudio-explorer-section-action:hover {
+    background: color-mix(in srgb, var(--xstudio-accent) 12%, transparent);
+    color: var(--xstudio-accent);
+}
+
+.xstudio-left-dock .xstudio-explorer-section-collapsed>.xstudio-portlet-body,
+.xstudio-left-dock .xstudio-explorer-section-collapsed>.xstudio-selected-object-raw-body {
+    display: none !important;
 }
 
 .xstudio-portlet .xbutton {
@@ -576,22 +679,62 @@ body {
     width: 100%;
     min-width: 0;
     min-height: 0;
-    flex: 0 0 auto;
+    flex: 1 1 auto;
     display: flex;
     flex-direction: column;
-    gap: 0;
-    overflow: visible;
+    gap: 4px;
+    overflow: hidden;
 }
 
 .xstudio-object-tree-portlet {
-    flex: 1 1 0;
-    min-height: 0;
-    max-height: 45%;
+    flex: 1 1 220px;
+    min-height: 96px;
+    max-height: none;
     overflow: hidden;
+}
+
+.xstudio-object-tree-portlet.xstudio-explorer-section-collapsed {
+    min-height: 0;
 }
 
 .xstudio-object-tree-body {
     flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+    padding: 4px 6px;
+}
+
+.xstudio-object-tree-search {
+    box-sizing: border-box;
+    flex: 0 0 auto;
+    width: 100%;
+    min-width: 0;
+    min-height: 24px;
+    padding: 3px 7px;
+    border: 1px solid color-mix(in srgb, var(--xstudio-border) 70%, transparent);
+    border-radius: var(--xstudio-radius-sm);
+    background: color-mix(in srgb, var(--xstudio-surface-2) 70%, transparent);
+    color: var(--xstudio-text);
+    font: inherit;
+    font-size: 11px;
+    line-height: 16px;
+    letter-spacing: 0;
+    outline: none;
+}
+
+.xstudio-object-tree-search::placeholder {
+    color: var(--xstudio-text-muted);
+}
+
+.xstudio-object-tree-search:focus {
+    border-color: color-mix(in srgb, var(--xstudio-accent) 74%, var(--xstudio-border));
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--xstudio-accent) 42%, transparent);
+}
+
+.xstudio-object-tree-results {
+    box-sizing: border-box;
+    flex: 1 1 auto;
+    min-width: 0;
     min-height: 0;
     overflow: auto;
     padding-right: 2px;
@@ -646,11 +789,11 @@ body {
 
 .xstudio-selected-object-panel {
     box-sizing: border-box;
-    flex: 2 1 0;
+    flex: 0 1 auto;
     min-height: 0;
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 6px;
     overflow: hidden;
     padding: 0;
     border: 0;
@@ -660,19 +803,24 @@ body {
 
 .xstudio-selected-object-summary-portlet {
     flex: 0 0 auto;
-    gap: 4px;
-    padding: 6px 8px;
+    gap: 0;
+    padding: 0;
     overflow: hidden;
 }
 
 .xstudio-selected-object-summary-portlet .xstudio-portlet-header {
-    padding-bottom: 4px;
+    padding-bottom: 0;
 }
 
 .xstudio-selected-object-properties-portlet {
-    flex: 1 1 0;
-    min-height: 260px;
+    flex: 0 1 min(42dvh, 380px);
+    min-height: 0;
+    max-height: min(42dvh, 420px);
     overflow: hidden;
+}
+
+.xstudio-selected-object-properties-portlet.xstudio-explorer-section-collapsed {
+    max-height: none;
 }
 
 .xstudio-selected-object-body {
@@ -680,7 +828,7 @@ body {
     min-height: 0;
     overflow: visible;
     gap: 2px;
-    padding-right: 0;
+    padding: 6px 8px;
 }
 
 .xstudio-selected-object-properties-body {
@@ -688,7 +836,7 @@ body {
     min-height: 0;
     gap: 8px;
     overflow: auto;
-    padding-right: 2px;
+    padding: 8px;
     scrollbar-gutter: stable;
 }
 
@@ -972,6 +1120,16 @@ body {
     gap: 8px;
 }
 
+.xstudio-selected-object-raw-body {
+    box-sizing: border-box;
+    min-width: 0;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 6px 0 0;
+}
+
 .xstudio-selected-object-raw-actions {
     min-width: 0;
     flex: 1 1 100%;
@@ -1132,6 +1290,390 @@ body {
 .xstudio-runtime-inspector-section textarea {
     min-height: 180px;
     white-space: pre;
+}
+
+#xstudio-conversation-section.xstudio-conversation-section {
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+    max-height: calc(100vh - 52px);
+    max-height: calc(100dvh - 52px);
+    flex: 1 1 0;
+    overflow: hidden;
+}
+
+#xstudio-conversation-header.xstudio-conversation-header {
+    flex: 0 0 auto;
+    min-height: 0;
+}
+
+#xstudio-conversation-section .xstudio-conversation-body {
+    box-sizing: border-box;
+    height: 100%;
+    flex: 1 1 0;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    overflow: scroll;
+}
+
+#xstudio-conversation-title.xstudio-conversation-title {
+    flex: 0 0 auto;
+    color: var(--xstudio-text-muted);
+    font-size: 12px;
+    line-height: 16px;
+    letter-spacing: 0;
+}
+
+#xstudio-conversation-selector.xstudio-conversation-selector {
+    flex: 0 0 auto;
+    min-height: 30px;
+}
+
+#xstudio-conversation-messages.xstudio-conversation-messages {
+    box-sizing: border-box;
+    flex: 1 1 0;
+    min-height: 0;
+    max-height: none;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 10px;
+    border: 1px solid color-mix(in srgb, var(--xstudio-border) 78%, transparent);
+    border-radius: var(--xstudio-radius-md);
+    background: color-mix(in srgb, var(--xstudio-surface-2) 78%, transparent);
+    scrollbar-gutter: stable;
+    scrollbar-width: thin;
+    scrollbar-color: var(--xstudio-accent) transparent;
+}
+
+.xstudio-conversation-messages::-webkit-scrollbar {
+    width: 10px;
+}
+
+.xstudio-conversation-messages::-webkit-scrollbar-thumb {
+    border: 2px solid transparent;
+    border-radius: var(--xstudio-radius-md);
+    background: color-mix(in srgb, var(--xstudio-accent) 58%, transparent);
+    background-clip: content-box;
+}
+
+.xstudio-conversation-empty {
+    margin: auto;
+    color: var(--xstudio-text-muted);
+    font-size: 12px;
+    line-height: 18px;
+    letter-spacing: 0;
+}
+
+.xstudio-conversation-message {
+    box-sizing: border-box;
+    max-width: 92%;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.xstudio-conversation-message-user {
+    align-self: flex-end;
+    align-items: flex-end;
+}
+
+.xstudio-conversation-message-assistant {
+    align-self: flex-start;
+    align-items: flex-start;
+}
+
+.xstudio-conversation-message-system,
+.xstudio-conversation-message-tool {
+    align-self: flex-start;
+    align-items: flex-start;
+}
+
+.xstudio-conversation-meta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--xstudio-text-muted);
+    font-size: 10px;
+    line-height: 14px;
+    letter-spacing: 0;
+}
+
+.xstudio-conversation-role {
+    color: inherit;
+    font-weight: 700;
+}
+
+.xstudio-conversation-time {
+    color: inherit;
+}
+
+.xstudio-conversation-bubble {
+    box-sizing: border-box;
+    max-width: 100%;
+    padding: 8px 10px;
+    border: 1px solid var(--xstudio-border);
+    border-radius: var(--xstudio-radius-md);
+    color: var(--xstudio-text);
+    font-size: 12px;
+    line-height: 18px;
+    letter-spacing: 0;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.xstudio-conversation-message-user .xstudio-conversation-bubble {
+    border-color: color-mix(in srgb, var(--xstudio-accent) 56%, var(--xstudio-border));
+    background: color-mix(in srgb, var(--xstudio-accent) 16%, var(--xstudio-surface-2));
+}
+
+.xstudio-conversation-message-assistant .xstudio-conversation-bubble {
+    background: var(--xstudio-surface);
+}
+
+.xstudio-conversation-message-system .xstudio-conversation-bubble,
+.xstudio-conversation-message-tool .xstudio-conversation-bubble {
+    border-color: color-mix(in srgb, var(--xstudio-border) 72%, var(--xstudio-accent));
+    background: color-mix(in srgb, var(--xstudio-surface) 76%, var(--xstudio-surface-2));
+    color: var(--xstudio-text-muted);
+}
+
+.xstudio-conversation-debug {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 100%;
+    color: var(--xstudio-text-muted);
+    font-size: 10px;
+    line-height: 14px;
+    letter-spacing: 0;
+}
+
+.xstudio-conversation-debug-summary {
+    cursor: pointer;
+    user-select: none;
+    color: var(--xstudio-text-muted);
+    font-weight: 700;
+    outline: none;
+}
+
+.xstudio-conversation-debug-summary::marker {
+    content: "";
+}
+
+.xstudio-conversation-debug-summary::-webkit-details-marker {
+    display: none;
+}
+
+.xstudio-conversation-debug-content {
+    box-sizing: border-box;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-top: 4px;
+    padding: 6px;
+    border: 1px solid color-mix(in srgb, var(--xstudio-border) 68%, transparent);
+    border-radius: var(--xstudio-radius-sm);
+    background: color-mix(in srgb, var(--xstudio-surface) 82%, var(--xstudio-surface-2));
+}
+
+.xstudio-conversation-debug-row {
+    display: grid;
+    grid-template-columns: minmax(92px, max-content) minmax(0, 1fr);
+    gap: 6px;
+    min-width: 0;
+}
+
+.xstudio-conversation-debug-row-block {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.xstudio-conversation-debug-label {
+    color: var(--xstudio-text-muted);
+    font-weight: 700;
+}
+
+.xstudio-conversation-debug-value {
+    min-width: 0;
+    color: var(--xstudio-text-muted);
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.xstudio-intent-actions {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.xstudio-intent-actions-title {
+    color: var(--xstudio-text-muted);
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 15px;
+    letter-spacing: 0;
+}
+
+.xstudio-intent-action-card {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 8px;
+    border: 1px solid color-mix(in srgb, var(--xstudio-border) 78%, var(--xstudio-accent));
+    border-radius: var(--xstudio-radius-md);
+    background: color-mix(in srgb, var(--xstudio-surface) 84%, var(--xstudio-surface-2));
+}
+
+.xstudio-intent-action-card-compact {
+    gap: 0;
+    padding: 5px 8px;
+}
+
+.xstudio-intent-action-card-approved-pending-execution {
+    border-color: color-mix(in srgb, var(--xstudio-accent) 68%, var(--xstudio-border));
+    background: color-mix(in srgb, var(--xstudio-accent) 10%, var(--xstudio-surface));
+}
+
+.xstudio-intent-action-card-running {
+    border-color: color-mix(in srgb, var(--x-warning) 58%, var(--xstudio-border));
+    background: color-mix(in srgb, var(--x-warning) 8%, var(--xstudio-surface));
+}
+
+.xstudio-intent-action-card-done {
+    border-color: color-mix(in srgb, var(--x-success) 58%, var(--xstudio-border));
+    background: color-mix(in srgb, var(--x-success) 8%, var(--xstudio-surface));
+}
+
+.xstudio-intent-action-card-failed {
+    border-color: color-mix(in srgb, var(--x-danger) 62%, var(--xstudio-border));
+    background: color-mix(in srgb, var(--x-danger) 8%, var(--xstudio-surface));
+}
+
+.xstudio-intent-action-content {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+}
+
+.xstudio-intent-action-title {
+    color: var(--xstudio-text);
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 16px;
+    letter-spacing: 0;
+    overflow-wrap: anywhere;
+}
+
+.xstudio-intent-action-description {
+    color: var(--xstudio-text-muted);
+    font-size: 12px;
+    line-height: 16px;
+    letter-spacing: 0;
+    overflow-wrap: anywhere;
+}
+
+.xstudio-intent-action-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    min-width: 0;
+}
+
+.xstudio-intent-action-meta-item {
+    box-sizing: border-box;
+    max-width: 100%;
+    padding: 2px 5px;
+    border: 1px solid color-mix(in srgb, var(--xstudio-border) 68%, transparent);
+    border-radius: var(--xstudio-radius-sm);
+    color: var(--xstudio-text-muted);
+    font-size: 10px;
+    line-height: 14px;
+    letter-spacing: 0;
+    overflow-wrap: anywhere;
+}
+
+.xstudio-intent-action-error {
+    color: color-mix(in srgb, var(--x-danger) 86%, var(--xstudio-text));
+    font-size: 11px;
+    line-height: 15px;
+    letter-spacing: 0;
+    overflow-wrap: anywhere;
+}
+
+.xstudio-intent-action-success {
+    color: color-mix(in srgb, var(--x-success) 86%, var(--xstudio-text));
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 15px;
+    letter-spacing: 0;
+    overflow-wrap: anywhere;
+}
+
+.xstudio-intent-action-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 6px;
+}
+
+.xstudio-intent-action-button {
+    min-height: 26px;
+    padding: 4px 8px;
+    font-size: 11px;
+    line-height: 14px;
+}
+
+.xstudio-intent-action-apply {
+    border-color: color-mix(in srgb, var(--xstudio-accent) 58%, var(--xstudio-border));
+    color: var(--xstudio-accent);
+}
+
+.xstudio-intent-action-applied {
+    border-color: color-mix(in srgb, var(--x-success) 64%, var(--xstudio-border));
+    color: color-mix(in srgb, var(--x-success) 82%, var(--xstudio-text));
+}
+
+.xstudio-intent-action-dismiss {
+    color: var(--xstudio-text-muted);
+}
+
+#xstudio-conversation-composer.xstudio-conversation-composer {
+    box-sizing: border-box;
+    flex: 0 0 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.xstudio-conversation-input,
+.xstudio-conversation-section textarea.xstudio-conversation-input {
+    min-height: 86px;
+    max-height: 132px;
+    resize: vertical;
+}
+
+.xstudio-conversation-actions {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 8px;
 }
 
 .xstudio-json-section textarea,

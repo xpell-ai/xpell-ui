@@ -3,7 +3,7 @@
   "_type": "view",
   "_theme": "terminal",
   "class": "xstudio-shell xstudio-theme-terminal",
-  "data-xstudio-theme": "terminal",
+  "data-xstudio-theme": "dark",
   "_children": [
     {
       "_id": "xstudio-topbar",
@@ -24,20 +24,41 @@
             {
               "_id": "xstudio-object-tree-portlet",
               "_type": "view",
-              "class": "xstudio-portlet xstudio-object-tree-portlet",
+              "class": "xstudio-portlet xstudio-explorer-section xstudio-object-tree-portlet",
               "_children": [
                 {
                   "_type": "view",
-                  "class": "xstudio-portlet-header",
+                  "class": "xstudio-portlet-header xstudio-explorer-section-header",
                   "_children": [
                     {
-                      "_type": "label",
-                      "class": "xstudio-section-title",
-                      "_text": "Object Tree"
+                      "_id": "xstudio-object-tree-section-toggle",
+                      "_type": "button",
+                      "type": "button",
+                      "class": "xstudio-explorer-section-toggle",
+                      "_text": "▾ Object Tree",
+                      "title": "Collapse Object Tree",
+                      "aria-expanded": "true",
+                      "_on": {
+                        "click": {
+                          "_module": "xem",
+                          "_op": "fire",
+                          "_params": {
+                            "event": "studio:explorer-section:toggle",
+                            "data": {
+                              "_section": "object_tree"
+                            }
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "_type": "view",
+                      "class": "xstudio-explorer-section-actions"
                     }
                   ]
                 },
                 {
+                  "_id": "xstudio-object-tree-body",
                   "_type": "view",
                   "class": "xstudio-portlet-body xstudio-object-tree-body",
                   "_children": [
@@ -85,30 +106,53 @@
                   "_id": "xstudio-editor",
                   "_type": "xvm-view",
                   "_view_id": "xstudio-editor",
-                  "class": "xstudio-portlet xstudio-editor xstudio-prompt-portlet"
+                  "_visible": false,
+                  "aria-hidden": "true",
+                  "style": "display: none;",
+                  "class": "xstudio-portlet xstudio-editor xstudio-prompt-portlet xstudio-portlet-hidden"
+                },
+                {
+                  "_id": "xstudio-conversation-section",
+                  "_type": "xvm-view",
+                  "_view_id": "xstudio-conversation-section",
+                  "_visible": true,
+                  "aria-hidden": "false",
+                  "class": "xstudio-portlet xstudio-section xstudio-conversation-section"
                 },
                 {
                   "_id": "xstudio-runtime-inspector-section",
                   "_type": "xvm-view",
                   "_view_id": "xstudio-runtime-inspector-section",
-                  "class": "xstudio-portlet xstudio-section xstudio-runtime-inspector-section"
+                  "_visible": false,
+                  "aria-hidden": "true",
+                  "style": "display: none;",
+                  "class": "xstudio-portlet xstudio-section xstudio-runtime-inspector-section xstudio-portlet-hidden"
                 },
                 {
                   "_id": "xstudio-json-section",
                   "_type": "xvm-view",
                   "_view_id": "xstudio-json-section",
-                  "class": "xstudio-portlet xstudio-section xstudio-json-section"
+                  "_visible": false,
+                  "aria-hidden": "true",
+                  "style": "display: none;",
+                  "class": "xstudio-portlet xstudio-section xstudio-json-section xstudio-portlet-hidden"
                 },
                 {
                   "_id": "xstudio-generated-modules-section",
                   "_type": "xvm-view",
                   "_view_id": "xstudio-generated-modules-section",
-                  "class": "xstudio-portlet xstudio-section xstudio-generated-modules-section"
+                  "_visible": false,
+                  "aria-hidden": "true",
+                  "style": "display: none;",
+                  "class": "xstudio-portlet xstudio-section xstudio-generated-modules-section xstudio-portlet-hidden"
                 },
                 {
                   "_id": "xstudio-runtime-section",
                   "_type": "view",
-                  "class": "xstudio-portlet xstudio-section xstudio-runtime-section",
+                  "_visible": false,
+                  "aria-hidden": "true",
+                  "style": "display: none;",
+                  "class": "xstudio-portlet xstudio-section xstudio-runtime-section xstudio-portlet-hidden",
                   "_children": [
                     {
                       "_type": "toolbar",

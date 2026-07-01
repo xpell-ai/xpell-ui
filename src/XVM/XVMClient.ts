@@ -53,6 +53,14 @@ type PendingStructuredViewEdit = {
   _created_at: number;
 };
 
+type StructuredViewEditRefreshRequest = {
+  _view_id?: string;
+  _action?: string;
+  _target_id?: string;
+  _version?: number;
+  _result?: any;
+};
+
 export type XVMClientConnectionChange = {
   _status: "connected" | "disconnected" | "error" | "connecting";
   _connected: boolean;
@@ -223,6 +231,61 @@ export class XVMClient {
     });
   }
 
+  async request_structured_view_edit_refresh(edit: StructuredViewEditRefreshRequest) {
+    const view_id = typeof edit?._view_id === "string" ? edit._view_id.trim() : "";
+    const action = typeof edit?._action === "string" ? edit._action.trim() : "";
+    const target_id = typeof edit?._target_id === "string" ? edit._target_id.trim() : "";
+    if (!view_id) {
+      return {
+        _ok: false,
+        _reason: "missing view id",
+      };
+    }
+
+    const out = (await this._send_cmd("get-view", {
+      _app_id: this._app_id,
+      _env: this._env,
+      _view_id: view_id,
+    })) as ServerGetViewRes;
+
+    if (!is_obj(out) || !is_obj(out._view)) {
+      return {
+        _ok: false,
+        _reason: "invalid get-view response",
+        _view_id: view_id,
+      };
+    }
+
+    const fetched_version = Number(out._version);
+    const requested_version = Number(edit?._version);
+    const version = Number.isFinite(fetched_version) && fetched_version > 0
+      ? fetched_version
+      : Number.isFinite(requested_version) && requested_version > 0
+        ? requested_version
+        : 0;
+    const update_payload: ServerUpdateEvt = {
+      _app_id: this._app_id,
+      _env: this._env,
+      _view_id: view_id,
+      ...(version > 0 ? { _version: version } : {}),
+      _view: out._view,
+      _meta: {
+        _source: "xstudio:intent-action-refresh",
+        _force_refresh: true,
+        ...(action ? { _edit_action: action } : {}),
+        ...(target_id ? { _target_id: target_id } : {}),
+      },
+    };
+    const handled = await this._handle_xvm_update_payload(update_payload, EVT_XVM_UPDATE);
+
+    return {
+      _ok: handled._accepted === true,
+      _view_id: view_id,
+      _version: version || handled._version || 0,
+      _handled: handled,
+    };
+  }
+
   sendServerXVMCommand(op: string, params: any) {
     return this._send_cmd(op, params);
   }
@@ -357,6 +420,20 @@ export class XVMClient {
       pending._view_id === normalized_view_id &&
       (pending._action === normalized_action ||
         (normalized_action === "remove-object" && pending._action === "remove"))
+    );
+    if (index < 0) return null;
+
+    const [pending] = this._pending_structured_view_edits.splice(index, 1);
+    return pending ?? null;
+  }
+
+  _consume_pending_structured_view_edit_for_view(view_id: string) {
+    const normalized_view_id = typeof view_id === "string" ? view_id.trim() : "";
+    if (!normalized_view_id) return null;
+
+    this._prune_pending_structured_view_edits();
+    const index = this._pending_structured_view_edits.findIndex((pending) =>
+      pending._view_id === normalized_view_id
     );
     if (index < 0) return null;
 
@@ -1104,6 +1181,159 @@ export class XVMClient {
     return { _accepted: true, _view_id: view_id, _version: next_version };
   }
 
+  _pending_structured_edit_for_update(upd: ServerUpdateEvt) {
+    const meta = is_obj(upd._meta) ? upd._meta : {};
+    const action = typeof meta._edit_action === "string" ? meta._edit_action.trim() : "";
+    const target_id = typeof meta._target_id === "string" ? meta._target_id.trim() : "";
+
+    if (action) {
+      const pending = this._consume_pending_structured_view_edit(upd._view_id, action);
+      if (pending) return pending;
+      return {
+        _view_id: upd._view_id,
+        _action: action,
+        _target_id: target_id,
+        _created_at: Date.now(),
+      };
+    }
+
+    return this._consume_pending_structured_view_edit_for_view(upd._view_id);
+  }
+
+  async _handle_xvm_update_payload(payload: any, source_evt: string) {
+    try {
+      const evt_payload = this._normalize_event_payload(payload);
+
+      if (!is_obj(evt_payload)) {
+        return {
+          _accepted: false,
+          _reason: "invalid payload",
+        };
+      }
+
+      if (evt_payload._app_id !== this._app_id || evt_payload._env !== this._env) {
+        return {
+          _accepted: false,
+          _reason: "scope mismatch",
+          _app_id: evt_payload._app_id,
+          _env: evt_payload._env,
+        };
+      }
+
+      if (typeof evt_payload._view_id !== "string" || !is_obj(evt_payload._view)) {
+        return {
+          _accepted: false,
+          _reason: "invalid view update",
+        };
+      }
+
+      const upd = evt_payload as ServerUpdateEvt;
+      const next_version = Number.isFinite(upd._version) ? Number(upd._version) : 0;
+      const update_meta = is_obj(upd._meta) ? upd._meta : {};
+      const force_current_refresh =
+        update_meta._source === "xstudio:intent-action-refresh" &&
+        update_meta._force_refresh === true &&
+        next_version > 0 &&
+        next_version === this._current_version;
+
+      if (next_version > 0 && !force_current_refresh && !this._should_accept_push_version(next_version, source_evt)) {
+        return {
+          _accepted: false,
+          _reason: "stale version",
+          _view_id: upd._view_id,
+          _version: next_version,
+        };
+      }
+
+      const pending_structured_edit = this._pending_structured_edit_for_update(upd);
+
+      this._views_cache.set(upd._view_id, upd._view);
+      this._emit_view_cache_updated(upd._view_id);
+      this._known_view_ids.add(upd._view_id);
+      this._persist_cached_view(upd._view_id, upd._view);
+      this._sync_cache_state();
+
+      if (next_version > 0) {
+        this._set_current_version(next_version);
+        XDB.saveString(this._cache_key_version, String(next_version));
+      }
+
+      this._xstudio.handle_xvm_update(upd);
+
+      this._log(
+        `update applied source='${source_evt}' view='${upd._view_id}' version=${next_version || this._current_version} active='${this._current_view_id}'`
+      );
+
+      if (await this._rerender_edit_mode_after_view_update(upd, pending_structured_edit ?? undefined)) {
+        return {
+          _accepted: true,
+          _rerendered: true,
+          _view_id: upd._view_id,
+          _version: next_version || this._current_version,
+        };
+      }
+
+      if (this._current_view_id === upd._view_id || this._app_view_id === upd._view_id) {
+        const live_obj = XUI.getObject(upd._view_id) as any;
+
+        if (live_obj && typeof live_obj.update === "function") {
+          this._log("live view update via XUIObject.update", {
+            _view_id: upd._view_id,
+            _version: next_version || this._current_version,
+          });
+
+          live_obj.update(upd._view);
+          (XVM as any).registerRawView?.(upd._view);
+          this._app_needs_refresh = false;
+          this._current_view_id = upd._view_id;
+          this._app_view_id = upd._view_id;
+
+          if (this._on_view_rendered) this._on_view_rendered(upd._view_id);
+          await _xem.fire(EVT_XVM_VIEW_RENDERED, {
+            _view_id: upd._view_id,
+            _app_id: this._app_id,
+            _env: this._env,
+          });
+          return {
+            _accepted: true,
+            _rerendered: false,
+            _patched: true,
+            _view_id: upd._view_id,
+            _version: next_version || this._current_version,
+          };
+        }
+
+        this._log("live view update fallback rerender", {
+          _view_id: upd._view_id,
+          _version: next_version || this._current_version,
+        });
+        (XVM as any).registerRawView?.(upd._view);
+        this._app_needs_refresh = true;
+        await this.render_view(upd._view_id);
+        return {
+          _accepted: true,
+          _rerendered: true,
+          _view_id: upd._view_id,
+          _version: next_version || this._current_version,
+        };
+      }
+
+      return {
+        _accepted: true,
+        _rerendered: false,
+        _view_id: upd._view_id,
+        _version: next_version || this._current_version,
+      };
+    } catch (err) {
+      this._error("update handler failed", err);
+      return {
+        _accepted: false,
+        _reason: "handler failed",
+        _error: to_err(err),
+      };
+    }
+  }
+
   _bind_events() {
     if (this._bound) return;
     this._bound = true;
@@ -1120,89 +1350,9 @@ export class XVMClient {
       this._set_connection_status("error", "wormhole-error");
     });
 
-    const handle_update = async (payload: any, source_evt: string) => {
-      try {
-        const evt_payload = this._normalize_event_payload(payload);
-
-        if (!is_obj(evt_payload)) return;
-
-        if (evt_payload._app_id !== this._app_id || evt_payload._env !== this._env) return;
-        if (typeof evt_payload._view_id !== "string" || !is_obj(evt_payload._view)) return;
-
-        const upd = evt_payload as ServerUpdateEvt;
-
-        const next_version = Number.isFinite(upd._version) ? Number(upd._version) : 0;
-
-        if (next_version > 0 && !this._should_accept_push_version(next_version, source_evt)) {
-          return;
-        }
-
-        const pending_remove_edit = this._consume_pending_structured_view_edit(
-          upd._view_id,
-          "remove-object",
-        );
-
-        // 🔥 update cache
-        this._views_cache.set(upd._view_id, upd._view);
-        this._emit_view_cache_updated(upd._view_id);
-        this._known_view_ids.add(upd._view_id);
-        this._persist_cached_view(upd._view_id, upd._view);
-        this._sync_cache_state();
-
-        // 🔥 version
-        if (next_version > 0) {
-          this._set_current_version(next_version);
-          XDB.saveString(this._cache_key_version, String(next_version));
-        }
-
-        this._xstudio.handle_xvm_update(upd);
-
-        this._log(
-          `update applied source='${source_evt}' view='${upd._view_id}' version=${next_version || this._current_version} active='${this._current_view_id}'`
-        );
-
-        if (await this._rerender_edit_mode_after_view_update(upd, pending_remove_edit ?? undefined)) {
-          return;
-        }
-
-        if (this._current_view_id === upd._view_id || this._app_view_id === upd._view_id) {
-          const live_obj = XUI.getObject(upd._view_id) as any;
-
-          if (live_obj && typeof live_obj.update === "function") {
-            this._log("live view update via XUIObject.update", {
-              _view_id: upd._view_id,
-              _version: next_version || this._current_version,
-            });
-
-            live_obj.update(upd._view);
-            (XVM as any).registerRawView?.(upd._view);
-            this._app_needs_refresh = false;
-            this._current_view_id = upd._view_id;
-            this._app_view_id = upd._view_id;
-
-            if (this._on_view_rendered) this._on_view_rendered(upd._view_id);
-            await _xem.fire(EVT_XVM_VIEW_RENDERED, {
-              _view_id: upd._view_id,
-              _app_id: this._app_id,
-              _env: this._env,
-            });
-            return;
-          }
-
-          this._log("live view update fallback rerender", {
-            _view_id: upd._view_id,
-            _version: next_version || this._current_version,
-          });
-          (XVM as any).registerRawView?.(upd._view);
-          this._app_needs_refresh = true;
-          await this.render_view(upd._view_id);
-        }
-      } catch (err) {
-        this._error("update handler failed", err);
-      }
-    };
-
-    _xem.on(EVT_XVM_UPDATE, (payload: any) => handle_update(payload, EVT_XVM_UPDATE));
+    _xem.on(EVT_XVM_UPDATE, (payload: any) => {
+      void this._handle_xvm_update_payload(payload, EVT_XVM_UPDATE);
+    });
 
     this._xstudio.bind_events();
 

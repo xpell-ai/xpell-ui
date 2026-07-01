@@ -68,7 +68,8 @@
       "class": "xstudio-portlet-toggle",
       "_text": "Prompt",
       "_variant": "ghost",
-      "title": "Hide Prompt",
+      "title": "Show Prompt",
+      "aria-pressed": "false",
       "_on": {
         "click": {
           "_module": "xstudio",
@@ -80,12 +81,31 @@
       }
     },
     {
+      "_id": "xstudio-portlet-toggle-conversation",
+      "_type": "button",
+      "class": "xstudio-portlet-toggle xstudio-portlet-toggle-active",
+      "_text": "Conversation",
+      "_variant": "ghost",
+      "title": "Hide Conversation",
+      "aria-pressed": "true",
+      "_on": {
+        "click": {
+          "_module": "xstudio",
+          "_op": "toggle-portlet",
+          "_params": {
+            "_portlet": "conversation"
+          }
+        }
+      }
+    },
+    {
       "_id": "xstudio-portlet-toggle-inspector",
       "_type": "button",
       "class": "xstudio-portlet-toggle",
       "_text": "Inspector",
       "_variant": "ghost",
-      "title": "Hide Inspector",
+      "title": "Show Inspector",
+      "aria-pressed": "false",
       "_on": {
         "click": {
           "_module": "xstudio",
@@ -103,6 +123,7 @@
       "_text": "JSON",
       "_variant": "ghost",
       "title": "Show JSON",
+      "aria-pressed": "false",
       "_on": {
         "click": {
           "_module": "xstudio",
@@ -120,6 +141,7 @@
       "_text": "Modules",
       "_variant": "ghost",
       "title": "Show Modules",
+      "aria-pressed": "false",
       "_on": {
         "click": {
           "_module": "xstudio",
@@ -137,6 +159,7 @@
       "_text": "Runtime",
       "_variant": "ghost",
       "title": "Show Runtime",
+      "aria-pressed": "false",
       "_on": {
         "click": {
           "_module": "xstudio",

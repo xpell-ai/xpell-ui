@@ -1,5 +1,5 @@
 import { XUIObject, type XUIObjectData } from "../XUI/XUIObject";
-import { XObjectPack, _xlog, _xu } from "@xpell/core";
+import { XObjectPack, _xlog, _xu, type XpellSkill } from "@xpell/core";
 
 export type XVMViewResolver = (view_id: string) => Record<string, any> | null;
 
@@ -13,6 +13,63 @@ export interface XVMViewData extends XUIObjectData {
 export class XVMView extends XUIObject {
   static _xtype = "xvm-view";
   private static view_resolver: XVMViewResolver | null = null;
+  static _skill: XpellSkill = {
+    _id: "xvm-view",
+    _title: "XVMView",
+    _version: "1.0.0",
+    _active: true,
+    _type: "view-skill",
+    _requires: ["xuiobject", "xvm"],
+
+    _description:
+      "Composable XVM view reference object. Use it like a JSON component to render another registered XVM view without duplicating its children.",
+    _fields: {
+      _view_id: "Required registered XVM view id to render.",
+      _params: "Optional local params passed into the referenced view. Use $params.name inside referenced view JSON.",
+      _id: "Optional local wrapper id. If omitted, the referenced view _id should be used.",
+      class: "Optional local wrapper classes. Merged with referenced view class.",
+      _xvm_view_stack: "Internal recursion-protection stack. Do not generate manually."
+    },
+
+    _core_rules: [
+      "Use xvm-view to split large views into reusable registered XVM views.",
+      "Always provide _view_id.",
+      "Do not generate _xvm_view_stack manually.",
+      "Prefer omitting local _id so the referenced view root _id is used.",
+      "Prefer defining root class/style on the referenced view, not on the xvm-view wrapper.",
+      "Use _params for component-like values.",
+      "Inside the referenced view, use $params.foo or $params.foo.bar.",
+      "Do not use xvm-view for external files; the referenced view must already exist in the XVM registry.",
+      "Avoid recursive references between views.",
+      "Do not inline the referenced view's _children unless explicitly asked.",
+      "Use xvm-view for header, footer, toolbar, sidebar, repeated panels, and large reusable sections.",
+      "Referenced views should be normal _type:'view' files with their own _id, class, and _children.",
+      "Do not set local class unless you need wrapper-specific extra classes.",
+      "Do not set local _id unless you intentionally need an id different from _view_id.",
+      "When passing text/config into the referenced view, use _params and $params.* only.",
+      "Never use $data or $xdata for static component params."
+    ],
+
+    _canonical_examples: [
+      {
+        _type: "xvm-view",
+        _view_id: "page-toolbar",
+        _params: {
+          title: "Dashboard",
+          subtitle: "Runtime overview"
+        }
+      },
+      {
+        _type: "xvm-view",
+        _view_id: "kpi-card",
+        _params: {
+          title: "Active Apps",
+          value: "12",
+          trend: "+3 today"
+        }
+      }
+    ]
+  };
 
   static setViewResolver(resolver: XVMViewResolver | null) {
     XVMView.view_resolver = resolver;
