@@ -1,0 +1,15 @@
+{
+  "_id": "flow-open-generated-app",
+  "_steps": [
+    {
+      "_id": "open-app",
+      "_command": {
+        "_module": "xvm",
+        "_op": "load_app",
+        "_params": {
+          "_app_id": "generated-app"
+        }
+      }
+    }
+  ]
+}

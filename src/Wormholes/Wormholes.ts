@@ -58,6 +58,14 @@ export class WormholesFacade implements WormholesClientAPI {
     return this._impl._sid;
   }
 
+  get _hello() {
+    return this._impl._hello;
+  }
+
+  get _server_identity() {
+    return this._impl._server_identity;
+  }
+
   /**
    * Open a wormholes session.
    *

@@ -40,6 +40,32 @@ const domProjectionFields = [
     "_visible",
     ...semanticProjectionFields
 ] as const;
+const booleanDomAttributes = new Set([
+    "allowfullscreen",
+    "async",
+    "autofocus",
+    "autoplay",
+    "checked",
+    "controls",
+    "default",
+    "defer",
+    "disabled",
+    "formnovalidate",
+    "hidden",
+    "inert",
+    "ismap",
+    "loop",
+    "multiple",
+    "muted",
+    "nomodule",
+    "novalidate",
+    "open",
+    "playsinline",
+    "readonly",
+    "required",
+    "reversed",
+    "selected"
+]);
 const RESERVED_DOM_EVENT_ALIASES: Record<string, string> = {
     "_click": "click",
     "_change": "change",
@@ -327,7 +353,17 @@ export class XUIObject extends XObject {
             }
 
             if (!outName.startsWith("_")) {
-                dom_object.setAttribute(outName, String(val));
+                if (booleanDomAttributes.has(outName.toLowerCase())) {
+                    if (val === false) {
+                        (dom_object as any)[outName] = false;
+                        dom_object.removeAttribute(outName);
+                    } else {
+                        (dom_object as any)[outName] = true;
+                        dom_object.setAttribute(outName, "");
+                    }
+                } else {
+                    dom_object.setAttribute(outName, String(val));
+                }
             }
         }
 

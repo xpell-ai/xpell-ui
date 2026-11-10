@@ -1,0 +1,21 @@
+{
+  "_id": "flow-create-app-from-starter",
+  "_open_created_app_in_edit": true,
+  "_on_success": [],
+  "_steps": [
+    {
+      "_id": "create-app",
+      "_command": {
+        "_module": "starter",
+        "_op": "create_app_from_starter",
+        "_params": {
+          "_debug": true,
+          "_starter_id": "$event._starter_id",
+          "_app_id": "$event._app_id",
+          "_env": "default",
+          "_vision": "$event._vision"
+        }
+      }
+    }
+  ]
+}

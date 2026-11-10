@@ -109,6 +109,14 @@ const STUDIO_APP_EXPLORER_SECTION_TOGGLE_ID = "xstudio-app-explorer-section-togg
 const STUDIO_APP_EXPLORER_ADD_VIEW_BUTTON_ID = "xstudio-app-explorer-add-view";
 const STUDIO_APP_EXPLORER_ADD_BUTTON_ID = "xstudio-app-explorer-add";
 const STUDIO_APP_EXPLORER_ADD_MENU_ID = "xstudio-app-explorer-add-menu";
+const STUDIO_APP_EXPLORER_ACTIONS_BUTTON_ID = "xstudio-app-explorer-actions";
+const STUDIO_APP_EXPLORER_ACTIONS_MENU_ID = "xstudio-app-explorer-actions-menu";
+const STUDIO_APP_EXPLORER_IMPORT_DIALOG_ID = "xstudio-import-app-dialog";
+const STUDIO_APP_EXPLORER_IMPORT_BODY_ID = "xstudio-import-app-body";
+const STUDIO_APP_EXPLORER_IMPORT_FILE_ID = "xstudio-import-app-file";
+const STUDIO_APP_EXPLORER_IMPORT_INSPECT_ID = "xstudio-import-app-inspect";
+const STUDIO_APP_EXPLORER_IMPORT_CONFIRM_ID = "xstudio-import-app-confirm";
+const STUDIO_APP_EXPLORER_IMPORT_CANCEL_ID = "xstudio-import-app-cancel";
 const STUDIO_APP_EXPLORER_DATA_FEATURE_DRAWER_ID = "xstudio-data-feature-panel";
 const STUDIO_APP_EXPLORER_DATA_FEATURE_BODY_ID = "xstudio-data-feature-body";
 const STUDIO_APP_EXPLORER_DATA_FEATURE_FIELD_PREFIX = "xstudio-data-feature-field";
@@ -137,6 +145,7 @@ const STUDIO_APP_EXPLORER_ADD_VIEW_ERROR_ID = "xstudio-add-view-error";
 const STUDIO_APP_EXPLORER_ADD_VIEW_CANCEL_ID = "xstudio-add-view-cancel";
 const STUDIO_APP_EXPLORER_ADD_VIEW_CREATE_ID = "xstudio-add-view-create";
 const STUDIO_OBJECT_PALETTE_DIALOG_ID = "xstudio-object-palette-dialog";
+const STUDIO_OBJECT_PALETTE_ID_INPUT_ID = "xstudio-object-palette-id-input";
 const STUDIO_OBJECT_PALETTE_SEARCH_ID = "xstudio-object-palette-search";
 const STUDIO_OBJECT_PALETTE_RESULTS_ID = "xstudio-object-palette-results";
 const STUDIO_OBJECT_PALETTE_CLOSE_ID = "xstudio-object-palette-close";
@@ -231,6 +240,8 @@ const STUDIO_ANALYZE_MESSAGE_TIMEOUT_MS = 45000;
 const STUDIO_ANALYZE_MESSAGE_TIMEOUT_TEXT = "Analysis took too long. Please retry.";
 const STUDIO_CAPABILITY_GUIDANCE_PROMPT = "What can I do with Visual Xpell?";
 const STUDIO_PLANNING_STAGE = "planning";
+const STUDIO_INITIAL_PLANNING_PLANNER_VERSION_XD_KEY = "studio:initial_planner_version";
+const STUDIO_INITIAL_PLANNING_PLANNER_VERSION = "v2";
 const STUDIO_PLANNING_GREETING_QUICK_STARTS: XStudioPlanningGreetingQuickStart[] = [
   {
     _id: "crm",
@@ -325,6 +336,7 @@ const STUDIO_OBJECT_TREE_CHILD_LEAF_TYPES = new Set([
   "path",
 ]);
 type XStudioTheme = typeof STUDIO_THEME_OPTIONS[number];
+type XStudioPlannerVersion = "v1" | "v2";
 type XStudioPortletId = "selected" | "prompt" | "conversation" | "guide" | "runtime" | "inspector" | "json" | "modules" | "data_feature";
 type XStudioExplorerSectionId = "app_explorer" | "object_tree" | "properties" | "interactions" | "raw_json" | "danger";
 type XStudioSelectedObjectInspectorSectionId = "properties" | "interactions" | "raw_json" | "danger";
@@ -602,6 +614,7 @@ type XStudioClientRuntime = {
     _version?: number;
     _result?: any;
   }): Promise<Record<string, any> | void>;
+  load_server_app?(app_id: string, env?: string, opts?: Record<string, any>): Promise<Record<string, any> | void>;
   isWormholeReady?(): boolean;
   isServerReady?(): boolean;
   sendXcmd(xcmd: any, timeoutMs?: number): Promise<any>;
@@ -609,6 +622,7 @@ type XStudioClientRuntime = {
 
 type XStudioSendCommandOptions = {
   _timeout_ms?: number;
+  _debug_params?: Record<string, any>;
 };
 
 type XStudioConversationAnalysisRequest = {
@@ -664,6 +678,21 @@ type XStudioSelectedObject = {
   _is_xvm_ref_child: boolean;
   _json_metadata: string;
   _dom_status?: string;
+  _semantic?: boolean;
+  _semantic_owner_id?: string;
+  _semantic_owner_type?: string;
+  _semantic_owner_path?: string;
+  _semantic_slot_id?: string;
+  _semantic_slot_label?: string;
+  _semantic_role?: string;
+  _semantic_path?: string;
+  _semantic_item_path?: string;
+  _semantic_style_path?: string;
+  _semantic_kind?: string;
+  _semantic_editor_type?: string;
+  _semantic_capabilities?: string[];
+  _semantic_actions?: string[];
+  _semantic_accepted_types?: string[];
 };
 
 type XStudioSelectedObjectInspectorDraft = {
@@ -674,12 +703,16 @@ type XStudioSkillInspectorField = {
   _key: string;
   _label?: string;
   _input?: "text" | "textarea" | "number" | "checkbox" | "select" | "json";
-  _options?: string[];
+  _options?: Array<string | { label?: string; value?: string; disabled?: boolean; selected?: boolean }>;
   _placeholder?: string;
   _description?: string;
   _advanced?: boolean;
   _readonly?: boolean;
   _required?: boolean;
+  _capability?: string;
+  _group?: string;
+  _group_label?: string;
+  _style_path?: string;
 };
 
 type XStudioSelectedObjectInspectorInput =
@@ -691,7 +724,9 @@ type XStudioSelectedObjectInspectorResolvedField =
     _label: string;
     _input: XStudioSelectedObjectInspectorInput;
     _control_id: string;
-    _source: "design" | "fallback";
+    _source: "design" | "fallback" | "capability";
+    _property_path?: string;
+    _style_object_path?: string;
   };
 
 type XStudioSelectedObjectInspectorField = string;
@@ -706,6 +741,7 @@ type XStudioSelectedObjectClickInteractionDraft = {
 };
 
 type XStudioIntentActionLocalStatus =
+  | typeof STUDIO_INTENT_ACTION_STATUS_SUGGESTED
   | typeof STUDIO_INTENT_ACTION_STATUS_DISMISSED
   | typeof STUDIO_INTENT_ACTION_STATUS_RUNNING
   | typeof STUDIO_INTENT_ACTION_STATUS_DONE
@@ -752,13 +788,17 @@ type XStudioSelectedObjectApplyViewEditParams = {
   _edit_action: string;
   _target_id: string;
   _target_type: string;
+  _runtime_xui_types?: string[];
   _property_name?: string;
+  _property_path?: string;
   _property_value?: any;
   _interaction_scope?: "_on" | "_once";
   _trigger?: string;
   _handler?: Record<string, any> | null;
   _style_property?: string;
+  _style_object_path?: string;
   _style_value?: string;
+  _styles?: Record<string, string>;
   _object_value?: Record<string, any>;
   _child?: Record<string, any>;
   _before_id?: string;
@@ -767,8 +807,29 @@ type XStudioSelectedObjectApplyViewEditParams = {
   _move_position?: string;
 };
 
+type XStudioSelectedObjectInspectorEdit = {
+  _field: XStudioSelectedObjectInspectorField;
+  _params: XStudioSelectedObjectApplyViewEditParams;
+  _interaction?: boolean;
+};
+
+type XStudioSelectedObjectInspectorTransactionStep = {
+  _id: string;
+  _title: string;
+  _params: XStudioSelectedObjectApplyViewEditParams;
+  _edits: XStudioSelectedObjectInspectorEdit[];
+};
+
+type XStudioSelectedObjectInspectorTransaction = {
+  _op: "apply-view-edit" | "apply-mutation-plan";
+  _params: Record<string, any>;
+  _steps: XStudioSelectedObjectInspectorTransactionStep[];
+  _edit_count: number;
+};
+
 type XStudioAddObjectInsertMode = "inside" | "before" | "after";
 type XStudioArrangeDropMode = XStudioAddObjectInsertMode;
+type XStudioObjectTreeMoveDirection = "up" | "down" | "out";
 
 type XStudioArrangeSourceResolution =
   | {
@@ -838,6 +899,7 @@ type XStudioObjectTreeNode = {
   _search_text: string;
   _meta: XStudioSelectedObject | null;
   _object: Record<string, any> | null;
+  _owner_object?: Record<string, any> | null;
   _depth: number;
   _children: XStudioObjectTreeNode[];
   _placeholder?: string;
@@ -923,6 +985,28 @@ type XStudioDataFeatureState = {
   };
 };
 
+type XStudioXAppImportStatus =
+  | "idle"
+  | "uploading"
+  | "uploaded"
+  | "inspecting"
+  | "ready"
+  | "importing"
+  | "completed"
+  | "failed";
+
+type XStudioXAppImportState = {
+  _open: boolean;
+  _file_name: string;
+  _file_size: number | null;
+  _package_ref: string;
+  _status: XStudioXAppImportStatus;
+  _error: string;
+  _debug_details: string;
+  _inspect: Record<string, any> | null;
+  _preview: Record<string, any> | null;
+};
+
 type XStudioDataFeatureOptionId =
   | "entity"
   | "list_view"
@@ -932,7 +1016,7 @@ type XStudioDataFeatureOptionId =
   | "delete_flow";
 
 export type XStudioObjectPaletteOptions = {
-  onSelect?: (skill: XpellSkill) => void;
+  onSelect?: (skill: XpellSkill, object_id: string) => void;
 };
 
 type XStudioObjectPaletteEntry = {
@@ -951,7 +1035,7 @@ type XStudioObjectPaletteClassEntry = {
 type XStudioObjectPaletteSession = {
   resolve: (skill: XpellSkill | null) => void;
   cleanup: () => void;
-  onSelect?: (skill: XpellSkill) => void;
+  onSelect?: (skill: XpellSkill, object_id: string) => void;
 };
 
 type ServerCreateViewRes = {
@@ -967,6 +1051,469 @@ type ServerCreateViewRes = {
 };
 
 const empty_selected_object_inspector_draft = (): XStudioSelectedObjectInspectorDraft => ({});
+
+const STUDIO_INSPECTOR_CAPABILITY_TYPOGRAPHY = "typography";
+const STUDIO_INSPECTOR_CAPABILITY_SPACING = "spacing";
+const STUDIO_INSPECTOR_CAPABILITY_LAYOUT = "layout";
+const STUDIO_INSPECTOR_CAPABILITY_APPEARANCE = "appearance";
+const STUDIO_INSPECTOR_GROUP_LABELS: Record<string, string> = {
+  design: "Design",
+  content: "Content",
+  data: "Data",
+  interactions: "Interactions",
+  advanced: "Advanced Design",
+};
+const STUDIO_INSPECTOR_GROUP_ORDER = [
+  "design",
+  "content",
+  "data",
+  "interactions",
+  "advanced",
+  STUDIO_INSPECTOR_CAPABILITY_TYPOGRAPHY,
+  STUDIO_INSPECTOR_CAPABILITY_SPACING,
+  STUDIO_INSPECTOR_CAPABILITY_LAYOUT,
+  STUDIO_INSPECTOR_CAPABILITY_APPEARANCE,
+];
+const STUDIO_INSPECTOR_CAPABILITIES: Record<string, { _fields: XStudioSkillInspectorField[] }> = {
+  [STUDIO_INSPECTOR_CAPABILITY_TYPOGRAPHY]: {
+    _fields: [
+      {
+        _key: "_style.font-size",
+        _label: "Font Size",
+        _input: "text",
+        _placeholder: "24px",
+        _description: "Writes _style.font-size.",
+        _style_path: "font-size",
+      },
+      {
+        _key: "_style.font-weight",
+        _label: "Font Weight",
+        _input: "select",
+        _options: ["", "normal", "400", "500", "600", "700", "bold"],
+        _description: "Writes _style.font-weight.",
+        _style_path: "font-weight",
+      },
+      {
+        _key: "_style.font-family",
+        _label: "Font Family",
+        _input: "text",
+        _placeholder: "Inter, sans-serif",
+        _description: "Writes _style.font-family.",
+        _style_path: "font-family",
+      },
+      {
+        _key: "_style.line-height",
+        _label: "Line Height",
+        _input: "text",
+        _placeholder: "1.4",
+        _description: "Writes _style.line-height.",
+        _style_path: "line-height",
+      },
+      {
+        _key: "_style.color",
+        _label: "Color",
+        _input: "text",
+        _placeholder: "#111827",
+        _description: "Writes _style.color.",
+        _style_path: "color",
+      },
+      {
+        _key: "_style.text-align",
+        _label: "Text Align",
+        _input: "select",
+        _options: ["", "left", "center", "right", "justify", "start", "end"],
+        _description: "Writes _style.text-align.",
+        _style_path: "text-align",
+      },
+      {
+        _key: "_style.letter-spacing",
+        _label: "Letter Spacing",
+        _input: "text",
+        _placeholder: "0.02em",
+        _description: "Writes _style.letter-spacing.",
+        _style_path: "letter-spacing",
+      },
+      {
+        _key: "_style.font-style",
+        _label: "Font Style",
+        _input: "select",
+        _options: ["", "normal", "italic", "oblique"],
+        _description: "Writes _style.font-style.",
+        _style_path: "font-style",
+      },
+      {
+        _key: "_style.text-decoration",
+        _label: "Text Decoration",
+        _input: "select",
+        _options: ["", "none", "underline", "line-through", "overline"],
+        _description: "Writes _style.text-decoration.",
+        _style_path: "text-decoration",
+      },
+    ].map(field => ({
+      _capability: STUDIO_INSPECTOR_CAPABILITY_TYPOGRAPHY,
+      _group: STUDIO_INSPECTOR_CAPABILITY_TYPOGRAPHY,
+      _group_label: "Typography",
+      ...field,
+    })) as XStudioSkillInspectorField[],
+  },
+  [STUDIO_INSPECTOR_CAPABILITY_SPACING]: {
+    _fields: [
+      {
+        _key: "_style.margin",
+        _label: "Margin",
+        _input: "text",
+        _placeholder: "16px",
+        _description: "Writes _style.margin.",
+        _style_path: "margin",
+      },
+      {
+        _key: "_style.margin-top",
+        _label: "Margin Top",
+        _input: "text",
+        _placeholder: "16px",
+        _description: "Writes _style.margin-top.",
+        _style_path: "margin-top",
+        _advanced: true,
+      },
+      {
+        _key: "_style.margin-right",
+        _label: "Margin Right",
+        _input: "text",
+        _placeholder: "16px",
+        _description: "Writes _style.margin-right.",
+        _style_path: "margin-right",
+        _advanced: true,
+      },
+      {
+        _key: "_style.margin-bottom",
+        _label: "Margin Bottom",
+        _input: "text",
+        _placeholder: "16px",
+        _description: "Writes _style.margin-bottom.",
+        _style_path: "margin-bottom",
+        _advanced: true,
+      },
+      {
+        _key: "_style.margin-left",
+        _label: "Margin Left",
+        _input: "text",
+        _placeholder: "16px",
+        _description: "Writes _style.margin-left.",
+        _style_path: "margin-left",
+        _advanced: true,
+      },
+      {
+        _key: "_style.padding",
+        _label: "Padding",
+        _input: "text",
+        _placeholder: "16px",
+        _description: "Writes _style.padding.",
+        _style_path: "padding",
+      },
+      {
+        _key: "_style.padding-top",
+        _label: "Padding Top",
+        _input: "text",
+        _placeholder: "16px",
+        _description: "Writes _style.padding-top.",
+        _style_path: "padding-top",
+        _advanced: true,
+      },
+      {
+        _key: "_style.padding-right",
+        _label: "Padding Right",
+        _input: "text",
+        _placeholder: "16px",
+        _description: "Writes _style.padding-right.",
+        _style_path: "padding-right",
+        _advanced: true,
+      },
+      {
+        _key: "_style.padding-bottom",
+        _label: "Padding Bottom",
+        _input: "text",
+        _placeholder: "16px",
+        _description: "Writes _style.padding-bottom.",
+        _style_path: "padding-bottom",
+        _advanced: true,
+      },
+      {
+        _key: "_style.padding-left",
+        _label: "Padding Left",
+        _input: "text",
+        _placeholder: "16px",
+        _description: "Writes _style.padding-left.",
+        _style_path: "padding-left",
+        _advanced: true,
+      },
+      {
+        _key: "_style.gap",
+        _label: "Gap",
+        _input: "text",
+        _placeholder: "12px",
+        _description: "Writes _style.gap.",
+        _style_path: "gap",
+      },
+      {
+        _key: "_style.row-gap",
+        _label: "Row Gap",
+        _input: "text",
+        _placeholder: "12px",
+        _description: "Writes _style.row-gap.",
+        _style_path: "row-gap",
+        _advanced: true,
+      },
+      {
+        _key: "_style.column-gap",
+        _label: "Column Gap",
+        _input: "text",
+        _placeholder: "12px",
+        _description: "Writes _style.column-gap.",
+        _style_path: "column-gap",
+        _advanced: true,
+      },
+    ].map(field => ({
+      _capability: STUDIO_INSPECTOR_CAPABILITY_SPACING,
+      _group: STUDIO_INSPECTOR_CAPABILITY_SPACING,
+      _group_label: "Spacing",
+      ...field,
+    })) as XStudioSkillInspectorField[],
+  },
+  [STUDIO_INSPECTOR_CAPABILITY_LAYOUT]: {
+    _fields: [
+      {
+        _key: "_style.width",
+        _label: "Width",
+        _input: "text",
+        _placeholder: "320px",
+        _description: "Writes _style.width.",
+        _style_path: "width",
+      },
+      {
+        _key: "_style.height",
+        _label: "Height",
+        _input: "text",
+        _placeholder: "240px",
+        _description: "Writes _style.height.",
+        _style_path: "height",
+      },
+      {
+        _key: "_style.min-width",
+        _label: "Min Width",
+        _input: "text",
+        _placeholder: "160px",
+        _description: "Writes _style.min-width.",
+        _style_path: "min-width",
+        _advanced: true,
+      },
+      {
+        _key: "_style.min-height",
+        _label: "Min Height",
+        _input: "text",
+        _placeholder: "80px",
+        _description: "Writes _style.min-height.",
+        _style_path: "min-height",
+        _advanced: true,
+      },
+      {
+        _key: "_style.max-width",
+        _label: "Max Width",
+        _input: "text",
+        _placeholder: "100%",
+        _description: "Writes _style.max-width.",
+        _style_path: "max-width",
+        _advanced: true,
+      },
+      {
+        _key: "_style.max-height",
+        _label: "Max Height",
+        _input: "text",
+        _placeholder: "480px",
+        _description: "Writes _style.max-height.",
+        _style_path: "max-height",
+        _advanced: true,
+      },
+      {
+        _key: "_style.display",
+        _label: "Display",
+        _input: "select",
+        _options: ["", "block", "inline", "inline-block", "flex", "grid", "none"],
+        _description: "Writes _style.display.",
+        _style_path: "display",
+      },
+      {
+        _key: "_style.flex-direction",
+        _label: "Flex Direction",
+        _input: "select",
+        _options: ["", "row", "column", "row-reverse", "column-reverse"],
+        _description: "Writes _style.flex-direction.",
+        _style_path: "flex-direction",
+      },
+      {
+        _key: "_style.flex-wrap",
+        _label: "Flex Wrap",
+        _input: "select",
+        _options: ["", "nowrap", "wrap", "wrap-reverse"],
+        _description: "Writes _style.flex-wrap.",
+        _style_path: "flex-wrap",
+      },
+      {
+        _key: "_style.justify-content",
+        _label: "Justify Content",
+        _input: "select",
+        _options: ["", "flex-start", "center", "flex-end", "space-between", "space-around", "space-evenly"],
+        _description: "Writes _style.justify-content.",
+        _style_path: "justify-content",
+      },
+      {
+        _key: "_style.align-items",
+        _label: "Align Items",
+        _input: "select",
+        _options: ["", "stretch", "flex-start", "center", "flex-end", "baseline"],
+        _description: "Writes _style.align-items.",
+        _style_path: "align-items",
+      },
+      {
+        _key: "_style.align-self",
+        _label: "Align Self",
+        _input: "select",
+        _options: ["", "auto", "stretch", "flex-start", "center", "flex-end", "baseline"],
+        _description: "Writes _style.align-self.",
+        _style_path: "align-self",
+      },
+      {
+        _key: "_style.overflow",
+        _label: "Overflow",
+        _input: "select",
+        _options: ["", "visible", "hidden", "scroll", "auto", "clip"],
+        _description: "Writes _style.overflow.",
+        _style_path: "overflow",
+      },
+      {
+        _key: "_style.position",
+        _label: "Position",
+        _input: "select",
+        _options: ["", "static", "relative", "absolute", "fixed", "sticky"],
+        _description: "Writes _style.position.",
+        _style_path: "position",
+      },
+      {
+        _key: "_style.top",
+        _label: "Top",
+        _input: "text",
+        _placeholder: "0",
+        _description: "Writes _style.top.",
+        _style_path: "top",
+        _advanced: true,
+      },
+      {
+        _key: "_style.right",
+        _label: "Right",
+        _input: "text",
+        _placeholder: "0",
+        _description: "Writes _style.right.",
+        _style_path: "right",
+        _advanced: true,
+      },
+      {
+        _key: "_style.bottom",
+        _label: "Bottom",
+        _input: "text",
+        _placeholder: "0",
+        _description: "Writes _style.bottom.",
+        _style_path: "bottom",
+        _advanced: true,
+      },
+      {
+        _key: "_style.left",
+        _label: "Left",
+        _input: "text",
+        _placeholder: "0",
+        _description: "Writes _style.left.",
+        _style_path: "left",
+        _advanced: true,
+      },
+    ].map(field => ({
+      _capability: STUDIO_INSPECTOR_CAPABILITY_LAYOUT,
+      _group: STUDIO_INSPECTOR_CAPABILITY_LAYOUT,
+      _group_label: "Layout",
+      ...field,
+    })) as XStudioSkillInspectorField[],
+  },
+  [STUDIO_INSPECTOR_CAPABILITY_APPEARANCE]: {
+    _fields: [
+      {
+        _key: "_style.background-color",
+        _label: "Background Color",
+        _input: "text",
+        _placeholder: "#f8fafc",
+        _description: "Writes _style.background-color.",
+        _style_path: "background-color",
+      },
+      {
+        _key: "_style.border",
+        _label: "Border",
+        _input: "text",
+        _placeholder: "1px solid #cbd5e1",
+        _description: "Writes _style.border.",
+        _style_path: "border",
+      },
+      {
+        _key: "_style.border-width",
+        _label: "Border Width",
+        _input: "text",
+        _placeholder: "1px",
+        _description: "Writes _style.border-width.",
+        _style_path: "border-width",
+      },
+      {
+        _key: "_style.border-style",
+        _label: "Border Style",
+        _input: "select",
+        _options: ["", "none", "solid", "dashed", "dotted", "double", "groove", "ridge", "inset", "outset"],
+        _description: "Writes _style.border-style.",
+        _style_path: "border-style",
+      },
+      {
+        _key: "_style.border-color",
+        _label: "Border Color",
+        _input: "text",
+        _placeholder: "#cbd5e1",
+        _description: "Writes _style.border-color.",
+        _style_path: "border-color",
+      },
+      {
+        _key: "_style.border-radius",
+        _label: "Border Radius",
+        _input: "text",
+        _placeholder: "8px",
+        _description: "Writes _style.border-radius.",
+        _style_path: "border-radius",
+      },
+      {
+        _key: "_style.opacity",
+        _label: "Opacity",
+        _input: "number",
+        _placeholder: "1",
+        _description: "Writes _style.opacity.",
+        _style_path: "opacity",
+      },
+      {
+        _key: "_style.box-shadow",
+        _label: "Box Shadow",
+        _input: "text",
+        _placeholder: "0 4px 12px rgba(15, 23, 42, 0.16)",
+        _description: "Writes _style.box-shadow.",
+        _style_path: "box-shadow",
+      },
+    ].map(field => ({
+      _capability: STUDIO_INSPECTOR_CAPABILITY_APPEARANCE,
+      _group: STUDIO_INSPECTOR_CAPABILITY_APPEARANCE,
+      _group_label: "Appearance",
+      ...field,
+    })) as XStudioSkillInspectorField[],
+  },
+};
 const empty_selected_object_click_interaction_draft = (): XStudioSelectedObjectClickInteractionDraft => ({
   _kind: "none",
   _view_id: "",
@@ -1012,6 +1559,18 @@ const empty_data_feature_state = (): XStudioDataFeatureState => ({
     _flows: [],
     _entities: [],
   },
+});
+
+const empty_xapp_import_state = (): XStudioXAppImportState => ({
+  _open: false,
+  _file_name: "",
+  _file_size: null,
+  _package_ref: "",
+  _status: "idle",
+  _error: "",
+  _debug_details: "",
+  _inspect: null,
+  _preview: null,
 });
 
 let object_palette_session: XStudioObjectPaletteSession | null = null;
@@ -1153,6 +1712,11 @@ const runtime_skill_compact_field_value = (value: unknown) => {
     "_required",
     "_advanced",
     "_readonly",
+    "_capability",
+    "_group",
+    "_group_label",
+    "_style_path",
+    "_children",
   ]) {
     if (value[key] === undefined) continue;
     out[key] = typeof value[key] === "string"
@@ -1163,6 +1727,76 @@ const runtime_skill_compact_field_value = (value: unknown) => {
     out._options = runtime_skill_string_array(value._options, 12, 72);
   }
   return out;
+};
+
+const runtime_skill_compact_semantic_nodes = (
+  value: unknown,
+  depth = 0,
+): Record<string, any>[] | Record<string, any> | undefined => {
+  if (depth > 8) return undefined;
+  if (Array.isArray(value)) {
+    const nodes = value
+      .slice(0, 32)
+      .map(item => runtime_skill_compact_semantic_node(item, depth))
+      .filter((item): item is Record<string, any> => is_obj(item) && Object.keys(item).length > 0);
+    return nodes.length > 0 ? nodes : undefined;
+  }
+  if (is_obj(value)) {
+    const out: Record<string, any> = {};
+    for (const [key, child] of Object.entries(value).slice(0, 32)) {
+      const compacted = runtime_skill_compact_semantic_node(child, depth);
+      const compacted_key = runtime_skill_string(key, 80);
+      if (compacted && compacted_key) out[compacted_key] = compacted;
+    }
+    return Object.keys(out).length > 0 ? out : undefined;
+  }
+  return undefined;
+};
+
+const runtime_skill_compact_semantic_node = (value: unknown, depth = 0): Record<string, any> | undefined => {
+  if (!is_obj(value) || depth > 8) return undefined;
+  const out: Record<string, any> = {};
+
+  for (const key of [
+    "_id",
+    "_key",
+    "_name",
+    "_label",
+    "_title",
+    "_role",
+    "_kind",
+    "_path",
+    "_property_path",
+    "_target_path",
+    "_style_path",
+    "_style_object_path",
+    "_canonical_style_path",
+  ]) {
+    if (typeof value[key] === "string") {
+      const text = runtime_skill_string(value[key], 180);
+      if (text) out[key] = text;
+    }
+  }
+
+  if (Array.isArray(value._capabilities)) {
+    out._capabilities = runtime_skill_string_array(value._capabilities, 16, 80);
+  }
+  if (Array.isArray(value._actions)) {
+    const actions = value._actions
+      .slice(0, 16)
+      .map(action => runtime_skill_json_value(action))
+      .filter(action => action !== undefined);
+    if (actions.length > 0) out._actions = actions;
+  }
+
+  const children = runtime_skill_compact_semantic_nodes(value._children, depth + 1);
+  if (children) out._children = children;
+  const semantic_children = runtime_skill_compact_semantic_nodes(value._semantic_children, depth + 1);
+  if (semantic_children) out._semantic_children = semantic_children;
+  const slots = runtime_skill_compact_semantic_nodes(value._slots, depth + 1);
+  if (slots) out._slots = slots;
+
+  return Object.keys(out).length > 0 ? out : undefined;
 };
 
 const runtime_skill_compact_fields = (value: unknown) => {
@@ -1239,6 +1873,14 @@ const runtime_skill_compact_design = (value: unknown) => {
         ? { _insert_modes: runtime_skill_string_array(value._children._insert_modes, 8, 40) }
         : {}),
     };
+  }
+
+  if (Array.isArray(value._semantic_children) || is_obj(value._semantic_children)) {
+    out._semantic_children = runtime_skill_compact_semantic_nodes(value._semantic_children) ?? [];
+  }
+
+  if (Array.isArray(value._slots) || is_obj(value._slots)) {
+    out._slots = runtime_skill_compact_semantic_nodes(value._slots) ?? [];
   }
 
   const inspector = is_obj(value._inspector) ? value._inspector : null;
@@ -1421,6 +2063,17 @@ const runtime_component_skill_records = () => {
   return Array.from(records.values());
 };
 
+const runtime_registered_xui_type_names = () => {
+  const types = new Set<string>();
+  for (const record of runtime_component_skill_records()) {
+    for (const type of record._types) {
+      const normalized = type.trim().toLowerCase();
+      if (normalized) types.add(normalized);
+    }
+  }
+  return Array.from(types).sort(object_palette_compare);
+};
+
 const runtime_skill_add_unique = (
   out: XpellSkill[],
   seen: Set<string>,
@@ -1451,34 +2104,27 @@ const runtime_skill_compact_skill_array = (
 
 const runtime_skill_compact_module = (
   module_item: unknown,
-  component_records: Array<{ _skill: XpellSkill; _types: string[] }>,
+  object_types_by_id = new Map<string, string[]>(),
+  canonical_object_ids = new Set<string>(),
 ) => {
   if (!is_obj(module_item)) return null;
 
   const name = runtime_skill_string(module_item._name, 120);
   if (!name) return null;
 
-  const component_types_by_id = new Map(
-    component_records.map(record => [record._skill._id, record._types]),
-  );
   const skill_seen = new Set<string>();
-  const object_seen = new Set<string>();
+  const object_seen = new Set<string>(canonical_object_ids);
   const skills = runtime_skill_compact_skill_array(
     module_item._skills,
     skill_seen,
-    component_types_by_id,
+    object_types_by_id,
   );
   const objects: XpellSkill[] = [];
 
-  if (name === "xui") {
-    for (const record of component_records) {
-      runtime_skill_add_unique(objects, object_seen, record._skill);
-    }
-  }
   for (const skill of runtime_skill_compact_skill_array(
     module_item._objects,
     object_seen,
-    component_types_by_id,
+    object_types_by_id,
   )) {
     objects.push(skill);
   }
@@ -1489,7 +2135,7 @@ const runtime_skill_compact_module = (
   return out;
 };
 
-const runtime_skill_compact_snapshot = (raw_snapshot: unknown) => {
+export const runtime_skill_compact_snapshot = (raw_snapshot: unknown) => {
   const component_records = runtime_component_skill_records();
   const component_types_by_id = new Map(
     component_records.map(record => [record._skill._id, record._types]),
@@ -1516,18 +2162,15 @@ const runtime_skill_compact_snapshot = (raw_snapshot: unknown) => {
 
   if (Array.isArray(raw._modules)) {
     for (const module_item of raw._modules) {
-      const compact_module = runtime_skill_compact_module(module_item, component_records);
+      const compact_module = runtime_skill_compact_module(
+        module_item,
+        component_types_by_id,
+        object_seen,
+      );
       if (!compact_module?._name || module_seen.has(compact_module._name)) continue;
       module_seen.add(compact_module._name);
       modules.push(compact_module);
     }
-  }
-
-  if (!module_seen.has("xui") && component_skills.length > 0) {
-    modules.push({
-      _name: "xui",
-      _objects: component_skills,
-    });
   }
 
   const runtime_context: Record<string, any> = {
@@ -1674,6 +2317,7 @@ export function showObjectPalette(
 
   return new Promise<XpellSkill | null>((resolve) => {
     const search = XUI.getObject(STUDIO_OBJECT_PALETTE_SEARCH_ID) as any;
+    const object_id_input = XUI.getObject(STUDIO_OBJECT_PALETTE_ID_INPUT_ID) as any;
     const results = XUI.getObject(STUDIO_OBJECT_PALETTE_RESULTS_ID) as any;
     const close = XUI.getObject(STUDIO_OBJECT_PALETTE_CLOSE_ID) as any;
 
@@ -1690,12 +2334,16 @@ export function showObjectPalette(
       set_object_palette_visible(false);
 
       if (skill) {
+        const object_id = object_palette_text(
+          object_id_input?.getValue?.() ?? object_id_input?.dom?.value,
+        );
         _xlog.log("[xstudio] object palette selected", {
           _id: skill._id,
           _title: skill._title,
           _category: skill._design?._palette?._category,
+          _object_id: object_id,
         });
-        session.onSelect?.(skill);
+        session.onSelect?.(skill, object_id);
       }
 
       session.resolve(skill);
@@ -1737,7 +2385,7 @@ export function showObjectPalette(
 
       if (
         event.key === "Enter" &&
-        event.target === search.dom &&
+        (event.target === search.dom || event.target === object_id_input?.dom) &&
         visible_entries[0]
       ) {
         event.preventDefault();
@@ -1755,16 +2403,22 @@ export function showObjectPalette(
       cleanup: () => {
         search.dom?.removeEventListener?.("input", on_input);
         search.dom?.removeEventListener?.("keydown", on_keydown);
+        object_id_input?.dom?.removeEventListener?.("keydown", on_keydown);
         results.dom?.removeEventListener?.("keydown", on_keydown);
         close?.dom?.removeEventListener?.("click", on_close);
       },
     };
 
+    object_id_input?.dom?.addEventListener?.("keydown", on_keydown);
     search.dom?.addEventListener?.("input", on_input);
     search.dom?.addEventListener?.("keydown", on_keydown);
     results.dom?.addEventListener?.("keydown", on_keydown);
     close?.dom?.addEventListener?.("click", on_close);
 
+    object_id_input?.setValue?.("");
+    if (object_id_input?.dom && "value" in object_id_input.dom) {
+      object_id_input.dom.value = "";
+    }
     search.setValue?.("");
     if (search.dom && "value" in search.dom) {
       search.dom.value = "";
@@ -1811,6 +2465,10 @@ const to_result = (raw: any) => {
 
   return raw;
 };
+
+function normalize_studio_planner_version(value: unknown): XStudioPlannerVersion | null {
+  return value === "v1" || value === "v2" ? value : null;
+}
 
 export class XStudioModule extends XModule {
   static _name = "xstudio";
@@ -1921,10 +2579,14 @@ export class XStudioModule extends XModule {
   private _arrange_scroll_frame = 0;
   private _selected_object: XStudioSelectedObject | null = null;
   private _selected_object_data: Record<string, any> | null = null;
+  private _selected_object_owner_data: Record<string, any> | null = null;
   private _selected_object_pending_delete: XStudioSelectedObject | null = null;
   private _selected_object_pending_select_id = "";
   private _selected_object_json = "";
   private _selected_object_inspector_draft = empty_selected_object_inspector_draft();
+  private _selected_object_inspector_dirty = false;
+  private _selected_object_inspector_save_in_progress = false;
+  private _selected_object_inspector_deferred_refresh = false;
   private _selected_object_inspector_fields: XStudioSelectedObjectInspectorResolvedField[] = [];
   private _selected_object_inspector_sections: XStudioSelectedObjectInspectorSectionId[] = [
     ...STUDIO_SELECTED_OBJECT_FALLBACK_INSPECTOR_SECTIONS,
@@ -1974,6 +2636,10 @@ export class XStudioModule extends XModule {
   private _app_explorer_section_open: Record<XStudioAppExplorerSectionId, boolean> = {
     ...STUDIO_DEFAULT_APP_EXPLORER_SECTION_OPEN,
   };
+  private _app_actions_menu_open = false;
+  private _xapp_export_status = "";
+  private _xapp_import_state: XStudioXAppImportState = empty_xapp_import_state();
+  private _xapp_import_upload_seq = 0;
   private _data_feature_state: XStudioDataFeatureState = empty_data_feature_state();
   private _data_feature_field_seq = 1;
   private _data_feature_previous_portlet_visibility: Record<XStudioPortletId, boolean> | null = null;
@@ -5521,7 +6187,7 @@ export class XStudioModule extends XModule {
       this._cancel_arrange_mode();
       this._apply_left_sidebar_width_to_dom();
       this._bind_left_sidebar_resize_divider();
-      this._refresh_object_tree_for_current_view();
+      this._refresh_object_tree_for_current_view_or_defer();
       void this._refresh_app_explorer();
       void this._ensure_conversation_for_current_context();
       void this._load_project_memory_for_current_app("view-rendered");
@@ -5548,7 +6214,7 @@ export class XStudioModule extends XModule {
       if (!is_obj(evt)) return;
       if (evt._app_id !== this._client().getActiveAppId()) return;
       if (evt._env !== this._client().getActiveEnv()) return;
-      this._refresh_object_tree_for_current_view();
+      this._refresh_object_tree_for_current_view_or_defer();
       this._render_cached_app_explorer();
     });
 
@@ -5771,6 +6437,14 @@ export class XStudioModule extends XModule {
       void this._confirm_project_plan(payload);
     });
 
+    _xem.on("studio:project-plan-end", (payload: any) => {
+      void this._end_project_plan(payload);
+    });
+
+    _xem.on("studio:project-plan-resume", (payload: any) => {
+      void this._resume_project_plan(payload);
+    });
+
     _xem.on("studio:planning-question-toggle", (payload: any) => {
       this._toggle_planning_question_answer(payload);
     });
@@ -5962,7 +6636,7 @@ export class XStudioModule extends XModule {
     this._complete_generation_from_update(update);
     this._cancel_object_picker();
     this._cancel_arrange_mode();
-    this._refresh_object_tree_for_current_view();
+    this._refresh_object_tree_for_current_view_or_defer();
     void this._refresh_app_explorer();
   }
 
@@ -6903,10 +7577,27 @@ export class XStudioModule extends XModule {
     return snapshot._runtime_skills;
   }
 
+  private _initial_planning_planner_version(): XStudioPlannerVersion {
+    return normalize_studio_planner_version(
+      _xd.get(STUDIO_INITIAL_PLANNING_PLANNER_VERSION_XD_KEY),
+    ) ?? STUDIO_INITIAL_PLANNING_PLANNER_VERSION;
+  }
+
+  private _conversation_initial_planning_runtime_context() {
+    if (this._project_memory_stage() !== STUDIO_PLANNING_STAGE) return {};
+
+    return {
+      _stage: STUDIO_PLANNING_STAGE,
+      _planner_version: this._initial_planning_planner_version(),
+    };
+  }
+
   private _conversation_runtime_context() {
     const active_view_id = this._resolve_studio_target_view_id();
     const selected_object = this._conversation_selected_object_context();
     const active_recommendation = this._active_guide_recommendation();
+    const initial_planning_context =
+      this._conversation_initial_planning_runtime_context();
     const views = this._conversation_artifact_ids(_XD_KEYS.STUDIO_VIEWS);
     const flows = this._conversation_artifact_ids(_XD_KEYS.STUDIO_FLOWS);
     const modules = this._conversation_artifact_ids(
@@ -6920,6 +7611,7 @@ export class XStudioModule extends XModule {
     if (modules.length > 0) available_artifacts._modules = modules;
 
     return {
+      ...initial_planning_context,
       ...(active_view_id ? { _active_view_id: active_view_id } : {}),
       ...(selected_object ? { _selected_object: selected_object } : {}),
       ...(active_recommendation
@@ -7082,6 +7774,8 @@ export class XStudioModule extends XModule {
     this._log("analyze-message runtime context", {
       _active_view_id: runtime_context._active_view_id,
       _selected_object: runtime_context._selected_object,
+      _stage: runtime_context._stage,
+      _planner_version: runtime_context._planner_version,
     });
 
     this._log("analyze-message requested", {
@@ -9454,6 +10148,9 @@ export class XStudioModule extends XModule {
       return this._format_apply_view_edit_failure(result, command);
     }
 
+    const server_message = this._format_server_failure(result, "");
+    if (server_message) return server_message;
+
     if (is_obj(result)) {
       const message = result._error ?? result.error ?? result._message ?? result.message;
       if (typeof message === "string" && message.trim()) return message.trim();
@@ -9562,7 +10259,14 @@ export class XStudioModule extends XModule {
     action: XStudioIntentActionView,
     result: any,
   ) {
-    const view_id = this._resolve_studio_target_view_id();
+    const command = action._execution_payload;
+    const is_materialize_confirmed_plan =
+      is_obj(command) &&
+      command._module === "xvibe" &&
+      command._op === "materialize-confirmed-plan";
+    const view_id =
+      (is_materialize_confirmed_plan ? this._mutation_plan_result_view_id(result) : "") ||
+      this._resolve_studio_target_view_id();
     if (view_id && typeof this._xvm_client?.render_view === "function") {
       try {
         await this._xvm_client.render_view(view_id);
@@ -9575,7 +10279,6 @@ export class XStudioModule extends XModule {
       }
     }
 
-    this._refresh_object_tree_for_current_view();
     try {
       await this._refresh_app_explorer();
     } catch (err) {
@@ -9585,6 +10288,7 @@ export class XStudioModule extends XModule {
       });
     }
 
+    this._refresh_object_tree_for_current_view();
     if (view_id) await this._load_studio_current_view_json();
     this._render_project_memory_guide();
     this._log("intent action refreshed studio artifacts", {
@@ -10229,6 +10933,7 @@ export class XStudioModule extends XModule {
     const request = create_xstudio_artifact_request_view(message as any, {
       _key: this._conversation_artifact_request_key(message, index),
       _message_id: this._conversation_message_id(message, index),
+      _conversation_id: this._conversation_id,
     });
     if (this._should_suppress_guide_owned_artifact_request(message, request)) {
       return null;
@@ -10541,6 +11246,16 @@ export class XStudioModule extends XModule {
     return this._format_server_failure(result, "Project plan confirmation failed.");
   }
 
+  private _confirm_end_project_plan_request() {
+    if (typeof window === "undefined" || typeof window.confirm !== "function") {
+      return true;
+    }
+
+    return window.confirm(
+      "End planning and continue manually?\n\nThe current plan will be kept, but planning questions will stop and Conversation will return to normal editing.",
+    );
+  }
+
   private _parse_error_object_string(value: string) {
     const trimmed = value.trim();
     if (!trimmed || (!trimmed.startsWith("{") && !trimmed.startsWith("["))) return null;
@@ -10639,6 +11354,225 @@ export class XStudioModule extends XModule {
 
     return candidates.find((candidate): candidate is Record<string, any> => is_obj(candidate)) ??
       artifact_request;
+  }
+
+  private async _end_project_plan(payload?: any) {
+    const request = this._normalize_artifact_request_event_payload(payload);
+    if (!request) return;
+
+    if (request._artifact_type !== PROJECT_PLAN_ARTIFACT_TYPE) {
+      this._log("project plan end ignored: wrong artifact type", {
+        _artifact_type: request._artifact_type,
+        _message_id: request._message_id,
+      });
+      return;
+    }
+
+    if (this._conversation_action_status[request._request_key] === STUDIO_INTENT_ACTION_STATUS_RUNNING) {
+      return;
+    }
+
+    if (!this._confirm_end_project_plan_request()) return;
+
+    if (!this._conversation_app_id || !this._conversation_env || !this._conversation_id) {
+      const message = "No active conversation selected.";
+      this._set_conversation_action_status(
+        request._request_key,
+        STUDIO_INTENT_ACTION_STATUS_FAILED,
+        message,
+      );
+      this._write_studio_status(message);
+      this._error("project plan end failed", {
+        _message_id: request._message_id,
+        _error: message,
+      });
+      return;
+    }
+
+    this._set_conversation_action_status(
+      request._request_key,
+      STUDIO_INTENT_ACTION_STATUS_RUNNING,
+    );
+    this._write_studio_status("Ending planning...");
+    this._log("project plan end requested", {
+      _message_id: request._message_id,
+      _app_id: this._conversation_app_id,
+      _env: this._conversation_env,
+      _conversation_id: this._conversation_id,
+    });
+
+    const project_plan = this._project_plan_payload_from_artifact(request._artifact_request);
+    const params: Record<string, any> = {
+      _app_id: this._conversation_app_id,
+      _env: this._conversation_env,
+      _conversation_id: this._conversation_id,
+      ...(request._message_id ? { _message_id: request._message_id } : {}),
+      ...(project_plan ? { _project_plan: project_plan } : {}),
+      ...(request._artifact_request ? { _artifact_request: request._artifact_request } : {}),
+    };
+
+    try {
+      const result = await this._send_planning_command("end-planning", params);
+      if (!is_obj(result) || result._ok === false) {
+        const message = this._format_artifact_request_failure(result);
+        this._set_conversation_action_status(
+          request._request_key,
+          STUDIO_INTENT_ACTION_STATUS_FAILED,
+          message,
+        );
+        this._write_studio_status(message);
+        this._error("project plan end failed", {
+          _message_id: request._message_id,
+          _result: result,
+          _error: message,
+        });
+        await this._persist_conversation_artifact_status_and_reload(
+          request,
+          STUDIO_INTENT_ACTION_STATUS_FAILED,
+          message,
+          result,
+        );
+        return;
+      }
+
+      this._set_conversation_action_status(
+        request._request_key,
+        STUDIO_INTENT_ACTION_STATUS_DONE,
+      );
+      this._conversation_action_result[request._request_key] = result;
+      this._planning_question_multi_answers = {};
+      this._conversation_transient_messages = [];
+      this._write_studio_status("Planning ended. Conversation is ready for manual editing.");
+      this._log("project plan ended", {
+        _message_id: request._message_id,
+        _app_id: this._conversation_app_id,
+        _env: this._conversation_env,
+        _result: result,
+      });
+      await this._persist_conversation_artifact_status_and_reload(
+        request,
+        STUDIO_INTENT_ACTION_STATUS_DONE,
+        "",
+        result,
+      );
+      await this._load_project_memory_for_current_app("project-plan-ended", {
+        _force: true,
+      });
+      this._render_conversation_messages();
+    } catch (err) {
+      const message = this._format_server_failure(err, "End planning failed.");
+      this._set_conversation_action_status(
+        request._request_key,
+        STUDIO_INTENT_ACTION_STATUS_FAILED,
+        message,
+      );
+      this._write_studio_status(message);
+      this._error("project plan end failed", {
+        _message_id: request._message_id,
+        _error: message,
+        _raw_error: to_err(err),
+      });
+      await this._persist_conversation_artifact_status_and_reload(
+        request,
+        STUDIO_INTENT_ACTION_STATUS_FAILED,
+        message,
+      );
+    }
+  }
+
+  private async _resume_project_plan(payload?: any) {
+    const request = this._normalize_artifact_request_event_payload(payload);
+    if (!request) return;
+
+    if (request._artifact_type !== PROJECT_PLAN_ARTIFACT_TYPE) {
+      this._log("project plan resume ignored: wrong artifact type", {
+        _artifact_type: request._artifact_type,
+        _message_id: request._message_id,
+      });
+      return;
+    }
+
+    if (this._conversation_action_status[request._request_key] === STUDIO_INTENT_ACTION_STATUS_RUNNING) {
+      return;
+    }
+
+    if (!this._conversation_app_id || !this._conversation_env || !this._conversation_id) {
+      const message = "No active conversation selected.";
+      this._set_conversation_action_status(
+        request._request_key,
+        STUDIO_INTENT_ACTION_STATUS_FAILED,
+        message,
+      );
+      this._write_studio_status(message);
+      this._error("project plan resume failed", {
+        _message_id: request._message_id,
+        _error: message,
+      });
+      return;
+    }
+
+    this._set_conversation_action_status(
+      request._request_key,
+      STUDIO_INTENT_ACTION_STATUS_RUNNING,
+    );
+    this._write_studio_status("Resuming planning...");
+    const params: Record<string, any> = {
+      _app_id: this._conversation_app_id,
+      _env: this._conversation_env,
+      _conversation_id: this._conversation_id,
+      ...(request._message_id ? { _message_id: request._message_id } : {}),
+    };
+
+    try {
+      const result = await this._send_planning_command("resume-planning", params);
+      if (!is_obj(result) || result._ok === false) {
+        const message = this._format_artifact_request_failure(result);
+        this._set_conversation_action_status(
+          request._request_key,
+          STUDIO_INTENT_ACTION_STATUS_FAILED,
+          message,
+        );
+        this._write_studio_status(message);
+        await this._persist_conversation_artifact_status_and_reload(
+          request,
+          STUDIO_INTENT_ACTION_STATUS_FAILED,
+          message,
+          result,
+        );
+        return;
+      }
+
+      this._set_conversation_action_status(
+        request._request_key,
+        STUDIO_INTENT_ACTION_STATUS_SUGGESTED,
+      );
+      this._conversation_action_result[request._request_key] = result;
+      this._write_studio_status("Planning resumed.");
+      await this._update_conversation_action_status(
+        request as any,
+        STUDIO_INTENT_ACTION_STATUS_SUGGESTED,
+        "",
+        result,
+      );
+      await this._load_project_memory_for_current_app("project-plan-resumed", {
+        _force: true,
+      });
+      await this._load_conversation_messages();
+      this._render_conversation_messages();
+    } catch (err) {
+      const message = this._format_server_failure(err, "Resume planning failed.");
+      this._set_conversation_action_status(
+        request._request_key,
+        STUDIO_INTENT_ACTION_STATUS_FAILED,
+        message,
+      );
+      this._write_studio_status(message);
+      await this._persist_conversation_artifact_status_and_reload(
+        request,
+        STUDIO_INTENT_ACTION_STATUS_FAILED,
+        message,
+      );
+    }
   }
 
   private async _confirm_project_plan(payload?: any) {
@@ -10817,6 +11751,8 @@ export class XStudioModule extends XModule {
     if (is_obj(result?.error)) return result.error;
     if (is_obj(result?._result?._error)) return result._result._error;
     if (is_obj(result?.result?.error)) return result.result.error;
+    if (is_obj(result?._result) && typeof result._result._code === "string") return result._result;
+    if (is_obj(result) && typeof result._code === "string") return result;
     if (is_obj(result)) {
       const parsed = typeof result.message === "string"
         ? this._parse_error_object_string(result.message)
@@ -11331,9 +12267,12 @@ export class XStudioModule extends XModule {
     const refresh = is_obj(source._refresh ?? source.refresh)
       ? source._refresh ?? source.refresh
       : null;
+    const refresh_app = is_obj(refresh?._app ?? refresh?.app)
+      ? refresh?._app ?? refresh?.app
+      : null;
     const app = is_obj(source._app ?? source.app)
       ? source._app ?? source.app
-      : null;
+      : refresh_app;
     const app_meta = is_obj(app?._meta ?? app?.meta)
       ? app?._meta ?? app?.meta
       : null;
@@ -11345,12 +12284,16 @@ export class XStudioModule extends XModule {
       : null;
 
     const candidates = [
+      refresh?._primary_view_id,
+      refresh?.primary_view_id,
       refresh?._default_view_id,
       refresh?.default_view_id,
       refresh?._active_view_id,
       refresh?.active_view_id,
       refresh?._view_id,
       refresh?.view_id,
+      source._primary_view_id,
+      source.primary_view_id,
       source._default_view_id,
       source.default_view_id,
       source._active_view_id,
@@ -11887,6 +12830,31 @@ export class XStudioModule extends XModule {
   private _toggle_project_plan_review(payload?: any) {
     const request = this._normalize_artifact_request_event_payload(payload);
     if (!request || request._artifact_type !== PROJECT_PLAN_ARTIFACT_TYPE) return;
+    const event_conversation_id =
+      typeof (request as any)._conversation_id === "string"
+        ? (request as any)._conversation_id.trim()
+        : "";
+    if (event_conversation_id && event_conversation_id !== this._conversation_id) {
+      this._log("project plan review toggle ignored: conversation mismatch", {
+        _message_id: request._message_id,
+        _event_conversation_id: event_conversation_id,
+        _conversation_id: this._conversation_id,
+      });
+      return;
+    }
+
+    const message_id = request._message_id.trim();
+    if (
+      message_id &&
+      !this._conversation_messages.some((message) => this._conversation_message_id(message, -1) === message_id) &&
+      !this._conversation_transient_messages.some((message) => this._conversation_message_id(message, -1) === message_id)
+    ) {
+      this._log("project plan review toggle ignored: message not in current conversation", {
+        _message_id: message_id,
+        _conversation_id: this._conversation_id,
+      });
+      return;
+    }
 
     this._project_plan_expanded[request._request_key] =
       this._project_plan_expanded[request._request_key] !== true;
@@ -15498,8 +16466,1174 @@ export class XStudioModule extends XModule {
     });
   }
 
+  private _safe_xapp_filename(app_id: string) {
+    const safe = String(app_id || "app")
+      .trim()
+      .replace(/[^a-zA-Z0-9_-]+/g, "-")
+      .replace(/^-+|-+$/g, "");
+    return `${safe || "app"}.xapp`;
+  }
+
+  private _redact_xapp_internal_paths(value: any): any {
+    if (Array.isArray(value)) return value.map((item) => this._redact_xapp_internal_paths(item));
+    if (!is_obj(value)) return value;
+
+    const out: Record<string, any> = {};
+    for (const [key, raw] of Object.entries(value)) {
+      const lower = key.toLowerCase();
+      if (
+        typeof raw === "string" &&
+        (
+          lower.includes("package_ref") ||
+          lower.includes("package-reference") ||
+          lower.includes("reference") ||
+          lower.endsWith("token") ||
+          lower.includes("_token")
+        )
+      ) {
+        out[key] = "[package reference redacted]";
+      } else if (
+        lower.includes("base64") &&
+        typeof raw === "string"
+      ) {
+        out[key] = "[file bytes omitted]";
+      } else if (
+        lower.includes("path") &&
+        typeof raw === "string" &&
+        (raw.includes("/") || raw.includes("\\"))
+      ) {
+        out[key] = "[server path redacted]";
+      } else {
+        out[key] = this._redact_xapp_internal_paths(raw);
+      }
+    }
+    return out;
+  }
+
+  private _xapp_debug_details(value: any) {
+    if (value === undefined || value === null || value === "") return "";
+    try {
+      return JSON.stringify(this._redact_xapp_internal_paths(value), null, 2);
+    } catch {
+      return String(value);
+    }
+  }
+
+  private _xapp_safe_debug_params(params: Record<string, any>) {
+    return this._redact_xapp_internal_paths(params) as Record<string, any>;
+  }
+
+  private _xapp_error_text(err: any) {
+    return to_err(this._redact_xapp_internal_paths(err));
+  }
+
+  private _xapp_file_size_label(size: number | null) {
+    if (typeof size !== "number" || !Number.isFinite(size) || size < 0) return "";
+    const units = ["B", "KB", "MB", "GB"];
+    let value = size;
+    let unit = 0;
+    while (value >= 1024 && unit < units.length - 1) {
+      value /= 1024;
+      unit += 1;
+    }
+    return unit === 0 ? `${value} ${units[unit]}` : `${value.toFixed(value >= 10 ? 1 : 2)} ${units[unit]}`;
+  }
+
+  private _xapp_package_ref_from_result(result: any) {
+    const candidates = [
+      result?._package_ref,
+      result?._package_reference,
+      result?._ref,
+    ];
+    for (const value of candidates) {
+      if (typeof value === "string" && value.trim()) return value.trim();
+    }
+    return "";
+  }
+
+  private _array_buffer_to_base64(buffer: ArrayBuffer) {
+    if (typeof btoa !== "function") {
+      throw new Error("Browser package upload encoding is unavailable.");
+    }
+    const bytes = new Uint8Array(buffer);
+    const chunk_size = 0x8000;
+    let binary = "";
+    for (let offset = 0; offset < bytes.length; offset += chunk_size) {
+      const chunk = bytes.subarray(offset, offset + chunk_size);
+      binary += String.fromCharCode(...chunk);
+    }
+    return btoa(binary);
+  }
+
+  private async _xapp_file_to_base64(file: any) {
+    if (typeof file?.arrayBuffer === "function") {
+      const buffer = await file.arrayBuffer();
+      return this._array_buffer_to_base64(buffer);
+    }
+    if (typeof FileReader === "undefined") {
+      throw new Error("Browser package upload is unavailable.");
+    }
+    return new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onerror = () => reject(new Error("Package file could not be read."));
+      reader.onload = () => {
+        const result = String(reader.result ?? "");
+        const comma = result.indexOf(",");
+        resolve(comma >= 0 ? result.slice(comma + 1) : result);
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  private _set_xapp_export_status(status: string) {
+    this._xapp_export_status = status;
+    this._render_cached_app_explorer();
+    if (status) this._write_studio_status(status);
+  }
+
+  private _download_xapp_url(url: string, filename: string) {
+    if (typeof document === "undefined") {
+      throw new Error("Browser download is unavailable.");
+    }
+    const link = document.createElement("a") as HTMLAnchorElement;
+    link.href = url;
+    link.download = filename;
+    link.rel = "noopener";
+    link.style.display = "none";
+    document.body?.appendChild?.(link);
+    if (typeof link.click === "function") {
+      link.click();
+    } else {
+      link.dispatchEvent?.({ type: "click" } as any);
+    }
+    link.remove?.();
+  }
+
+  private _xapp_export_expected_size(result: any) {
+    const values = [
+      result?._size,
+      result?._download?._size,
+      result?._content_length,
+      result?._contentLength,
+    ];
+    for (const value of values) {
+      if (typeof value === "number" && Number.isFinite(value) && value >= 0) return value;
+      if (typeof value === "string" && value.trim()) {
+        const parsed = Number(value.trim());
+        if (Number.isFinite(parsed) && parsed >= 0) return parsed;
+      }
+    }
+    return null;
+  }
+
+  private _xapp_expected_size_from_header(value: unknown) {
+    if (typeof value !== "string" || !value.trim()) return null;
+    const parsed = Number(value.trim());
+    return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
+  }
+
+  private _xapp_export_content_type(result: any) {
+    const value =
+      typeof result?._content_type === "string" && result._content_type.trim()
+        ? result._content_type.trim()
+        : typeof result?._download?._content_type === "string" && result._download._content_type.trim()
+          ? result._download._content_type.trim()
+          : "";
+    return value || "application/vnd.xpell.xapp+zip";
+  }
+
+  private _xapp_download_url_from_result(result: any) {
+    const candidates = [
+      result?._download_url,
+      result?._download?._url,
+      result?._package_url,
+      result?._url,
+    ];
+    for (const value of candidates) {
+      if (typeof value === "string" && value.trim()) return value.trim();
+    }
+    return "";
+  }
+
+  private _xapp_base64_from_result(result: any) {
+    const candidates = [
+      result?._package_base64,
+      result?._bytes_base64,
+      result?._base64,
+      result?._download?._bytes_base64,
+    ];
+    for (const value of candidates) {
+      if (typeof value === "string" && value.trim()) return value.trim();
+    }
+    return "";
+  }
+
+  private _xapp_binary_from_result(result: any): Uint8Array | null {
+    const candidates = [
+      result?._bytes,
+      result?._binary,
+      result?._array_buffer,
+      result?._arrayBuffer,
+      result?._download?._bytes,
+    ];
+    for (const value of candidates) {
+      if (value instanceof Uint8Array) return value;
+      if (typeof ArrayBuffer !== "undefined" && value instanceof ArrayBuffer) return new Uint8Array(value);
+      if (Array.isArray(value) && value.every((item) => Number.isInteger(item) && item >= 0 && item <= 255)) {
+        return new Uint8Array(value);
+      }
+    }
+    return null;
+  }
+
+  private _xapp_export_transfer_mode(result: any) {
+    if (this._xapp_download_url_from_result(result)) return "download_url";
+    if (this._xapp_base64_from_result(result)) return "base64";
+    if (this._xapp_binary_from_result(result)) return "binary";
+    if (typeof Blob !== "undefined" && result?._blob instanceof Blob) return "blob";
+    return "none";
+  }
+
+  private _log_xapp_export_transfer_received(result: any, filename: string) {
+    this._log("[xstudio/xapp] export transfer received", {
+      _filename: filename,
+      _mode: this._xapp_export_transfer_mode(result),
+      _expected_size: this._xapp_export_expected_size(result),
+      _has_download_url: Boolean(this._xapp_download_url_from_result(result)),
+      _has_base64: Boolean(this._xapp_base64_from_result(result)),
+      _has_binary: Boolean(this._xapp_binary_from_result(result) || (typeof Blob !== "undefined" && result?._blob instanceof Blob)),
+    });
+  }
+
+  private _is_xapp_zip_bytes(bytes: Uint8Array) {
+    if (bytes.length < 4) return false;
+    if (bytes[0] !== 0x50 || bytes[1] !== 0x4b) return false;
+    const signature = bytes[2] << 8 | bytes[3];
+    return signature === 0x0304 || signature === 0x0506 || signature === 0x0708;
+  }
+
+  private _assert_xapp_export_bytes(bytes: Uint8Array, filename: string, expected_size: number | null) {
+    if (expected_size !== null && bytes.byteLength !== expected_size) {
+      throw new Error(
+        `E_XSTUDIO_XAPP_EXPORT_INVALID_PAYLOAD: Export transfer size mismatch for ${filename}. Expected ${expected_size} bytes, received ${bytes.byteLength}.`,
+      );
+    }
+    if (!this._is_xapp_zip_bytes(bytes)) {
+      throw new Error(
+        `E_XSTUDIO_XAPP_EXPORT_INVALID_PAYLOAD: Export transfer did not contain .xapp ZIP bytes for ${filename}.`,
+      );
+    }
+  }
+
+  private _base64_to_bytes(base64: string) {
+    if (typeof atob !== "function") {
+      throw new Error("Browser file saving is unavailable.");
+    }
+    const clean = base64.includes(",") ? base64.slice(base64.indexOf(",") + 1) : base64;
+    const binary = atob(clean);
+    const bytes = new Uint8Array(binary.length);
+    for (let index = 0; index < binary.length; index += 1) {
+      bytes[index] = binary.charCodeAt(index);
+    }
+    return bytes;
+  }
+
+  private _bytes_to_xapp_blob(bytes: Uint8Array, mime = "application/vnd.xpell.xapp+zip") {
+    if (typeof Blob === "undefined") {
+      throw new Error("Browser file saving is unavailable.");
+    }
+    const copy = new Uint8Array(bytes.byteLength);
+    copy.set(bytes);
+    return new Blob([copy.buffer], { type: mime });
+  }
+
+  private _download_xapp_blob(blob: Blob, filename: string) {
+    const nav = typeof navigator !== "undefined" ? navigator as any : {};
+    if (typeof nav.msSaveOrOpenBlob === "function") {
+      nav.msSaveOrOpenBlob(blob, filename);
+      return;
+    }
+    if (typeof URL === "undefined" || typeof URL.createObjectURL !== "function") {
+      throw new Error("Browser file saving is unavailable.");
+    }
+    const url = URL.createObjectURL(blob);
+    try {
+      this._download_xapp_url(url, filename);
+    } finally {
+      setTimeout(() => URL.revokeObjectURL?.(url), 0);
+    }
+  }
+
+  private _xapp_transfer_base_url() {
+    const client = this._client() as any;
+    const wormhole_url = typeof client?._wormhole_url === "string" ? client._wormhole_url.trim() : "";
+    if (!wormhole_url) {
+      return typeof window !== "undefined" && typeof window.location?.href === "string"
+        ? window.location.href
+        : "";
+    }
+    try {
+      const parsed = new URL(wormhole_url, typeof window !== "undefined" ? window.location?.href : undefined);
+      parsed.protocol = parsed.protocol === "wss:" ? "https:" : parsed.protocol === "ws:" ? "http:" : parsed.protocol;
+      parsed.pathname = "/";
+      parsed.search = "";
+      parsed.hash = "";
+      return parsed.toString();
+    } catch {
+      return typeof window !== "undefined" && typeof window.location?.href === "string"
+        ? window.location.href
+        : "";
+    }
+  }
+
+  private _resolve_xapp_transfer_url(url: string) {
+    if (/^https?:\/\//iu.test(url)) return url;
+    const base = this._xapp_transfer_base_url();
+    if (!base) return url;
+    return new URL(url, base).toString();
+  }
+
+  private async _fetch_xapp_transfer_bytes(url: string) {
+    if (typeof fetch !== "function") {
+      throw new Error("Browser binary download is unavailable.");
+    }
+    const resolved_url = this._resolve_xapp_transfer_url(url);
+    const response = await fetch(resolved_url);
+    if (!response?.ok) {
+      throw new Error(`E_XSTUDIO_XAPP_EXPORT_DOWNLOAD_FAILED: Export download failed with HTTP ${response?.status ?? "unknown"}.`);
+    }
+    if (typeof response.arrayBuffer !== "function") {
+      throw new Error("E_XSTUDIO_XAPP_EXPORT_INVALID_PAYLOAD: Export download response is not binary-readable.");
+    }
+    const expected_size = this._xapp_expected_size_from_header(
+      typeof response.headers?.get === "function" ? response.headers.get("content-length") : null,
+    );
+    return {
+      _bytes: new Uint8Array(await response.arrayBuffer()),
+      _expected_size: expected_size,
+    };
+  }
+
+  private async _blob_to_xapp_bytes(blob: Blob) {
+    if (typeof blob.arrayBuffer !== "function") {
+      throw new Error("E_XSTUDIO_XAPP_EXPORT_INVALID_PAYLOAD: Export Blob is not binary-readable.");
+    }
+    return new Uint8Array(await blob.arrayBuffer());
+  }
+
+  private async _prepare_exported_xapp_blob(result: any, filename: string) {
+    let expected_size = this._xapp_export_expected_size(result);
+    const content_type = this._xapp_export_content_type(result);
+    this._log_xapp_export_transfer_received(result, filename);
+
+    const direct_url = this._xapp_download_url_from_result(result);
+    let bytes: Uint8Array | null = null;
+
+    if (direct_url) {
+      const transfer = await this._fetch_xapp_transfer_bytes(direct_url);
+      bytes = transfer._bytes;
+      if (transfer._expected_size !== null) {
+        if (expected_size !== null && expected_size !== transfer._expected_size) {
+          throw new Error(
+            `E_XSTUDIO_XAPP_EXPORT_INVALID_PAYLOAD: Export transfer size metadata mismatch for ${filename}. Expected ${expected_size} bytes, transfer declared ${transfer._expected_size}.`,
+          );
+        }
+        if (expected_size === null) expected_size = transfer._expected_size;
+      }
+    } else {
+      const base64 = this._xapp_base64_from_result(result);
+      if (base64) {
+        bytes = this._base64_to_bytes(base64);
+      } else {
+        bytes = this._xapp_binary_from_result(result);
+      }
+    }
+
+    if (typeof Blob !== "undefined" && result?._blob instanceof Blob) {
+      bytes = await this._blob_to_xapp_bytes(result._blob);
+    }
+
+    if (!bytes) {
+      throw new Error("E_XSTUDIO_XAPP_EXPORT_INVALID_PAYLOAD: Export package is ready, but the server did not return a binary .xapp transfer.");
+    }
+
+    this._assert_xapp_export_bytes(bytes, filename, expected_size);
+    const blob = this._bytes_to_xapp_blob(bytes, content_type);
+    this._log("[xstudio/xapp] export blob prepared", {
+      _filename: filename,
+      _size: blob.size,
+      _zip_magic_ok: true,
+    });
+    return blob;
+  }
+
+  private async _save_exported_xapp_package(result: any, filename: string) {
+    const blob = await this._prepare_exported_xapp_blob(result, filename);
+    this._download_xapp_blob(blob, filename);
+  }
+
+  private async _export_current_app_xapp() {
+    const app_id = this._client().getActiveAppId();
+    const env = this._client().getActiveEnv();
+    if (!app_id) {
+      this._set_xapp_export_status("Export failed: No active app selected.");
+      return false;
+    }
+    if (!env) {
+      this._set_xapp_export_status("Export failed: No active environment selected.");
+      return false;
+    }
+
+    const filename = this._safe_xapp_filename(app_id);
+    this._app_actions_menu_open = false;
+    this._set_xapp_export_status("Preparing package");
+    this._log("xapp export requested", { _app_id: app_id, _env: env });
+
+    try {
+      const result = await this._send_server_xvm_command("export-app", {
+        _app_id: app_id,
+        _env: env,
+      }) as Record<string, any>;
+      await this._save_exported_xapp_package(result, filename);
+      this._set_xapp_export_status("Export complete");
+      this._log("xapp export completed", {
+        _app_id: app_id,
+        _env: env,
+        _filename: filename,
+        _sha256: result?._sha256,
+      });
+      return true;
+    } catch (err) {
+      const message = `Export failed: ${to_err(err)}`;
+      this._set_xapp_export_status(message);
+      this._error("xapp export failed", {
+        _app_id: app_id,
+        _env: env,
+        _error: to_err(err),
+      });
+      return false;
+    }
+  }
+
+  private _xapp_import_target_label() {
+    const env = this._client().getActiveEnv() || "default";
+    const inspected_app_id =
+      typeof this._xapp_import_state._preview?._target_app_id === "string" &&
+        this._xapp_import_state._preview._target_app_id.trim()
+        ? this._xapp_import_state._preview._target_app_id.trim()
+        : typeof this._xapp_import_state._inspect?._app?._app_id === "string" &&
+          this._xapp_import_state._inspect._app._app_id.trim()
+          ? this._xapp_import_state._inspect._app._app_id.trim()
+          : this._client().getActiveAppId() || "app";
+    return `Import into: ${inspected_app_id} / ${env}`;
+  }
+
+  private _open_xapp_import_dialog() {
+    this._app_actions_menu_open = false;
+    this._reset_xapp_import_state(true);
+    this._render_cached_app_explorer();
+    const dialog = XUI.getObject(STUDIO_APP_EXPLORER_IMPORT_DIALOG_ID) as any;
+    dialog?.show?.();
+    this._render_xapp_import_dialog();
+    queueMicrotask(() => {
+      const input = XUI.getObject(STUDIO_APP_EXPLORER_IMPORT_FILE_ID) as any;
+      input?.dom?.focus?.();
+    });
+  }
+
+  private async _hide_xapp_import_dialog() {
+    if (this._xapp_import_state._status === "importing") return;
+    const package_ref = this._xapp_import_state._package_ref;
+    this._reset_xapp_import_state(false);
+    this._reset_xapp_import_file_control();
+    const dialog = XUI.getObject(STUDIO_APP_EXPLORER_IMPORT_DIALOG_ID) as any;
+    dialog?.hide?.();
+    this._render_xapp_import_dialog();
+    if (package_ref) await this._discard_xapp_import_package_ref(package_ref);
+  }
+
+  private async _discard_xapp_import_package_ref(package_ref = this._xapp_import_state._package_ref) {
+    if (!package_ref) return false;
+    try {
+      await this._send_server_xvm_command(
+        "discard-app-package",
+        { _package_ref: package_ref },
+        { _debug_params: { _package_ref: "[package reference redacted]" } },
+      );
+      return true;
+    } catch (err) {
+      this._debug_log("xapp package discard skipped or failed", {
+        _error: this._xapp_error_text(err),
+      });
+      return false;
+    }
+  }
+
+  private _xapp_upload_debug_params(file_name: string, file_size: number | null, content_type: string) {
+    return {
+      _file_name: file_name,
+      _size: file_size,
+      _content_type: content_type,
+      _bytes_base64: "[file bytes omitted]",
+    };
+  }
+
+  private _xapp_event_from_handler_args(args: any[]) {
+    for (const value of args) {
+      if (
+        value?.target?.files ||
+        value?.currentTarget?.files ||
+        value?.dataTransfer?.files ||
+        value?.files ||
+        value?._files
+      ) {
+        return value;
+      }
+    }
+    return args[args.length - 1] ?? null;
+  }
+
+  private _xapp_files_from_selection_event(event?: any) {
+    const files =
+      event?.target?.files ??
+      event?.currentTarget?.files ??
+      event?.dataTransfer?.files ??
+      event?.files ??
+      event?._files ??
+      null;
+    if (!files) return [];
+    try {
+      return Array.from(files as ArrayLike<any>);
+    } catch {
+      return [];
+    }
+  }
+
+  private _xapp_selection_meta(event?: any, file?: any) {
+    const files = this._xapp_files_from_selection_event(event);
+    const selected = file ?? files[0] ?? null;
+    return {
+      _file_count: files.length,
+      ...(selected
+        ? {
+          _file_name: typeof selected.name === "string" ? selected.name : "",
+          _size: typeof selected.size === "number" && Number.isFinite(selected.size) ? selected.size : null,
+          _content_type: typeof selected.type === "string" ? selected.type : "",
+        }
+        : {}),
+    };
+  }
+
+  private _reset_xapp_import_file_control() {
+    const input = XUI.getObject(STUDIO_APP_EXPLORER_IMPORT_FILE_ID) as any;
+    const dom = input?.dom;
+    if (dom && typeof dom === "object" && "value" in dom) {
+      try {
+        dom.value = "";
+      } catch {
+        // Keep reset best-effort; state clearing is authoritative.
+      }
+    }
+  }
+
+  private async _upload_xapp_import_file(file: any, upload_seq: number) {
+    const file_name =
+      typeof file?.name === "string" && file.name.trim()
+        ? file.name.trim()
+        : "Selected package";
+    const file_size =
+      typeof file?.size === "number" && Number.isFinite(file.size)
+        ? file.size
+        : null;
+    const content_type =
+      typeof file?.type === "string" && file.type.trim()
+        ? file.type.trim()
+        : "application/vnd.xpell.xapp+zip";
+
+    this._log("[xstudio/xapp] upload begin", {
+      _file_name: file_name,
+      _size: file_size,
+      _content_type: content_type,
+      _file_count: 1,
+    });
+
+    try {
+      const bytes_base64 = await this._xapp_file_to_base64(file);
+      if (upload_seq !== this._xapp_import_upload_seq) return false;
+      const result = await this._send_server_xvm_command(
+        "upload-app-package",
+        {
+          _file_name: file_name,
+          _size: file_size,
+          _content_type: content_type,
+          _bytes_base64: bytes_base64,
+        },
+        { _debug_params: this._xapp_upload_debug_params(file_name, file_size, content_type) },
+      ) as Record<string, any>;
+      if (upload_seq !== this._xapp_import_upload_seq) {
+        const stale_ref = this._xapp_package_ref_from_result(result);
+        if (stale_ref) void this._discard_xapp_import_package_ref(stale_ref);
+        return false;
+      }
+      const package_ref = this._xapp_package_ref_from_result(result);
+      if (!package_ref) {
+        throw new Error("Upload completed, but XNode did not return a package reference.");
+      }
+      this._xapp_import_state = {
+        ...this._xapp_import_state,
+        _package_ref: package_ref,
+        _status: "uploaded",
+        _error: "",
+        _debug_details: "",
+      };
+      this._render_xapp_import_dialog();
+      this._write_studio_status("Package uploaded");
+      return true;
+    } catch (err) {
+      if (upload_seq !== this._xapp_import_upload_seq) return false;
+      const error_text = this._xapp_error_text(err);
+      const message = `Upload failed: ${error_text}`;
+      this._xapp_import_state = {
+        ...this._xapp_import_state,
+        _package_ref: "",
+        _status: "failed",
+        _error: message,
+        _debug_details: this._xapp_debug_details(err),
+        _inspect: null,
+        _preview: null,
+      };
+      this._render_xapp_import_dialog();
+      this._write_studio_status(message);
+      this._error("xapp upload failed", { _error: error_text });
+      this._reset_xapp_import_file_control();
+      return false;
+    }
+  }
+
+  private _select_xapp_import_file(event?: any) {
+    this._log("[xstudio/xapp] file input change", this._xapp_selection_meta(event));
+    const files = this._xapp_files_from_selection_event(event);
+    const file = files[0] ?? null;
+    const previous_ref = this._xapp_import_state._package_ref;
+    this._xapp_import_upload_seq += 1;
+    if (previous_ref) void this._discard_xapp_import_package_ref(previous_ref);
+    if (!file) {
+      this._xapp_import_state = {
+        ...this._xapp_import_state,
+        _file_name: "",
+        _file_size: null,
+        _package_ref: "",
+        _status: "idle",
+        _error: "",
+        _debug_details: "",
+        _inspect: null,
+        _preview: null,
+      };
+      this._render_xapp_import_dialog();
+      return;
+    }
+    this._log("[xstudio/xapp] file selected", this._xapp_selection_meta(event, file));
+    const file_name =
+      typeof file?.name === "string" && file.name.trim()
+        ? file.name.trim()
+        : "Selected package";
+    const file_size =
+      typeof file?.size === "number" && Number.isFinite(file.size)
+        ? file.size
+        : null;
+    this._xapp_import_state = {
+      ...this._xapp_import_state,
+      _file_name: file_name,
+      _file_size: file_size,
+      _package_ref: "",
+      _status: "uploading",
+      _error: "",
+      _debug_details: "",
+      _inspect: null,
+      _preview: null,
+    };
+    this._render_xapp_import_dialog();
+    this._write_studio_status("Uploading package");
+    void this._upload_xapp_import_file(file, this._xapp_import_upload_seq);
+  }
+
+  private _reset_xapp_import_state(open = false, status: XStudioXAppImportStatus = "idle") {
+    this._xapp_import_upload_seq += 1;
+    this._xapp_import_state = {
+      ...empty_xapp_import_state(),
+      _open: open,
+      _status: status,
+    };
+  }
+
+  private _complete_xapp_import_state() {
+    this._xapp_import_upload_seq += 1;
+    this._xapp_import_state = {
+      ...empty_xapp_import_state(),
+      _open: true,
+      _status: "completed",
+    };
+  }
+
+  private _xapp_ref_params(extra: Record<string, any> = {}) {
+    return {
+      _package_ref: this._xapp_import_state._package_ref,
+      ...extra,
+    };
+  }
+
+  private _xapp_ref_debug_params(extra: Record<string, any> = {}) {
+    return this._xapp_safe_debug_params(this._xapp_ref_params(extra));
+  }
+
+  private _xapp_status_class() {
+    const status = this._xapp_import_state._status;
+    return [
+      "xstudio-xapp-status",
+      status === "failed" ? "xstudio-xapp-status-error" : "",
+      status === "completed" ? "xstudio-xapp-status-success" : "",
+    ].filter(Boolean).join(" ");
+  }
+
+  private _xapp_selected_package_view() {
+    const state = this._xapp_import_state;
+    if (!state._file_name) return null;
+    const size_label = this._xapp_file_size_label(state._file_size);
+    const upload_status =
+      state._status === "uploading" ? "Uploading package" :
+        state._status === "uploaded" || state._status === "inspecting" || state._status === "ready" || state._status === "importing" ? "Package uploaded" :
+          state._status === "failed" ? state._error || "Upload failed" :
+            "Selected";
+    return {
+      _type: "view",
+      class: "xstudio-xapp-selected-package",
+      _children: [
+        { _type: "label", class: "xstudio-xapp-section-title", _text: "Selected package" },
+        { _type: "label", _text: `Filename: ${state._file_name}` },
+        ...(size_label ? [{ _type: "label", _text: `Size: ${size_label}` }] : []),
+        { _type: "label", _text: `Upload status: ${upload_status}` },
+      ],
+    };
+  }
+
+  private _xapp_manifest_files(manifest: any) {
+    return Array.isArray(manifest?._content?._files) ? manifest._content._files : [];
+  }
+
+  private _xapp_manifest_count(manifest: any, kinds: string[]) {
+    const wanted = new Set(kinds);
+    return this._xapp_manifest_files(manifest)
+      .filter((file: any) => wanted.has(String(file?._kind ?? "")))
+      .length;
+  }
+
+  private _xapp_change_list(
+    changes: any,
+    group: "_views" | "_flows" | "_entities" | "_public_files",
+    kind: "_added" | "_modified" | "_deleted",
+  ) {
+    const values = changes?.[group]?.[kind];
+    return Array.isArray(values) ? values.map((item) => String(item)).filter(Boolean) : [];
+  }
+
+  private _xapp_has_replacing_changes() {
+    const changes = this._xapp_import_state._preview?._changes;
+    if (!is_obj(changes)) return false;
+    const groups: Array<"_views" | "_flows" | "_entities" | "_public_files"> = ["_views", "_flows", "_entities", "_public_files"];
+    return groups.some((group) =>
+      this._xapp_change_list(changes, group, "_modified").length > 0 ||
+      this._xapp_change_list(changes, group, "_deleted").length > 0
+    );
+  }
+
+  private _xapp_change_count(kind: "_added" | "_modified" | "_deleted") {
+    const changes = this._xapp_import_state._preview?._changes;
+    const groups: Array<"_views" | "_flows" | "_entities" | "_public_files"> = ["_views", "_flows", "_entities", "_public_files"];
+    return groups.reduce((sum, group) => sum + this._xapp_change_list(changes, group, kind).length, 0);
+  }
+
+  private _xapp_diff_group_view(label: string, group: "_views" | "_flows" | "_entities" | "_public_files") {
+    const changes = this._xapp_import_state._preview?._changes;
+    const row = (kind: "_added" | "_modified" | "_deleted", text: string) => {
+      const items = this._xapp_change_list(changes, group, kind);
+      return {
+        _type: "view",
+        class: "xstudio-xapp-diff-row",
+        _children: [
+          { _type: "span", class: "xstudio-xapp-diff-kind", _text: text },
+          {
+            _type: "span",
+            class: items.length ? "xstudio-xapp-diff-values" : "xstudio-xapp-diff-empty",
+            _text: items.length ? items.join(", ") : "None",
+          },
+        ],
+      };
+    };
+
+    return {
+      _type: "view",
+      class: "xstudio-xapp-diff-group",
+      _children: [
+        { _type: "label", class: "xstudio-xapp-diff-title", _text: label },
+        row("_added", "Added"),
+        row("_modified", "Modified"),
+        row("_deleted", "Deleted"),
+      ],
+    };
+  }
+
+  private _xapp_import_preview_view() {
+    const preview = this._xapp_import_state._preview;
+    const manifest = preview?._manifest ?? this._xapp_import_state._inspect?._manifest ?? {};
+    const app = manifest?._app ?? this._xapp_import_state._inspect?._app ?? {};
+    const build = manifest?._build ?? {};
+    const source_meta = [
+      typeof build._source_app_id === "string" && build._source_app_id.trim() ? build._source_app_id.trim() : "",
+      typeof build._source_env === "string" && build._source_env.trim() ? build._source_env.trim() : "",
+    ].filter(Boolean).join(" / ");
+    const replacing = this._xapp_has_replacing_changes();
+
+    return {
+      _type: "view",
+      class: "xstudio-xapp-preview",
+      _children: [
+        {
+          _type: "view",
+          class: "xstudio-xapp-package-info",
+          _children: [
+            { _type: "label", class: "xstudio-xapp-section-title", _text: "Package" },
+            { _type: "label", _text: `App ID: ${app._app_id ?? preview?._target_app_id ?? "Unknown"}` },
+            { _type: "label", _text: `Format: ${manifest._format ?? "Unknown"} / ${manifest._format_version ?? "Unknown"}` },
+            ...(source_meta ? [{ _type: "label", _text: `Source: ${source_meta}` }] : []),
+            { _type: "label", _text: `Views: ${this._xapp_manifest_count(manifest, ["view"])}` },
+            { _type: "label", _text: `Flows: ${this._xapp_manifest_count(manifest, ["flow"])}` },
+            { _type: "label", _text: `Entities: ${this._xapp_manifest_count(manifest, ["entity"])}` },
+            { _type: "label", _text: `Assets/styles: ${this._xapp_manifest_count(manifest, ["asset", "style"])}` },
+          ],
+        },
+        {
+          _type: "view",
+          class: "xstudio-xapp-import-target",
+          _text: this._xapp_import_target_label(),
+        },
+        ...(replacing
+          ? [{
+            _type: "view",
+            class: "xstudio-xapp-change-summary",
+            _text: `${this._xapp_change_count("_modified")} modified and ${this._xapp_change_count("_deleted")} deleted artifacts will change in the target app.`,
+          }]
+          : []),
+        this._xapp_diff_group_view("Views", "_views"),
+        this._xapp_diff_group_view("Flows", "_flows"),
+        this._xapp_diff_group_view("Entities", "_entities"),
+        this._xapp_diff_group_view("Assets/styles", "_public_files"),
+      ],
+    };
+  }
+
+  private _render_xapp_import_dialog() {
+    const body = XUI.getObject(STUDIO_APP_EXPLORER_IMPORT_BODY_ID) as any;
+    if (!body) return;
+
+    const state = this._xapp_import_state;
+    const busy = state._status === "uploading" || state._status === "inspecting" || state._status === "importing";
+    const can_inspect = Boolean(state._package_ref) && !busy;
+    const can_import = state._status === "ready" && Boolean(state._preview) && !busy;
+    const selected_package_view = this._xapp_selected_package_view();
+    const status_text =
+      state._status === "uploading" ? "Uploading package" :
+        state._status === "uploaded" ? "Package uploaded" :
+          state._status === "inspecting" ? "Inspecting package..." :
+        state._status === "importing" ? "Importing package..." :
+          state._status === "completed" ? "App imported successfully" :
+            state._status === "ready" ? "Package inspected" :
+              state._status === "failed" ? state._error :
+                "Select a .xapp package";
+
+    body.update?.({
+      _children: [
+        {
+          _type: "view",
+          class: "xstudio-xapp-dialog-header",
+          _children: [
+            { _type: "label", class: "xstudio-selected-object-delete-title xstudio-xapp-title", _text: "Import App" },
+            {
+              _id: STUDIO_APP_EXPLORER_IMPORT_CANCEL_ID,
+              _type: "button",
+              type: "button",
+              class: "xstudio-object-palette-close",
+              title: "Close",
+              "aria-label": "Close Import App",
+              _text: "x",
+              ...(busy ? { disabled: true } : {}),
+              _on: {
+                click: (event?: Event) => {
+                  event?.preventDefault?.();
+                  event?.stopPropagation?.();
+                  void this._hide_xapp_import_dialog();
+                },
+              },
+            },
+          ],
+        },
+        {
+          _type: "view",
+          class: "xstudio-xapp-dropzone",
+          _on: {
+            dragover: (event?: DragEvent) => {
+              event?.preventDefault?.();
+            },
+            drop: (...args: any[]) => {
+              const event = this._xapp_event_from_handler_args(args) as DragEvent;
+              event?.preventDefault?.();
+              this._select_xapp_import_file(event);
+            },
+          },
+          _children: [
+            {
+              _id: STUDIO_APP_EXPLORER_IMPORT_FILE_ID,
+              _type: "input",
+              type: "file",
+              accept: ".xapp",
+              class: "xstudio-xapp-file-input",
+              ...(busy ? { disabled: true } : {}),
+              _on: {
+                change: (...args: any[]) => {
+                  const event = this._xapp_event_from_handler_args(args) as Event;
+                  this._select_xapp_import_file(event);
+                },
+              },
+            },
+            {
+              _type: "label",
+              class: "xstudio-xapp-file-name",
+              _text: state._file_name || "Choose or drop a .xapp file",
+            },
+          ],
+        },
+        ...(selected_package_view ? [selected_package_view] : []),
+        {
+          _type: "view",
+          class: this._xapp_status_class(),
+          "aria-live": "polite",
+          _text: status_text,
+        },
+        ...(state._preview ? [this._xapp_import_preview_view()] : []),
+        ...(state._debug_details
+          ? [{
+            _id: "xstudio-import-app-debug",
+            _type: "xhtml",
+            _html_tag: "details",
+            class: "xstudio-data-feature-ask-debug",
+            _children: [
+              { _type: "xhtml", _html_tag: "summary", class: "xstudio-data-feature-ask-debug-summary", _text: "Debug" },
+              { _type: "xhtml", class: "xstudio-data-feature-ask-debug-payload debug-payload", _text: state._debug_details },
+            ],
+          }]
+          : []),
+        {
+          _type: "view",
+          class: "xstudio-selected-object-delete-actions xstudio-xapp-actions",
+          _children: [
+            {
+              _type: "button",
+              type: "button",
+              class: "xstudio-selected-object-editor-button",
+              _text: "Cancel",
+              ...(busy ? { disabled: true } : {}),
+              _on: {
+                click: (event?: Event) => {
+                  event?.preventDefault?.();
+                  event?.stopPropagation?.();
+                  void this._hide_xapp_import_dialog();
+                },
+              },
+            },
+            {
+              _id: STUDIO_APP_EXPLORER_IMPORT_INSPECT_ID,
+              _type: "button",
+              type: "button",
+              class: "xstudio-selected-object-editor-button",
+              _text: state._status === "inspecting" ? "Inspecting..." : "Inspect Package",
+              ...(can_inspect ? {} : { disabled: true }),
+              _on: {
+                click: (event?: Event) => {
+                  event?.preventDefault?.();
+                  event?.stopPropagation?.();
+                  void this._inspect_xapp_import_package();
+                },
+              },
+            },
+            {
+              _id: STUDIO_APP_EXPLORER_IMPORT_CONFIRM_ID,
+              _type: "button",
+              type: "button",
+              class: "xstudio-selected-object-editor-button xstudio-add-view-create",
+              _text: state._status === "importing" ? "Importing..." : "Import App",
+              ...(can_import ? {} : { disabled: true }),
+              _on: {
+                click: (event?: Event) => {
+                  event?.preventDefault?.();
+                  event?.stopPropagation?.();
+                  void this._execute_xapp_import();
+                },
+              },
+            },
+          ],
+        },
+      ],
+    });
+  }
+
+  private async _inspect_xapp_import_package() {
+    const package_ref = this._xapp_import_state._package_ref;
+    if (!package_ref) {
+      this._xapp_import_state._status = "failed";
+      this._xapp_import_state._error = "Upload the .xapp package before inspection.";
+      this._render_xapp_import_dialog();
+      return false;
+    }
+
+    const env = this._client().getActiveEnv();
+    this._xapp_import_state._status = "inspecting";
+    this._xapp_import_state._error = "";
+    this._xapp_import_state._debug_details = "";
+    this._xapp_import_state._inspect = null;
+    this._xapp_import_state._preview = null;
+    this._render_xapp_import_dialog();
+    this._write_studio_status("Inspecting package...");
+
+    try {
+      const inspect = await this._send_server_xvm_command(
+        "inspect-app-package",
+        this._xapp_ref_params(),
+        { _debug_params: this._xapp_ref_debug_params() },
+      ) as Record<string, any>;
+      const preview = await this._send_server_xvm_command(
+        "preview-app-import",
+        this._xapp_ref_params({ _env: env }),
+        { _debug_params: this._xapp_ref_debug_params({ _env: env }) },
+      ) as Record<string, any>;
+
+      this._xapp_import_state = {
+        ...this._xapp_import_state,
+        _status: "ready",
+        _error: "",
+        _debug_details: "",
+        _inspect: inspect,
+        _preview: preview,
+      };
+      this._render_xapp_import_dialog();
+      this._write_studio_status("Package inspected");
+      return true;
+    } catch (err) {
+      const error_text = this._xapp_error_text(err);
+      const message = `Package inspection failed: ${error_text}`;
+      this._xapp_import_state = {
+        ...this._xapp_import_state,
+        _status: "failed",
+        _error: message,
+        _debug_details: this._xapp_debug_details(err),
+        _inspect: null,
+        _preview: null,
+      };
+      this._render_xapp_import_dialog();
+      this._write_studio_status(message);
+      this._error("xapp inspect failed", { _error: error_text });
+      return false;
+    }
+  }
+
+  private _xapp_imported_app_id(result: any) {
+    return typeof result?._app_id === "string" && result._app_id.trim()
+      ? result._app_id.trim()
+      : typeof this._xapp_import_state._preview?._target_app_id === "string" &&
+        this._xapp_import_state._preview._target_app_id.trim()
+        ? this._xapp_import_state._preview._target_app_id.trim()
+        : typeof this._xapp_import_state._inspect?._app?._app_id === "string"
+          ? this._xapp_import_state._inspect._app._app_id.trim()
+          : "";
+  }
+
+  private _xapp_import_entry_view_id() {
+    const manifest = this._xapp_import_state._preview?._manifest ?? this._xapp_import_state._inspect?._manifest;
+    return typeof manifest?._app?._entry_view_id === "string" && manifest._app._entry_view_id.trim()
+      ? manifest._app._entry_view_id.trim()
+      : "";
+  }
+
+  private async _refresh_after_xapp_import(result: any) {
+    const imported_app_id = this._xapp_imported_app_id(result);
+    const imported_env =
+      typeof result?._env === "string" && result._env.trim()
+        ? result._env.trim()
+        : this._client().getActiveEnv();
+    const entry_view_id = this._xapp_import_entry_view_id();
+    const load_server_app = this._client().load_server_app;
+
+    if (
+      imported_app_id &&
+      typeof load_server_app === "function"
+    ) {
+      await load_server_app.call(this._client(), imported_app_id, imported_env);
+    } else if (
+      imported_app_id &&
+      imported_app_id === this._client().getActiveAppId() &&
+      entry_view_id
+    ) {
+      await this._client().render_view(entry_view_id);
+    }
+
+    await this._refresh_app_explorer();
+    await this._refresh_studio_runtime();
+  }
+
+  private async _execute_xapp_import() {
+    const package_ref = this._xapp_import_state._package_ref;
+    if (!package_ref || !this._xapp_import_state._preview) return false;
+
+    const env = this._client().getActiveEnv();
+    this._xapp_import_state._status = "importing";
+    this._xapp_import_state._error = "";
+    this._xapp_import_state._debug_details = "";
+    this._render_xapp_import_dialog();
+    this._write_studio_status("Importing package...");
+
+    try {
+      const result = await this._send_server_xvm_command(
+        "import-app",
+        this._xapp_ref_params({
+          _env: env,
+          _mode: "upsert",
+        }),
+        { _debug_params: this._xapp_ref_debug_params({ _env: env, _mode: "upsert" }) },
+      ) as Record<string, any>;
+      await this._refresh_after_xapp_import(result);
+      this._complete_xapp_import_state();
+      this._reset_xapp_import_file_control();
+      this._render_xapp_import_dialog();
+      this._write_studio_status("App imported successfully");
+      void this._discard_xapp_import_package_ref(package_ref);
+      return true;
+    } catch (err) {
+      const error_text = this._xapp_error_text(err);
+      const message = `Import failed: ${error_text}`;
+      this._xapp_import_state = {
+        ...this._xapp_import_state,
+        _status: "failed",
+        _error: message,
+        _debug_details: this._xapp_debug_details(err),
+      };
+      this._render_xapp_import_dialog();
+      this._write_studio_status(message);
+      this._error("xapp import failed", { _error: error_text });
+      return false;
+    }
+  }
+
   private _open_add_menu() {
     this._data_feature_state._add_menu_open = true;
+    this._app_actions_menu_open = false;
     this._render_cached_app_explorer();
   }
 
@@ -15511,6 +17645,13 @@ export class XStudioModule extends XModule {
 
   private _toggle_add_menu() {
     this._data_feature_state._add_menu_open = !this._data_feature_state._add_menu_open;
+    if (this._data_feature_state._add_menu_open) this._app_actions_menu_open = false;
+    this._render_cached_app_explorer();
+  }
+
+  private _toggle_app_actions_menu() {
+    this._app_actions_menu_open = !this._app_actions_menu_open;
+    if (this._app_actions_menu_open) this._data_feature_state._add_menu_open = false;
     this._render_cached_app_explorer();
   }
 
@@ -16062,6 +18203,58 @@ export class XStudioModule extends XModule {
     return this._format_object_tree_label_parts(obj)._title;
   }
 
+  private _format_object_tree_meaningful_label_parts(obj: Record<string, any>) {
+    const type = typeof obj._type === "string" && obj._type.trim() ? obj._type.trim() : "object";
+    const text = this._format_tree_text(obj._text, 56);
+    const name = this._format_tree_text(obj._name, 56);
+    const label = this._format_tree_text(obj._label, 56);
+    const title = this._format_tree_text(obj._title, 56);
+    const view_ref = type === "xvm-view"
+      ? this._format_tree_text(obj._view_id, 36)
+      : "";
+    const primary = text || name || label || title || view_ref;
+
+    return {
+      _primary: primary,
+      _secondary: "",
+      _type: type,
+      _title: [
+        primary,
+        type ? `[${type}]` : "",
+      ].filter(Boolean).join(" "),
+    };
+  }
+
+  private _format_semantic_object_tree_label_parts(
+    obj: Record<string, any>,
+    semantic: {
+      _label: string;
+      _role: string;
+      _id: string;
+      _prefer_object_label?: boolean;
+    },
+  ) {
+    const fallback_parts = this._format_object_tree_label_parts(obj);
+    const object_parts = this._format_object_tree_meaningful_label_parts(obj);
+    const semantic_label = this._format_tree_text(semantic._label, 56);
+    const semantic_role = this._format_tree_text(semantic._role, 56);
+    const semantic_id = this._format_tree_text(semantic._id, 56);
+    const role_or_id = semantic_role || semantic_id;
+    const primary = semantic._prefer_object_label === true
+      ? object_parts._primary || semantic_label || role_or_id || fallback_parts._primary
+      : semantic_label || object_parts._primary || role_or_id || fallback_parts._primary;
+
+    return {
+      _primary: primary,
+      _secondary: "",
+      _type: fallback_parts._type,
+      _title: [
+        primary,
+        fallback_parts._type ? `[${fallback_parts._type}]` : "",
+      ].filter(Boolean).join(" "),
+    };
+  }
+
   private _object_tree_search_text(obj: Record<string, any>) {
     return [
       obj._id,
@@ -16079,6 +18272,15 @@ export class XStudioModule extends XModule {
   private _selected_object_matches(a: XStudioSelectedObject | null, b: XStudioSelectedObject | null) {
     if (!a || !b) return false;
     if (a._source_view_id !== b._source_view_id) return false;
+    if (Boolean(a._semantic) !== Boolean(b._semantic)) return false;
+    if (a._semantic || b._semantic) {
+      return (
+        (a._semantic_owner_id ?? "") === (b._semantic_owner_id ?? "") &&
+        (a._semantic_slot_id ?? "") === (b._semantic_slot_id ?? "") &&
+        (a._semantic_item_path ?? "") === (b._semantic_item_path ?? "") &&
+        a._type === b._type
+      );
+    }
 
     const a_id = a._json_id.trim() || a._id.trim();
     const b_id = b._json_id.trim() || b._id.trim();
@@ -16133,6 +18335,195 @@ export class XStudioModule extends XModule {
       type.trim() || "object",
     ].join("::");
   }
+
+  private _semantic_path_is_safe(path: string) {
+    const normalized = path.trim();
+    if (!normalized || normalized.startsWith(".") || normalized.endsWith(".")) return false;
+    if (normalized.includes("..")) return false;
+    const forbidden = new Set(["__proto__", "prototype", "constructor"]);
+    const token_pattern = /([A-Za-z_$][A-Za-z0-9_$-]*)(\[(\d+)\])?/g;
+    let offset = 0;
+
+    for (const match of normalized.matchAll(token_pattern)) {
+      if (match.index !== offset) return false;
+      const key = match[1];
+      if (forbidden.has(key)) return false;
+      offset += match[0].length;
+      if (offset < normalized.length) {
+        if (normalized[offset] !== ".") return false;
+        offset += 1;
+      }
+    }
+
+    return offset === normalized.length;
+  }
+
+  private _read_semantic_path(root: Record<string, any>, path: string): unknown {
+    if (!this._semantic_path_is_safe(path)) return undefined;
+    let current: unknown = root;
+    const token_pattern = /([A-Za-z_$][A-Za-z0-9_$-]*)(?:\[(\d+)\])?/g;
+
+    for (const match of path.trim().matchAll(token_pattern)) {
+      if (!is_obj(current)) return undefined;
+      current = (current as Record<string, any>)[match[1]];
+      if (match[2] !== undefined) {
+        if (!Array.isArray(current)) return undefined;
+        const index = Number(match[2]);
+        if (!Number.isInteger(index) || index < 0 || index >= current.length) return undefined;
+        current = current[index];
+      }
+    }
+
+    return current;
+  }
+
+  private _write_semantic_path(root: Record<string, any>, path: string, value: unknown) {
+    if (!this._semantic_path_is_safe(path)) return false;
+    const parts = Array.from(path.trim().matchAll(/([A-Za-z_$][A-Za-z0-9_$-]*)(?:\[(\d+)\])?/g));
+    if (parts.length === 0) return false;
+
+    let current: unknown = root;
+    for (let index = 0; index < parts.length - 1; index += 1) {
+      const part = parts[index];
+      if (!is_obj(current)) return false;
+      current = (current as Record<string, any>)[part[1]];
+      if (part[2] !== undefined) {
+        if (!Array.isArray(current)) return false;
+        current = current[Number(part[2])];
+      }
+    }
+
+    const last = parts[parts.length - 1];
+    if (!is_obj(current)) return false;
+    if (last[2] !== undefined) {
+      const array_value = (current as Record<string, any>)[last[1]];
+      if (!Array.isArray(array_value)) return false;
+      array_value[Number(last[2])] = value;
+      return true;
+    }
+
+    (current as Record<string, any>)[last[1]] = value;
+    return true;
+  }
+
+  private _delete_semantic_path(root: Record<string, any>, path: string) {
+    if (!this._semantic_path_is_safe(path)) return false;
+    const parts = Array.from(path.trim().matchAll(/([A-Za-z_$][A-Za-z0-9_$-]*)(?:\[(\d+)\])?/g));
+    if (parts.length === 0) return false;
+
+    let current: unknown = root;
+    for (let index = 0; index < parts.length - 1; index += 1) {
+      const part = parts[index];
+      if (!is_obj(current)) return false;
+      current = (current as Record<string, any>)[part[1]];
+      if (part[2] !== undefined) {
+        if (!Array.isArray(current)) return false;
+        current = current[Number(part[2])];
+      }
+    }
+
+    const last = parts[parts.length - 1];
+    if (!is_obj(current)) return false;
+    if (last[2] !== undefined) {
+      const array_value = (current as Record<string, any>)[last[1]];
+      if (!Array.isArray(array_value)) return false;
+      array_value.splice(Number(last[2]), 1);
+      return true;
+    }
+
+    delete (current as Record<string, any>)[last[1]];
+    return true;
+  }
+
+  private _join_semantic_paths(base: string, child: string) {
+    const clean_base = base.trim();
+    const clean_child = child.trim();
+    if (!clean_base) return clean_child;
+    if (!clean_child) return clean_base;
+    return `${clean_base}.${clean_child}`;
+  }
+
+  private _object_tree_json_path(base: string, relative: string) {
+    const normalized_base = base.trim() || "$";
+    const normalized_relative = relative.trim();
+    if (!normalized_relative) return normalized_base;
+    return `${normalized_base}.${normalized_relative}`;
+  }
+
+  private _semantic_tree_identity(owner_id: string, slot_id: string, item_path: string, value: unknown) {
+    if (is_obj(value) && typeof value._id === "string" && value._id.trim()) {
+      return value._id.trim();
+    }
+
+    const owner = owner_id.trim() || "anonymous-owner";
+    const slot = slot_id.trim() || "semantic";
+    const path = item_path.trim();
+    return path ? `${owner}::${slot}::${path}` : `${owner}::${slot}`;
+  }
+
+	  private _normalize_semantic_slot_actions(value: unknown) {
+	    return runtime_skill_string_array(value, 12, 60)
+	      .filter(action =>
+	        action === "editable" ||
+	        action === "deletable" ||
+        action === "duplicable" ||
+        action === "movable" ||
+        action === "add-child",
+      );
+  }
+
+	  private _normalize_semantic_slots(skill: XpellSkill | null) {
+	    const design = skill?._design as Record<string, any> | undefined;
+	    const source = Array.isArray(design?._semantic_children)
+	      ? design?._semantic_children
+	      : Array.isArray(design?._slots)
+	        ? design?._slots
+	        : [];
+	    const normalize_slot = (slot: unknown, depth = 0): any | null => {
+	        if (!is_obj(slot)) return null;
+	        const id = typeof slot._id === "string" ? slot._id.trim() : "";
+	        const kind = typeof slot._kind === "string" ? slot._kind.trim() : "";
+	        const path = typeof slot._path === "string" ? slot._path.trim() : "";
+	        if (!id) return null;
+	        if (path && !this._semantic_path_is_safe(path)) return null;
+	        if (!path && kind !== "group") return null;
+	        return {
+	          _id: id,
+	          _label: typeof slot._label === "string" ? slot._label.trim() : "",
+	          _role: typeof slot._role === "string" ? slot._role.trim() : "",
+	          _kind: kind,
+          _path: path,
+          _style_path:
+            typeof slot._style_path === "string" && this._semantic_path_is_safe(slot._style_path)
+              ? slot._style_path.trim()
+              : "",
+          _type: typeof slot._type === "string" ? slot._type.trim() : "",
+	          _capabilities: runtime_skill_string_array(slot._capabilities, 16, 80),
+	          _accepted_types: runtime_skill_string_array(slot._accepted_types, 24, 80),
+	          _actions: this._normalize_semantic_slot_actions(slot._actions),
+	          _children: depth < 4 && Array.isArray(slot._children)
+	            ? slot._children
+	              .map((child: unknown) => normalize_slot(child, depth + 1))
+	              .filter(Boolean)
+	            : [],
+	        };
+	      };
+	    return source
+	      .map((slot: unknown) => normalize_slot(slot))
+	      .filter(Boolean) as Array<{
+	        _id: string;
+	        _label: string;
+	        _role: string;
+	        _kind: string;
+        _path: string;
+        _style_path: string;
+	        _type: string;
+	        _capabilities: string[];
+	        _accepted_types: string[];
+	        _actions: string[];
+	        _children: any[];
+	      }>;
+	  }
 
   private _flatten_object_tree_nodes(
     nodes: XStudioObjectTreeNode[],
@@ -16247,10 +18638,15 @@ export class XStudioModule extends XModule {
   ) {
     if (!is_obj(obj)) return;
 
-    const type = typeof obj._type === "string" && obj._type.trim() ? obj._type.trim() : "object";
-    const json_id = typeof obj._id === "string" && obj._id.trim() ? obj._id.trim() : "";
-    const text = typeof obj._text === "string" && obj._text.trim() ? obj._text.trim() : "";
-    const node_key = this._object_tree_node_key(source_view_id, tree_path, path, type, json_id);
+        const type = typeof obj._type === "string" && obj._type.trim() ? obj._type.trim() : "object";
+        const json_id = typeof obj._id === "string" && obj._id.trim() ? obj._id.trim() : "";
+        const text = typeof obj._text === "string" && obj._text.trim() ? obj._text.trim() : "";
+        const skill = this._resolve_selected_object_skill(type);
+        const semantic_slots = this._normalize_semantic_slots(skill);
+        const children_semantic_slot = semantic_slots.find(slot =>
+          slot._kind === "children" && slot._path === "_children"
+        );
+        const node_key = this._object_tree_node_key(source_view_id, tree_path, path, type, json_id);
     const meta: XStudioSelectedObject = {
       _id: json_id,
       _json_id: json_id,
@@ -16282,8 +18678,8 @@ export class XStudioModule extends XModule {
     };
     out.push(node);
 
-    if (Array.isArray(obj._children)) {
-      obj._children.forEach((child: any, index: number) => {
+        if (Array.isArray(obj._children) && !children_semantic_slot) {
+          obj._children.forEach((child: any, index: number) => {
         if (!is_obj(child)) return;
         const previous = index > 0 ? obj._children[index - 1] : null;
         const next = index < obj._children.length - 1 ? obj._children[index + 1] : null;
@@ -16303,6 +18699,244 @@ export class XStudioModule extends XModule {
         );
       });
     }
+
+	    const append_semantic_slot = (
+	      slot: (typeof semantic_slots)[number],
+	      parent_node: XStudioObjectTreeNode,
+	      path_prefix: string,
+	      tree_path_prefix: string,
+	      node_depth: number,
+	    ) => {
+	      const slot_path = this._join_semantic_paths(path_prefix, slot._path);
+	      const slot_tree_path = this._join_semantic_paths(tree_path_prefix, slot._path);
+	      let value = slot._kind === "group" && !slot_path
+	        ? {}
+	        : this._read_semantic_path(obj, slot_path);
+	      if (value === undefined) {
+	        if (slot._kind === "group") {
+	          value = {};
+	        } else if (slot._kind === "property") {
+	          value = "";
+	        } else if (slot._kind === "object-array" || slot._kind === "children") {
+	          value = [];
+	        } else {
+	          return;
+	        }
+	      }
+
+	      const semantic_base = {
+	        _source_view_id: source_view_id,
+	        _parent_path: path,
+	        _previous_sibling_id: "",
+	        _next_sibling_id: "",
+	        _is_xvm_ref_child: is_xvm_ref_child,
+	        _semantic: true,
+	        _semantic_owner_id: json_id || path,
+	        _semantic_owner_type: type,
+	        _semantic_owner_path: path,
+	        _semantic_slot_id: slot._id,
+	        _semantic_slot_label: slot._label,
+	        _semantic_role: slot._role,
+	        _semantic_path: slot_path,
+	        _semantic_style_path: slot._style_path
+	          ? this._join_semantic_paths(path_prefix, slot._style_path)
+	          : "",
+	        _semantic_kind: slot._kind,
+	        _semantic_editor_type: slot._type,
+	        _semantic_capabilities: slot._capabilities,
+	        _semantic_actions: slot._actions,
+	        _semantic_accepted_types: slot._accepted_types,
+	      };
+
+	      const append_semantic_node = (
+	        semantic_value: unknown,
+	        item_path: string,
+	        item_tree_path: string,
+	        fallback_label: string,
+	        target_parent_node: XStudioObjectTreeNode,
+	      ) => {
+	        const object_value = is_obj(semantic_value)
+	          ? semantic_value as Record<string, any>
+	          : {
+	            _type: slot._type || "semantic-value",
+	            _text: semantic_value === null || semantic_value === undefined
+	              ? ""
+	              : String(semantic_value),
+	          };
+	        const semantic_id = this._semantic_tree_identity(
+	          json_id || path,
+	          slot._id,
+	          item_path,
+	          semantic_value,
+	        );
+	        const semantic_type =
+	          slot._type ||
+	          (typeof object_value._type === "string" && object_value._type.trim()
+	            ? object_value._type.trim()
+	            : "semantic");
+	        const semantic_path = this._object_tree_json_path(path, item_path);
+	        const semantic_node_key = this._object_tree_node_key(
+	          source_view_id,
+	          item_tree_path,
+	          semantic_path,
+	          semantic_type,
+	          semantic_id,
+	        );
+	        const label_source = {
+	          ...object_value,
+	          _type: semantic_type,
+	          ...(!object_value._text && fallback_label ? { _text: fallback_label } : {}),
+	        };
+	        const label_parts = this._format_semantic_object_tree_label_parts(label_source, {
+	          _label: slot._kind === "object-array" ? "" : slot._label,
+	          _role: slot._role,
+	          _id: slot._id,
+	          _prefer_object_label: slot._kind === "object-array" && is_obj(semantic_value),
+	        });
+	        const effective_kind = slot._kind === "property" && is_obj(semantic_value)
+	          ? "object"
+	          : slot._kind;
+	        const semantic_meta: XStudioSelectedObject = {
+	          ...semantic_base,
+	          _id: semantic_id,
+	          _json_id: semantic_id,
+	          _type: semantic_type,
+	          _text: typeof object_value._text === "string" ? object_value._text : "",
+	          _path: semantic_path,
+	          _semantic_item_path: item_path,
+	          _semantic_kind: effective_kind,
+	          _json_metadata: this._safe_selected_json_metadata(object_value),
+	        };
+	        const semantic_node: XStudioObjectTreeNode = {
+	          _key: "",
+	          _node_key: semantic_node_key,
+	          _parent_node_key: target_parent_node._node_key,
+	          _label: label_parts._title,
+	          _label_primary: label_parts._primary,
+	          _label_secondary: label_parts._secondary,
+	          _label_type: label_parts._type,
+	          _search_text: this._object_tree_search_text(label_source),
+	          _meta: semantic_meta,
+	          _object: object_value,
+	          _owner_object: obj,
+	          _depth: node_depth,
+	          _children: [],
+	        };
+	        target_parent_node._children.push(semantic_node);
+	        return semantic_node;
+	      };
+
+	      const create_semantic_slot_node = () => {
+	        const semantic_id = this._semantic_tree_identity(json_id || path, slot._id, slot_path, value);
+	        const semantic_path = this._object_tree_json_path(path, slot_path);
+	        const semantic_node_key = this._object_tree_node_key(
+	          source_view_id,
+	          slot_tree_path,
+	          semantic_path,
+	          "semantic-slot",
+	          semantic_id,
+	        );
+	        const slot_object = {
+	          _type: "semantic-slot",
+	          _text: slot._label || slot._id,
+	          _children: [],
+	        };
+	        const label_parts = this._format_semantic_object_tree_label_parts(slot_object, {
+	          _label: slot._label,
+	          _role: slot._role,
+	          _id: slot._id,
+	        });
+	        const semantic_meta: XStudioSelectedObject = {
+	          ...semantic_base,
+	          _id: semantic_id,
+	          _json_id: semantic_id,
+	          _type: "semantic-slot",
+	          _text: slot_object._text,
+	          _path: semantic_path,
+	          _semantic_item_path: slot_path,
+	          _semantic_actions: slot._actions.includes("add-child") ? ["add-child"] : [],
+	          _json_metadata: this._safe_selected_json_metadata(slot_object),
+	        };
+	        const slot_node: XStudioObjectTreeNode = {
+	          _key: "",
+	          _node_key: semantic_node_key,
+	          _parent_node_key: parent_node._node_key,
+	          _label: label_parts._title,
+	          _label_primary: label_parts._primary,
+	          _label_secondary: label_parts._secondary,
+	          _label_type: label_parts._type,
+	          _search_text: this._object_tree_search_text(slot_object),
+	          _meta: semantic_meta,
+	          _object: slot_object,
+	          _owner_object: obj,
+	          _depth: node_depth,
+	          _children: [],
+	        };
+	        parent_node._children.push(slot_node);
+	        return slot_node;
+	      };
+
+	      if (slot._kind === "children" && Array.isArray(value)) {
+	        const slot_node = create_semantic_slot_node();
+	        value.forEach((child: any, index: number) => {
+	          if (!is_obj(child)) return;
+	          const previous = index > 0 ? value[index - 1] : null;
+	          const next = index < value.length - 1 ? value[index + 1] : null;
+	          this._build_object_tree_nodes(
+	            child,
+	            source_view_id,
+	            `${path}.${slot_path}[${index}]`,
+	            path,
+	            is_obj(previous) && typeof previous._id === "string" ? previous._id.trim() : "",
+	            is_obj(next) && typeof next._id === "string" ? next._id.trim() : "",
+	            slot_node._node_key,
+	            `${slot_tree_path}[${index}]`,
+	            node_depth + 1,
+	            is_xvm_ref_child,
+	            allow_xvm_refs,
+	            slot_node._children,
+	          );
+	        });
+	        return;
+	      }
+
+	      if (slot._kind === "object-array" && Array.isArray(value)) {
+	        const slot_node = create_semantic_slot_node();
+	        value.forEach((item, index) => {
+	          append_semantic_node(
+	            item,
+	            `${slot_path}[${index}]`,
+	            `${slot_tree_path}[${index}]`,
+	            slot._label || slot._id,
+	            slot_node,
+	          );
+	        });
+	        return;
+	      }
+
+	      const semantic_node = append_semantic_node(
+	        value,
+	        slot_path,
+	        slot_tree_path,
+	        slot._label || slot._id,
+	        parent_node,
+	      );
+	      if (!semantic_node || slot._children.length === 0) return;
+
+	      for (const child_slot of slot._children) {
+	        append_semantic_slot(
+	          child_slot,
+	          semantic_node,
+	          slot_path,
+	          slot_tree_path,
+	          node_depth + 1,
+	        );
+	      }
+	    };
+
+	    for (const slot of semantic_slots) {
+	      append_semantic_slot(slot, node, "", tree_path, depth + 1);
+	    }
 
     if (type !== "xvm-view" || !allow_xvm_refs) return;
 
@@ -16629,6 +19263,50 @@ export class XStudioModule extends XModule {
     };
   }
 
+  private _app_explorer_actions_menu_view() {
+    const open = this._app_actions_menu_open;
+    const item = (
+      id: string,
+      label: string,
+      title: string,
+      handler: (event?: Event) => void,
+    ) => ({
+      _type: "button",
+      _id: `xstudio-app-explorer-actions-menu-${id}`,
+      type: "button",
+      class: "xstudio-app-explorer-add-menu-item xstudio-app-explorer-actions-menu-item",
+      title,
+      _text: label,
+      _on: {
+        click: (event?: Event) => {
+          event?.preventDefault?.();
+          event?.stopPropagation?.();
+          handler(event);
+        },
+      },
+    });
+
+    return {
+      _type: "view",
+      _id: STUDIO_APP_EXPLORER_ACTIONS_MENU_ID,
+      class: [
+        "xstudio-app-explorer-add-menu",
+        "xstudio-app-explorer-actions-menu",
+        open ? "xstudio-app-explorer-add-menu-open" : "",
+      ].filter(Boolean).join(" "),
+      "aria-hidden": String(!open),
+      _visible: open,
+      _children: [
+        item("export", "Export App", "Export current app as .xapp", () => {
+          void this._export_current_app_xapp();
+        }),
+        item("import", "Import App", "Import a .xapp package", () => {
+          this._open_xapp_import_dialog();
+        }),
+      ],
+    };
+  }
+
   private _app_explorer_toggle_row(
     row_id: string,
     section_id: XStudioAppExplorerSectionId,
@@ -16678,6 +19356,32 @@ export class XStudioModule extends XModule {
         _children: [
           {
             _type: "button",
+            _id: STUDIO_APP_EXPLORER_ACTIONS_BUTTON_ID,
+            type: "button",
+            class: "xstudio-explorer-section-action xstudio-app-explorer-actions-button",
+            title: "App actions",
+            "aria-label": "App actions",
+            "aria-haspopup": "menu",
+            "aria-expanded": String(this._app_actions_menu_open),
+            _text: "...",
+            _on: {
+              click: (event?: Event) => {
+                event?.preventDefault?.();
+                event?.stopPropagation?.();
+                this._toggle_app_actions_menu();
+              },
+            },
+          },
+          this._app_explorer_actions_menu_view(),
+        ],
+      });
+
+      children.push({
+        _type: "view",
+        class: "xstudio-app-explorer-add-menu-wrap",
+        _children: [
+          {
+            _type: "button",
             _id: STUDIO_APP_EXPLORER_ADD_BUTTON_ID,
             type: "button",
             class: "xstudio-explorer-section-action xstudio-app-explorer-add-button",
@@ -16696,6 +19400,15 @@ export class XStudioModule extends XModule {
           this._app_explorer_add_menu_view(),
         ],
       });
+
+      if (this._xapp_export_status) {
+        children.push({
+          _type: "label",
+          class: "xstudio-app-explorer-xapp-status",
+          "aria-live": "polite",
+          _text: this._xapp_export_status,
+        });
+      }
     }
 
     if (section_id === "views") {
@@ -17157,9 +19870,19 @@ export class XStudioModule extends XModule {
       : null;
   }
 
+  private _semantic_action_allowed(
+    selected: XStudioSelectedObject | null,
+    action: "editable" | "deletable" | "duplicable" | "movable" | "add-child",
+  ) {
+    if (!selected?._semantic) return true;
+    return Array.isArray(selected._semantic_actions) &&
+      selected._semantic_actions.includes(action);
+  }
+
   private _object_tree_node_can_drag(node: XStudioObjectTreeNode) {
     const meta = node._meta;
     if (!meta) return false;
+    if (!this._semantic_action_allowed(meta, "movable")) return false;
     if (!meta._json_id.trim()) return false;
     if (!meta._source_view_id.trim()) return false;
     if (meta._is_xvm_ref_child) return false;
@@ -17213,11 +19936,38 @@ export class XStudioModule extends XModule {
     };
   }
 
-  private _object_tree_node_can_move(node: XStudioObjectTreeNode, direction: "up" | "down") {
+  private _object_tree_node_promote_anchor_id(node: XStudioObjectTreeNode) {
+    const meta = node._meta;
+    if (!meta) return "";
+
+    const source_view_id = meta._source_view_id.trim();
+    const parent_path = meta._parent_path.trim();
+    if (!meta._json_id.trim() || !source_view_id || !parent_path || parent_path === "$") {
+      return "";
+    }
+
+    const parent_node = this._find_object_tree_node_by_path(source_view_id, parent_path);
+    if (parent_node?._meta && parent_node._meta._path.trim() !== "$") {
+      const parent_id = parent_node._meta._json_id.trim();
+      if (parent_id) return parent_id;
+    }
+
+    const view = this._get_cached_view(source_view_id);
+    if (!is_obj(view)) return "";
+
+    const parent_object = this._get_cached_json_node_by_path(view, parent_path);
+    return typeof parent_object?._id === "string" ? parent_object._id.trim() : "";
+  }
+
+  private _object_tree_node_can_move(node: XStudioObjectTreeNode, direction: XStudioObjectTreeMoveDirection) {
     const meta = node._meta;
     if (!meta) return false;
     if (!meta._json_id.trim()) return false;
     if (!meta._source_view_id.trim()) return false;
+
+    if (direction === "out") {
+      return Boolean(this._object_tree_node_promote_anchor_id(node));
+    }
 
     const sibling_context = this._object_tree_node_sibling_context(node);
     if (!sibling_context || sibling_context._is_root) return false;
@@ -17273,6 +20023,94 @@ export class XStudioModule extends XModule {
     return accepted_types.includes("*") ||
       accepted_types.includes("xuiobject") ||
       accepted_types.includes(normalized_child_type);
+  }
+
+  private _runtime_xui_types_for_view_edit() {
+    return runtime_registered_xui_type_names();
+  }
+
+  private _collect_persisted_object_ids(value: unknown, out = new Set<string>()) {
+    if (Array.isArray(value)) {
+      value.forEach(item => this._collect_persisted_object_ids(item, out));
+      return out;
+    }
+    if (!is_obj(value)) return out;
+
+    if (typeof value._id === "string" && value._id.trim()) {
+      out.add(value._id.trim());
+    }
+
+    Object.values(value).forEach(item => this._collect_persisted_object_ids(item, out));
+    return out;
+  }
+
+  private _existing_view_object_ids(view_id = this._app_explorer_current_view_id()) {
+    const out = new Set<string>();
+    for (const node of this._flatten_object_tree_nodes(this._object_tree_nodes)) {
+      const id = node._meta?._json_id?.trim() || node._meta?._id?.trim() || "";
+      if (id) out.add(id);
+    }
+
+    const active_view_id = view_id.trim();
+    const active_view = active_view_id ? this._get_cached_view(active_view_id) : null;
+    this._collect_persisted_object_ids(active_view, out);
+    return out;
+  }
+
+  private _unique_palette_child_id(child_type: string, existing_ids: Set<string>, preferred_id = "") {
+    const normalized_preferred = _xu.normalize_id(preferred_id) ?? "";
+    const normalized_type = _xu.normalize_id(child_type) ?? "";
+    const base = normalized_preferred || _xu.normalize_id(_xu.guid()) || normalized_type || "object";
+    if (!existing_ids.has(base)) return base;
+
+    for (let index = 2; index < 100000; index += 1) {
+      const candidate = `${base}-${index}`;
+      if (!existing_ids.has(candidate)) return candidate;
+    }
+
+    return `${base}-${existing_ids.size + 1}`;
+  }
+
+  private _prepare_palette_child_for_creation(
+    child: Record<string, any>,
+    selected_skill: XpellSkill,
+    source_view_id = this._app_explorer_current_view_id(),
+    requested_object_id = "",
+  ):
+    | { _ok: true; _runtime_xui_types: string[]; _reason: ""; _message: "" }
+    | { _ok: false; _reason: string; _message: string } {
+    const child_type = this._normalize_palette_child_type(child, selected_skill);
+    if (!child_type) {
+      return {
+        _ok: false,
+        _message: "Selected object default has no runtime type",
+        _reason: "missing_child_type",
+      };
+    }
+
+    if (typeof child._type !== "string" || !child._type.trim()) {
+      child._type = child_type;
+    }
+
+    const runtime_xui_types = this._runtime_xui_types_for_view_edit();
+    if (!runtime_xui_types.includes(child_type)) {
+      return {
+        _ok: false,
+        _message: `Selected object type is not registered at runtime: ${child_type}`,
+        _reason: "runtime_type_not_registered",
+      };
+    }
+
+    const existing_ids = this._existing_view_object_ids(source_view_id);
+    const requested_id = object_palette_text(requested_object_id);
+    child._id = this._unique_palette_child_id(child_type, existing_ids, requested_id);
+
+    return {
+      _ok: true,
+      _runtime_xui_types: runtime_xui_types,
+      _reason: "",
+      _message: "",
+    };
   }
 
   private _object_tree_node_can_insert_inside(
@@ -17378,6 +20216,7 @@ export class XStudioModule extends XModule {
     child_type: string,
     app_id: string,
     env: string,
+    runtime_xui_types: string[],
   ): XStudioAddObjectInsertionResolution {
     const view_id = this._app_explorer_current_view_id().trim();
     const root_node = this._active_view_root_insert_target(view_id);
@@ -17412,6 +20251,7 @@ export class XStudioModule extends XModule {
         _edit_action: "add-child",
         _target_id: target_id,
         _target_type: root_meta._type.trim() || "view",
+        _runtime_xui_types: runtime_xui_types,
         _child: child,
       },
     };
@@ -17423,6 +20263,7 @@ export class XStudioModule extends XModule {
     child_type: string,
     app_id: string,
     env: string,
+    runtime_xui_types: string[],
   ): XStudioAddObjectInsertionResolution {
     const selected_node = this._find_object_tree_node_by_selected_object(selected);
     const selected_meta = selected_node?._meta;
@@ -17450,6 +20291,7 @@ export class XStudioModule extends XModule {
           _edit_action: "add-child",
           _target_id: selected_id,
           _target_type: selected_meta._type.trim() || "object",
+          _runtime_xui_types: runtime_xui_types,
           _child: child,
         },
       };
@@ -17493,6 +20335,7 @@ export class XStudioModule extends XModule {
           _edit_action: "add-child",
           _target_id: parent_id,
           _target_type: parent_meta._type.trim() || "object",
+          _runtime_xui_types: runtime_xui_types,
           _child: child,
           ...(mode === "after"
             ? { _after_id: selected_id }
@@ -17513,12 +20356,13 @@ export class XStudioModule extends XModule {
     child: Record<string, any>,
     app_id: string,
     env: string,
+    runtime_xui_types: string[],
     selected: XStudioSelectedObject | null = this._selected_object,
   ): XStudioAddObjectInsertionResolution {
     const child_type = this._normalize_palette_child_type(child, selected_skill);
 
     if (!selected) {
-      return this._resolve_add_object_root_append_params(child, child_type, app_id, env);
+      return this._resolve_add_object_root_append_params(child, child_type, app_id, env, runtime_xui_types);
     }
 
     return this._resolve_add_object_relative_params(
@@ -17527,6 +20371,7 @@ export class XStudioModule extends XModule {
       child_type,
       app_id,
       env,
+      runtime_xui_types,
     );
   }
 
@@ -17586,7 +20431,12 @@ export class XStudioModule extends XModule {
       _selected: this._selected_object_persisted_metadata(this._selected_object),
     });
 
-    const selected_skill = await showObjectPalette();
+    let requested_object_id = "";
+    const selected_skill = await showObjectPalette({
+      onSelect: (_skill, object_id) => {
+        requested_object_id = object_id;
+      },
+    });
     if (!selected_skill) {
       this._log("add object palette cancelled", {
         _selected: this._selected_object_persisted_metadata(this._selected_object),
@@ -17594,10 +20444,13 @@ export class XStudioModule extends XModule {
       return false;
     }
 
-    return this._apply_add_object_from_palette_skill(selected_skill);
+    return this._apply_add_object_from_palette_skill(selected_skill, requested_object_id);
   }
 
-  private async _apply_add_object_from_palette_skill(selected_skill: XpellSkill) {
+  private async _apply_add_object_from_palette_skill(
+    selected_skill: XpellSkill,
+    requested_object_id = "",
+  ) {
     const app_id = this._client().getActiveAppId();
     const env = this._client().getActiveEnv();
 
@@ -17624,11 +20477,28 @@ export class XStudioModule extends XModule {
     }
 
     const child = default_result._child;
+    const prepared_child = this._prepare_palette_child_for_creation(
+      child,
+      selected_skill,
+      undefined,
+      requested_object_id,
+    );
+    if (!prepared_child._ok) {
+      this._write_studio_status(prepared_child._message);
+      this._error("add object failed", {
+        _reason: prepared_child._reason,
+        _skill_id: selected_skill._id,
+        _child_type: child._type,
+      });
+      return false;
+    }
+
     const resolution = this._resolve_add_object_insertion_params(
       selected_skill,
       child,
       app_id,
       env,
+      prepared_child._runtime_xui_types,
     );
 
     if (!resolution._ok) {
@@ -17655,6 +20525,7 @@ export class XStudioModule extends XModule {
       _skill_type: selected_skill._type,
       _child_type: child._type,
       _child_id: typeof child._id === "string" ? child._id : "",
+      _runtime_xui_types_count: params._runtime_xui_types?.length ?? 0,
       _selected: this._selected_object_persisted_metadata(this._selected_object),
     });
 
@@ -17692,6 +20563,21 @@ export class XStudioModule extends XModule {
     const meta = node._meta;
     const object_id = meta?._json_id?.trim() || meta?._id?.trim() || "";
     const type = meta?._type?.trim() ?? "";
+    if (meta?._semantic && !this._semantic_action_allowed(meta, "add-child")) {
+      return {
+        _allowed: false,
+        _object_id: object_id,
+        _object_type: type,
+        _skill: null,
+        _skill_found: false,
+        _design_children_allowed: false,
+        _design_children_disallowed: true,
+        _has_children_array: false,
+        _fallback_allowed: false,
+        _leaf_type: false,
+      };
+    }
+
     const normalized_type = type.toLowerCase();
     const skill = type ? this._resolve_selected_object_skill(type) : null;
     const design_allowed_raw = skill?._design?._children?._allowed;
@@ -17743,7 +20629,7 @@ export class XStudioModule extends XModule {
 
   private _object_tree_quick_action_button(
     row_id: string,
-    action: "move-up" | "move-down" | "duplicate" | "add-child",
+    action: "move-out" | "move-up" | "move-down" | "duplicate" | "add-child",
     text: string,
     title: string,
     disabled: boolean,
@@ -17775,6 +20661,7 @@ export class XStudioModule extends XModule {
   private _object_tree_action_buttons(node: XStudioObjectTreeNode, row_id: string) {
     const child_capability = this._object_tree_child_capability(node, true);
     const can_add_child = child_capability._allowed;
+    const can_move_out = this._object_tree_node_can_move(node, "out");
     const can_move_up = this._object_tree_node_can_move(node, "up");
     const can_move_down = this._object_tree_node_can_move(node, "down");
     const can_duplicate = this._object_tree_node_can_duplicate(node);
@@ -17798,6 +20685,18 @@ export class XStudioModule extends XModule {
     }
 
     children.push(
+      this._object_tree_quick_action_button(
+        row_id,
+        "move-out",
+        "←",
+        can_move_out ? `Move ${node._label} one level up` : "Object cannot move one level up",
+        !can_move_out,
+        (event?: Event) => {
+          event?.preventDefault?.();
+          event?.stopPropagation?.();
+          void this._apply_object_tree_node_move(node, "out");
+        },
+      ),
       this._object_tree_quick_action_button(
         row_id,
         "move-up",
@@ -17859,7 +20758,12 @@ export class XStudioModule extends XModule {
       _path: meta._path,
     });
 
-    const selected_skill = await showObjectPalette();
+    let requested_object_id = "";
+    const selected_skill = await showObjectPalette({
+      onSelect: (_skill, object_id) => {
+        requested_object_id = object_id;
+      },
+    });
 
     if (!selected_skill) {
       this._log("object tree add child palette cancelled", {
@@ -17880,12 +20784,13 @@ export class XStudioModule extends XModule {
       _default_object: selected_skill._design?._palette?._default_object ?? null,
     });
 
-    await this._apply_object_tree_node_add_child(node, selected_skill);
+    await this._apply_object_tree_node_add_child(node, selected_skill, requested_object_id);
   }
 
   private async _apply_object_tree_node_add_child(
     node: XStudioObjectTreeNode,
     selected_skill: XpellSkill,
+    requested_object_id = "",
   ) {
     const meta = node._meta;
     if (!meta || !this._object_tree_node_can_add_child(node)) return false;
@@ -17963,11 +20868,31 @@ export class XStudioModule extends XModule {
       return false;
     }
 
+    const prepared_child = this._prepare_palette_child_for_creation(
+      child,
+      selected_skill,
+      source_view_id,
+      requested_object_id,
+    );
+    if (!prepared_child._ok) {
+      this._write_studio_status(prepared_child._message);
+      this._error("object tree add child failed", {
+        _reason: prepared_child._reason,
+        _source_view_id: source_view_id,
+        _target_id: target_id,
+        _target_type: target_type,
+        _skill_id: selected_skill._id,
+        _child_type: child._type,
+      });
+      return false;
+    }
+
     const resolution = this._resolve_add_object_insertion_params(
       selected_skill,
       child,
       app_id,
       env,
+      prepared_child._runtime_xui_types,
       meta,
     );
     if (!resolution._ok) {
@@ -17997,6 +20922,7 @@ export class XStudioModule extends XModule {
       _skill_type: selected_skill._type,
       _child_type: child._type,
       _child_id: typeof child._id === "string" ? child._id : "",
+      _runtime_xui_types_count: params._runtime_xui_types?.length ?? 0,
       _path: meta._path,
       _parent_path: meta._parent_path,
     });
@@ -18077,7 +21003,7 @@ export class XStudioModule extends XModule {
 
   private async _apply_object_tree_node_move(
     node: XStudioObjectTreeNode,
-    direction: "up" | "down",
+    direction: XStudioObjectTreeMoveDirection,
   ) {
     const meta = node._meta;
     if (!meta) return;
@@ -18086,15 +21012,27 @@ export class XStudioModule extends XModule {
     const source_view_id = meta._source_view_id.trim();
     const target_type = meta._type.trim() || "object";
     const sibling_context = this._object_tree_node_sibling_context(node);
-    const anchor_id = direction === "up"
-      ? sibling_context?._previous_sibling_id ?? ""
-      : sibling_context?._next_sibling_id ?? "";
+    const anchor_id = direction === "out"
+      ? this._object_tree_node_promote_anchor_id(node)
+      : direction === "up"
+        ? sibling_context?._previous_sibling_id ?? ""
+        : sibling_context?._next_sibling_id ?? "";
 
-    if (!target_id || !source_view_id || !sibling_context || sibling_context._is_root || !anchor_id) {
+    if (
+      !target_id ||
+      !source_view_id ||
+      !anchor_id ||
+      (
+        direction !== "out" &&
+        (!sibling_context || sibling_context._is_root)
+      )
+    ) {
       this._write_studio_status(
         direction === "up"
           ? "Object cannot move up"
-          : "Object cannot move down",
+          : direction === "down"
+            ? "Object cannot move down"
+            : "Object cannot move one level up",
       );
       this._log("object tree quick move action", {
         _direction: direction,
@@ -18134,7 +21072,9 @@ export class XStudioModule extends XModule {
     this._write_studio_status(
       direction === "up"
         ? "Moving object up..."
-        : "Moving object down...",
+        : direction === "down"
+          ? "Moving object down..."
+          : "Moving object one level up...",
     );
     this._log("object tree quick move action", {
       _direction: direction,
@@ -18165,7 +21105,9 @@ export class XStudioModule extends XModule {
       this._write_studio_status(
         direction === "up"
           ? "Moved object up"
-          : "Moved object down",
+          : direction === "down"
+            ? "Moved object down"
+            : "Moved object one level up",
       );
       this._log("object tree quick move result", {
         _direction: direction,
@@ -18758,43 +21700,245 @@ export class XStudioModule extends XModule {
     return `xstudio-selected-object-field-${index}-${safe_key}`;
   }
 
+  private _normalize_inspector_style_path(value: unknown) {
+    const style_path = typeof value === "string" ? value.trim() : "";
+    if (!style_path || style_path.includes(".") || style_path.includes("[") || style_path.includes("]")) {
+      return "";
+    }
+    return style_path;
+  }
+
+  private _normalize_inspector_group(value: unknown) {
+    const group = typeof value === "string"
+      ? value.trim().toLowerCase().replace(/[\s_-]+/g, "-")
+      : "";
+    if (!group) return "";
+    if (group === "raw-json" || group === "raw_json") return "";
+    if (group === "advanced-design") return "advanced";
+    return group.replace(/-/g, "_");
+  }
+
+  private _inspector_group_label(group: string, label: unknown) {
+    const explicit = typeof label === "string" ? label.trim() : "";
+    if (explicit) return explicit;
+    return STUDIO_INSPECTOR_GROUP_LABELS[group] ?? this._inspector_label_for_key(group);
+  }
+
+  private _normalize_inspector_options(
+    options: unknown,
+    current_value: unknown,
+  ): XStudioSkillInspectorField["_options"] {
+    const normalized: NonNullable<XStudioSkillInspectorField["_options"]> = [];
+    const seen = new Set<string>();
+
+    if (Array.isArray(options)) {
+      for (const option of options) {
+        if (is_obj(option)) {
+          const value = String(option.value ?? option.label ?? "");
+          if (seen.has(value)) continue;
+          seen.add(value);
+          normalized.push({
+            label: String(option.label ?? value),
+            value,
+            ...(option.disabled === true ? { disabled: true } : {}),
+            ...(option.selected === true ? { selected: true } : {}),
+          });
+          continue;
+        }
+
+        const value = String(option ?? "");
+        if (seen.has(value)) continue;
+        seen.add(value);
+        normalized.push(value);
+      }
+    }
+
+    const current = current_value === undefined || current_value === null
+      ? ""
+      : String(current_value);
+    if (current && !seen.has(current)) {
+      normalized.unshift({ label: current, value: current });
+    }
+
+    return normalized;
+  }
+
+  private _normalize_design_inspector_field(
+    field: unknown,
+    obj: Record<string, any>,
+    source: XStudioSelectedObjectInspectorResolvedField["_source"],
+  ): Omit<XStudioSelectedObjectInspectorResolvedField, "_control_id"> | null {
+    if (!is_obj(field) || typeof field._key !== "string" || !field._key.trim()) {
+      return null;
+    }
+
+    const key = field._key.trim();
+    if (key === "_on") {
+      return null;
+    }
+
+    const style_path = this._normalize_inspector_style_path(field._style_path);
+    const input =
+      this._normalize_inspector_input(field._input) ??
+      this._infer_inspector_input_for_key(key, style_path ? undefined : obj[key]);
+    const group = this._normalize_inspector_group(field._group);
+    const options = input === "select"
+      ? this._normalize_inspector_options(field._options, style_path ? undefined : obj[key])
+      : undefined;
+
+    return {
+      ...field,
+      _key: key,
+      _label:
+        typeof field._label === "string" && field._label.trim()
+          ? field._label.trim()
+          : this._inspector_label_for_key(style_path || key),
+      _input: input,
+      ...(options ? { _options: options } : {}),
+      ...(group
+        ? {
+          _group: group,
+          _group_label: this._inspector_group_label(group, field._group_label),
+        }
+        : {}),
+      ...(style_path ? { _style_path: style_path } : {}),
+      _source: source,
+    };
+  }
+
+  private _with_inspector_control_ids(
+    fields: Array<Omit<XStudioSelectedObjectInspectorResolvedField, "_control_id">>,
+  ): XStudioSelectedObjectInspectorResolvedField[] {
+    return fields.map((field, index) => ({
+      ...field,
+      _control_id: this._inspector_control_id(field._key, index),
+    }));
+  }
+
+  private _inspector_group_order(group: unknown) {
+    const normalized = typeof group === "string" ? group.trim() : "";
+    if (!normalized) return Number.MAX_SAFE_INTEGER;
+    const index = STUDIO_INSPECTOR_GROUP_ORDER.indexOf(normalized);
+    return index >= 0 ? index : STUDIO_INSPECTOR_GROUP_ORDER.length;
+  }
+
+  private _order_selected_object_inspector_fields(
+    fields: Array<Omit<XStudioSelectedObjectInspectorResolvedField, "_control_id">>,
+  ) {
+    return fields
+      .map((field, index) => ({ field, index }))
+      .sort((a, b) => {
+        const a_order = this._inspector_group_order(a.field._group);
+        const b_order = this._inspector_group_order(b.field._group);
+        if (a_order !== b_order) return a_order - b_order;
+        return a.index - b.index;
+      })
+      .map(item => item.field);
+  }
+
+  private _selected_object_inspector_capability_ids(skill: XpellSkill | null) {
+    if (this._selected_object?._semantic) {
+      return runtime_skill_string_array(this._selected_object._semantic_capabilities, 16, 80);
+    }
+
+    if (!skill) return [];
+
+    return runtime_skill_string_array([
+      ...(Array.isArray((skill as any)._capabilities) ? (skill as any)._capabilities : []),
+    ], 16, 80);
+  }
+
+  private _normalize_capability_inspector_fields(
+    skill: XpellSkill | null,
+    obj: Record<string, any>,
+  ): Array<Omit<XStudioSelectedObjectInspectorResolvedField, "_control_id">> {
+    const out: Array<Omit<XStudioSelectedObjectInspectorResolvedField, "_control_id">> = [];
+
+    for (const capability_id of this._selected_object_inspector_capability_ids(skill)) {
+      const capability = STUDIO_INSPECTOR_CAPABILITIES[capability_id];
+      if (!capability) continue;
+
+      for (const field of capability._fields) {
+        const normalized = this._normalize_design_inspector_field(field, obj, "capability");
+        if (normalized && this._selected_object?._semantic && normalized._style_path && !this._selected_object._semantic_style_path) {
+          continue;
+        }
+        if (normalized) out.push(normalized);
+      }
+    }
+
+    return out;
+  }
+
+  private _with_semantic_inspector_paths(
+    fields: Array<Omit<XStudioSelectedObjectInspectorResolvedField, "_control_id">>,
+  ) {
+    const selected = this._selected_object;
+    if (!selected?._semantic) return fields;
+
+        return fields
+          .map(field => {
+            if (field._style_path) {
+              const style_object_path = selected._semantic_style_path?.trim() ?? "";
+          return style_object_path
+            ? {
+              ...field,
+              _style_object_path: style_object_path,
+            }
+            : null;
+        }
+
+            const item_path = selected._semantic_item_path?.trim() ?? selected._semantic_path?.trim() ?? "";
+            if (!item_path) return null;
+            if (selected._semantic_kind === "property") {
+              return {
+                ...field,
+                _property_path: item_path,
+              };
+            }
+            return {
+              ...field,
+              _property_path: this._join_semantic_paths(item_path, field._key),
+            };
+          })
+      .filter(Boolean) as Array<Omit<XStudioSelectedObjectInspectorResolvedField, "_control_id">>;
+  }
+
   private _normalize_design_inspector_fields(
     skill: XpellSkill | null,
     obj: Record<string, any>,
   ): XStudioSelectedObjectInspectorResolvedField[] {
     const fields = skill?._design?._inspector?._fields;
-    if (!Array.isArray(fields) || fields.length === 0) return [];
+    const raw_design_fields = Array.isArray(fields)
+      ? fields
+        .map(field => this._normalize_design_inspector_field(field, obj, "design"))
+        .filter(Boolean) as Array<Omit<XStudioSelectedObjectInspectorResolvedField, "_control_id">>
+      : [];
+    const has_canonical_density = raw_design_fields.some(field => field._key === "_density");
+    const design_fields = has_canonical_density
+      ? raw_design_fields.filter(field => field._key !== "_dense")
+      : raw_design_fields;
+    const capability_fields = this._normalize_capability_inspector_fields(skill, obj);
 
-    const out: XStudioSelectedObjectInspectorResolvedField[] = [];
+    if (design_fields.length === 0 && capability_fields.length === 0) return [];
 
-    fields.forEach((field, index) => {
-      if (!is_obj(field) || typeof field._key !== "string" || !field._key.trim()) {
-        return;
-      }
-
-      const key = field._key.trim();
-      if (key === "_on") {
-        return;
-      }
-
-      const input =
-        this._normalize_inspector_input(field._input) ??
-        this._infer_inspector_input_for_key(key, obj[key]);
-
-      out.push({
+    const capability_by_key = new Map(capability_fields.map(field => [field._key, field]));
+    const design_keys = new Set(design_fields.map(field => field._key));
+    const has_metadata_group = design_fields.some(field => typeof field._group === "string" && field._group.trim());
+    const composed = this._with_semantic_inspector_paths([
+      ...design_fields.map(field => ({
+        ...(capability_by_key.get(field._key) ?? {}),
         ...field,
-        _key: key,
-        _label:
-          typeof field._label === "string" && field._label.trim()
-            ? field._label.trim()
-            : this._inspector_label_for_key(key),
-        _input: input,
-        _control_id: this._inspector_control_id(key, index),
-        _source: "design",
-      });
-    });
+        _source: "design" as const,
+      })),
+      ...capability_fields.filter(field => !design_keys.has(field._key)),
+    ]);
 
-    return out;
+    return this._with_inspector_control_ids(
+      has_metadata_group
+        ? this._order_selected_object_inspector_fields(composed)
+        : composed,
+    );
   }
 
   private _fallback_inspector_field_allowed(key: string, value: unknown) {
@@ -18879,6 +22023,10 @@ export class XStudioModule extends XModule {
   }
 
   private _selected_object_type_from_data(obj: Record<string, any> | null) {
+    if (this._selected_object?._semantic_editor_type?.trim()) {
+      return this._selected_object._semantic_editor_type.trim();
+    }
+
     if (obj && typeof obj._type === "string" && obj._type.trim()) {
       return obj._type.trim();
     }
@@ -18979,13 +22127,27 @@ export class XStudioModule extends XModule {
       return [];
     }
 
-    const type = this._selected_object_type_from_data(obj);
-    const skill = this._resolve_selected_object_skill(type);
-    const design_fields = this._normalize_design_inspector_fields(skill, obj);
+        const type = this._selected_object_type_from_data(obj);
+        const skill = this._resolve_selected_object_skill(type);
+        if (
+          this._selected_object?._semantic &&
+          !this._semantic_action_allowed(this._selected_object, "editable")
+        ) {
+          return [];
+        }
+
+        const design_fields = this._normalize_design_inspector_fields(skill, obj);
     const fields =
       design_fields.length > 0
         ? design_fields
-        : this._infer_selected_object_inspector_fields(obj);
+        : this._selected_object?._semantic
+          ? this._with_inspector_control_ids(
+            this._with_semantic_inspector_paths(
+              this._infer_selected_object_inspector_fields(obj)
+                .map(({ _control_id: _ignored, ...field }) => field),
+            ),
+          )
+          : this._infer_selected_object_inspector_fields(obj);
 
     this._log("inspector fields resolved", {
       _type: type,
@@ -19002,6 +22164,36 @@ export class XStudioModule extends XModule {
     obj: Record<string, any>,
     field: XStudioSelectedObjectInspectorResolvedField,
   ) {
+    if (field._style_path) {
+      const style_source = field._style_object_path && this._selected_object_owner_data
+        ? this._read_semantic_path(this._selected_object_owner_data, field._style_object_path)
+        : obj._style;
+      const style = is_obj(style_source) ? style_source as Record<string, any> : {};
+      const value = style[field._style_path];
+      if (value === undefined || value === null) return "";
+      if (typeof value === "object" || typeof value === "function") return "";
+      return String(value);
+    }
+
+    if (field._property_path && this._selected_object_owner_data) {
+      const value = this._read_semantic_path(this._selected_object_owner_data, field._property_path);
+      if (value === undefined || value === null) return field._input === "checkbox" ? "false" : "";
+      if (field._input === "json") {
+        try {
+          return JSON.stringify(value, null, 2);
+        } catch {
+          return "";
+        }
+      }
+      if (field._input === "checkbox") {
+        return value === true || String(value).toLowerCase() === "true"
+          ? "true"
+          : "false";
+      }
+      if (typeof value === "object" || typeof value === "function") return "";
+      return String(value);
+    }
+
     if (!this._has_own_field(obj, field._key)) {
       return field._input === "checkbox" ? "false" : "";
     }
@@ -19163,10 +22355,17 @@ export class XStudioModule extends XModule {
         _type: "select",
         _options: [
           ...(Array.isArray(field._options)
-            ? field._options.map((option: string) => ({
-              label: String(option),
-              value: String(option),
-            }))
+            ? field._options.map((option) => is_obj(option)
+              ? {
+                label: String(option.label ?? option.value ?? ""),
+                value: String(option.value ?? option.label ?? ""),
+                ...(option.disabled === true ? { disabled: true } : {}),
+                ...(option.selected === true ? { selected: true } : {}),
+              }
+              : {
+                label: String(option),
+                value: String(option),
+              })
             : []),
         ],
       };
@@ -19196,31 +22395,56 @@ export class XStudioModule extends XModule {
     if (!container) return;
 
     const children = fields.length > 0
-      ? fields.map(field => ({
-        _id: `${field._control_id}-row`,
-        _type: "view",
-        class: [
-          "xstudio-selected-object-editor-row",
-          `xstudio-selected-object-editor-row-${field._input}`,
-          field._advanced ? "xstudio-selected-object-editor-row-advanced" : "",
-          field._required ? "xstudio-selected-object-editor-row-required" : "",
-        ].filter(Boolean).join(" "),
-        _children: [
-          {
+      ? fields.reduce<Record<string, any>[]>((out, field) => {
+        const group = typeof field._group === "string" ? field._group.trim() : "";
+        const previous = out[out.length - 1] as Record<string, any> | undefined;
+        const previous_group =
+          typeof previous?._xstudio_inspector_group === "string"
+            ? previous._xstudio_inspector_group
+            : "";
+        if (group && previous_group !== group) {
+          out.push({
+            _id: `${field._control_id}-group`,
             _type: "label",
-            class: [
-              "xstudio-selected-object-editor-label",
-              field._required ? "xstudio-selected-object-editor-label-required" : "",
-            ].filter(Boolean).join(" "),
-            _text: field._required ? `${field._label} *` : field._label,
-            title: field._description ?? field._key,
-          },
-          this._selected_object_inspector_field_control(
-            field,
-            !has_selected_object,
-          ),
-        ],
-      }))
+            class: "xstudio-selected-object-editor-group-title",
+            _text:
+              typeof field._group_label === "string" && field._group_label.trim()
+                ? field._group_label.trim()
+                : this._inspector_label_for_key(group),
+            _xstudio_inspector_group: group,
+          });
+        }
+
+        out.push({
+          _id: `${field._control_id}-row`,
+          _type: "view",
+          class: [
+            "xstudio-selected-object-editor-row",
+            `xstudio-selected-object-editor-row-${field._input}`,
+            group ? `xstudio-selected-object-editor-row-group-${group.replace(/[^a-zA-Z0-9_-]+/g, "-")}` : "",
+            field._advanced ? "xstudio-selected-object-editor-row-advanced" : "",
+            field._required ? "xstudio-selected-object-editor-row-required" : "",
+          ].filter(Boolean).join(" "),
+          _xstudio_inspector_group: group,
+          _children: [
+            {
+              _type: "label",
+              class: [
+                "xstudio-selected-object-editor-label",
+                field._required ? "xstudio-selected-object-editor-label-required" : "",
+              ].filter(Boolean).join(" "),
+              _text: field._required ? `${field._label} *` : field._label,
+              title: field._description ?? field._key,
+            },
+            this._selected_object_inspector_field_control(
+              field,
+              !has_selected_object,
+            ),
+          ],
+        });
+
+        return out;
+      }, [])
       : [
         {
           _id: "xstudio-selected-object-fields-empty",
@@ -19637,6 +22861,7 @@ export class XStudioModule extends XModule {
       _kind: this._selected_object_click_interaction_draft._kind,
       _view_id: this._selected_object_click_interaction_draft._view_id,
     });
+    this._update_selected_object_inspector_dirty();
     this._set_selected_object_inspector_controls(
       this._selected_object_inspector_draft,
       this._selected_object !== null,
@@ -19748,8 +22973,12 @@ export class XStudioModule extends XModule {
       this._render_selected_object_inspector_fields([], draft, false);
     }
 
+    const has_dirty_changes =
+      this._selected_object_inspector_dirty ||
+      this._selected_object_click_interaction_changed();
     const has_editable_fields =
       has_selected_object &&
+      has_dirty_changes &&
       (
         (
           this._selected_object_inspector_section_supported("properties") &&
@@ -19906,6 +23135,7 @@ export class XStudioModule extends XModule {
     const sibling_context = this._selected_object_sibling_context(selected);
     const has_movable_selection = Boolean(
       selected &&
+      this._semantic_action_allowed(selected, "movable") &&
       selected._json_id.trim() &&
       selected._source_view_id.trim() &&
       sibling_context &&
@@ -19933,7 +23163,9 @@ export class XStudioModule extends XModule {
   ) {
     this._set_studio_control_disabled(
       STUDIO_SELECTED_OBJECT_DELETE_REQUEST_ID,
-      !selected || this._selected_object_is_root_view(selected),
+      !selected ||
+      !this._semantic_action_allowed(selected, "deletable") ||
+      this._selected_object_is_root_view(selected),
     );
   }
 
@@ -19943,13 +23175,18 @@ export class XStudioModule extends XModule {
     this._set_studio_control_disabled(
       STUDIO_SELECTED_OBJECT_DUPLICATE_ID,
       !selected ||
+      !this._semantic_action_allowed(selected, "duplicable") ||
       !selected._json_id.trim() ||
       this._selected_object_is_root_view(selected),
     );
   }
 
-  private _populate_selected_object_inspector_draft(obj: Record<string, any> | null) {
+  private _populate_selected_object_inspector_draft(
+    obj: Record<string, any> | null,
+    owner: Record<string, any> | null = null,
+  ) {
     this._selected_object_data = obj;
+    this._selected_object_owner_data = owner;
     this._selected_object_inspector_sections = this._resolve_selected_object_inspector_sections(obj);
     this._selected_object_inspector_fields = this._resolve_selected_object_inspector_fields(obj);
     this._selected_object_click_interaction_original =
@@ -19961,6 +23198,7 @@ export class XStudioModule extends XModule {
       obj,
       this._selected_object_inspector_fields,
     );
+    this._selected_object_inspector_dirty = false;
     this._write_selected_object_inspector_draft(
       this._selected_object_inspector_draft,
       "xstudio-object-tree",
@@ -19970,11 +23208,13 @@ export class XStudioModule extends XModule {
 
   private _clear_selected_object_inspector_draft() {
     this._selected_object_data = null;
+    this._selected_object_owner_data = null;
     this._selected_object_inspector_sections = this._resolve_selected_object_inspector_sections(null);
     this._selected_object_inspector_fields = [];
     this._selected_object_click_interaction_original = empty_selected_object_click_interaction_draft();
     this._selected_object_click_interaction_draft = empty_selected_object_click_interaction_draft();
     this._selected_object_inspector_draft = empty_selected_object_inspector_draft();
+    this._selected_object_inspector_dirty = false;
     this._write_selected_object_inspector_draft(null, "xstudio-object-tree");
     this._set_selected_object_inspector_controls(this._selected_object_inspector_draft, false);
   }
@@ -19987,6 +23227,42 @@ export class XStudioModule extends XModule {
     }
 
     return draft;
+  }
+
+  private _update_selected_object_inspector_dirty(
+    draft: XStudioSelectedObjectInspectorDraft = this._read_selected_object_inspector_draft_from_controls(),
+  ) {
+    this._selected_object_inspector_dirty =
+      this._changed_selected_object_inspector_fields(
+        this._selected_object_inspector_draft,
+        draft,
+      ).length > 0 ||
+      this._selected_object_click_interaction_changed();
+    return this._selected_object_inspector_dirty;
+  }
+
+  private _refresh_selected_object_inspector_action_controls() {
+    const has_selected_object = this._selected_object !== null;
+    const has_dirty_changes =
+      this._selected_object_inspector_dirty ||
+      this._selected_object_click_interaction_changed();
+    const has_editable_fields =
+      has_selected_object &&
+      has_dirty_changes &&
+      (
+        (
+          this._selected_object_inspector_section_supported("properties") &&
+          this._selected_object_inspector_fields.some(field => field._readonly !== true)
+        ) ||
+        (
+          this._selected_object_inspector_section_supported("interactions") &&
+          this._selected_object_click_interaction_changed()
+        )
+      );
+
+    for (const control_id of STUDIO_SELECTED_OBJECT_EDITOR_ACTION_CONTROL_IDS) {
+      this._set_studio_control_disabled(control_id, !has_editable_fields);
+    }
   }
 
   private _handle_selected_object_inspector_field_changed(payload: any) {
@@ -20004,6 +23280,8 @@ export class XStudioModule extends XModule {
     //   _field: key,
     //   _input: input,
     // });
+    this._update_selected_object_inspector_dirty();
+    this._refresh_selected_object_inspector_action_controls();
   }
 
   private _selected_object_apply_error(message: string, field: XStudioSelectedObjectInspectorField | "fields") {
@@ -20050,6 +23328,9 @@ export class XStudioModule extends XModule {
   }
 
   private _selected_object_json_id(selected: XStudioSelectedObject | null) {
+    if (selected?._semantic) {
+      return selected._semantic_owner_id?.trim() ?? "";
+    }
     return selected?._json_id?.trim() ?? "";
   }
 
@@ -20376,8 +23657,12 @@ export class XStudioModule extends XModule {
     env: string,
   ) {
     const view_id = selected._source_view_id.trim();
-    const id = selected._json_id.trim();
-    const type = selected._type.trim() || "object";
+    const id = selected._semantic
+      ? selected._semantic_owner_id?.trim() ?? ""
+      : selected._json_id.trim();
+    const type = selected._semantic
+      ? selected._semantic_owner_type?.trim() || "object"
+      : selected._type.trim() || "object";
     const base: XStudioSelectedObjectApplyViewEditParams = {
       _app_id: app_id,
       _env: env,
@@ -20429,12 +23714,30 @@ export class XStudioModule extends XModule {
       };
     }
 
+    if (field_meta._style_path) {
+      const style_value = String(parsed._value ?? "");
+
+      return {
+        _ok: true,
+        _error: "",
+        _params: {
+          ...base,
+          _edit_action: style_value.trim() ? "set-style" : "remove-style",
+          _style_property: field_meta._style_path,
+          ...(field_meta._style_object_path ? { _style_object_path: field_meta._style_object_path } : {}),
+          ...(style_value.trim() ? { _style_value: style_value } : {}),
+        },
+      };
+    }
+
     return {
       _ok: true,
       _error: "",
       _params: {
         ...base,
-        _property_name: field_meta._key,
+        ...(field_meta._property_path
+          ? { _property_path: field_meta._property_path }
+          : { _property_name: field_meta._key }),
         _property_value: parsed._value,
       },
     };
@@ -20528,6 +23831,263 @@ export class XStudioModule extends XModule {
     }
 
     return fields;
+  }
+
+  private _clone_selected_object_inspector_edit_params(
+    params: XStudioSelectedObjectApplyViewEditParams,
+  ) {
+    return _xu.clone_json(params) as XStudioSelectedObjectApplyViewEditParams;
+  }
+
+  private _selected_object_inspector_style_batch_key(
+    params: XStudioSelectedObjectApplyViewEditParams,
+  ) {
+    if (
+      params._edit_action !== "set-style" ||
+      !params._style_property ||
+      params._style_object_path
+    ) {
+      return "";
+    }
+
+    return [
+      params._app_id,
+      params._env,
+      params._view_id,
+      params._target_id,
+      params._target_type,
+    ].join("::");
+  }
+
+  private _selected_object_inspector_step_title(
+    edits: XStudioSelectedObjectInspectorEdit[],
+    params: XStudioSelectedObjectApplyViewEditParams,
+  ) {
+    if (params._edit_action === "set-styles") return `Set ${edits.length} styles`;
+    if (params._edit_action === "set-style") return `Set ${params._style_property ?? "style"}`;
+    if (params._edit_action === "remove-style") return `Remove ${params._style_property ?? "style"}`;
+    if (params._edit_action === "set-interaction") return "Set click interaction";
+    return `Set ${edits[0]?._field ?? "property"}`;
+  }
+
+  private _build_selected_object_inspector_transaction_steps(
+    edits: XStudioSelectedObjectInspectorEdit[],
+  ): XStudioSelectedObjectInspectorTransactionStep[] {
+    const steps: XStudioSelectedObjectInspectorTransactionStep[] = [];
+    const consumed = new Set<number>();
+
+    for (let index = 0; index < edits.length; index += 1) {
+      if (consumed.has(index)) continue;
+
+      const edit = edits[index];
+      const batch_key = this._selected_object_inspector_style_batch_key(edit._params);
+      let step_edits = [edit];
+      let params = this._clone_selected_object_inspector_edit_params(edit._params);
+
+      if (batch_key) {
+        step_edits = edits.filter((candidate, candidate_index) => {
+          if (candidate_index < index || consumed.has(candidate_index)) return false;
+          return this._selected_object_inspector_style_batch_key(candidate._params) === batch_key;
+        });
+
+        for (const candidate of step_edits) {
+          consumed.add(edits.indexOf(candidate));
+        }
+
+        if (step_edits.length > 1) {
+          const styles: Record<string, string> = {};
+          for (const candidate of step_edits) {
+            const style_property = candidate._params._style_property;
+            if (!style_property) continue;
+            styles[style_property] = String(candidate._params._style_value ?? "");
+          }
+
+          params = {
+            ...this._clone_selected_object_inspector_edit_params(edit._params),
+            _edit_action: "set-styles",
+            _styles: styles,
+          };
+          delete params._style_property;
+          delete params._style_value;
+        }
+      } else {
+        consumed.add(index);
+      }
+
+      const step_id = `inspector-save-${steps.length + 1}`;
+      steps.push({
+        _id: step_id,
+        _title: this._selected_object_inspector_step_title(step_edits, params),
+        _params: params,
+        _edits: step_edits,
+      });
+    }
+
+    return steps;
+  }
+
+  private _build_selected_object_inspector_transaction(
+    edits: XStudioSelectedObjectInspectorEdit[],
+    app_id: string,
+    env: string,
+  ): XStudioSelectedObjectInspectorTransaction {
+    const steps = this._build_selected_object_inspector_transaction_steps(edits);
+
+    if (steps.length === 1) {
+      return {
+        _op: "apply-view-edit",
+        _params: steps[0]._params,
+        _steps: steps,
+        _edit_count: edits.length,
+      };
+    }
+
+    const plan = {
+      _type: MUTATION_PLAN_ARTIFACT_TYPE,
+      _id: "selected-object-inspector-save",
+      _title: "Selected object inspector save",
+      _goal: "Persist selected object inspector changes as one edit transaction.",
+      _summary: `${edits.length} selected object edits.`,
+      _estimated_mutations: edits.length,
+      _status: "planned",
+      _can_apply: true,
+      _executable_steps: steps.map(step => step._id),
+      _unsupported_steps: [],
+      _steps: steps.map(step => ({
+        _id: step._id,
+        _title: step._title,
+        _status: "planned",
+        _primitive: {
+          _module: "xvibe",
+          _op: "apply-view-edit",
+          _params: step._params,
+        },
+      })),
+    };
+
+    return {
+      _op: "apply-mutation-plan",
+      _params: {
+        _app_id: app_id,
+        _env: env,
+        _plan: plan,
+      },
+      _steps: steps,
+      _edit_count: edits.length,
+    };
+  }
+
+  private _selected_object_inspector_transaction_completed_steps(
+    transaction: XStudioSelectedObjectInspectorTransaction,
+    result: any,
+  ) {
+    if (transaction._op === "apply-view-edit") {
+      return is_obj(result) && result._ok === true ? transaction._steps : [];
+    }
+
+    if (!this._is_apply_mutation_plan_failure(result)) {
+      return transaction._steps;
+    }
+
+    const source = this._mutation_plan_result_source(result);
+    const completed_steps = source?._completed_steps ?? source?.completed_steps;
+    const completed_count =
+      typeof source?._completed_count === "number"
+        ? source._completed_count
+        : typeof source?.completed_count === "number"
+          ? source.completed_count
+          : typeof completed_steps === "number"
+            ? completed_steps
+            : Array.isArray(completed_steps)
+              ? completed_steps.length
+              : 0;
+
+    if (Array.isArray(completed_steps)) {
+      const ids = new Set(
+        completed_steps.flatMap((step) => {
+          if (typeof step === "string") return [step];
+          if (!is_obj(step)) return [];
+          const id = step._id ?? step.id ?? step._step_id ?? step.step_id;
+          return typeof id === "string" && id.trim() ? [id.trim()] : [];
+        }),
+      );
+      if (ids.size > 0) {
+        return transaction._steps.filter(step => ids.has(step._id));
+      }
+    }
+
+    return transaction._steps.slice(0, Math.max(0, completed_count));
+  }
+
+  private _selected_object_inspector_transaction_failed(
+    transaction: XStudioSelectedObjectInspectorTransaction,
+    result: any,
+  ) {
+    if (transaction._op === "apply-mutation-plan") {
+      return this._is_apply_mutation_plan_failure(result);
+    }
+
+    return !is_obj(result) || result._ok !== true;
+  }
+
+  private _format_selected_object_inspector_transaction_failure(
+    transaction: XStudioSelectedObjectInspectorTransaction,
+    result: any,
+  ) {
+    const completed_steps =
+      this._selected_object_inspector_transaction_completed_steps(transaction, result).length;
+    const base = transaction._op === "apply-mutation-plan"
+      ? this._format_server_failure(result, "Selected object save failed.")
+      : this._format_apply_view_edit_failure(result);
+    const suffix = completed_steps > 0
+      ? ` ${completed_steps} of ${transaction._steps.length} edit steps completed; unsaved fields remain dirty.`
+      : " Unsaved fields remain dirty.";
+
+    return `${base}${suffix}`;
+  }
+
+  private async _apply_selected_object_inspector_transaction(
+    transaction: XStudioSelectedObjectInspectorTransaction,
+  ) {
+    try {
+      const result = await this._send_xvibe_command(transaction._op, transaction._params);
+      if (this._selected_object_inspector_transaction_failed(transaction, result)) {
+        const message = this._format_selected_object_inspector_transaction_failure(transaction, result);
+        this._write_studio_status(message);
+        this._error("selected object inspector transaction failed", {
+          _op: transaction._op,
+          _result: result,
+        });
+        return {
+          _ok: false,
+          _result: result,
+          _completed_steps: this._selected_object_inspector_transaction_completed_steps(transaction, result),
+        };
+      }
+
+      this._log("selected object inspector transaction result", {
+        _op: transaction._op,
+        _result: result,
+      });
+      return {
+        _ok: true,
+        _result: result,
+        _completed_steps: transaction._steps,
+      };
+    } catch (err) {
+      const result = { _ok: false, _error: to_err(err) };
+      const message = this._format_selected_object_inspector_transaction_failure(transaction, result);
+      this._write_studio_status(message);
+      this._error("selected object inspector transaction failed", {
+        _op: transaction._op,
+        _error: to_err(err),
+      });
+      return {
+        _ok: false,
+        _result: result,
+        _completed_steps: [],
+      };
+    }
   }
 
   private async _apply_selected_object_inspector_edit(
@@ -20632,6 +24192,115 @@ export class XStudioModule extends XModule {
     this._selected_object_data[scope] = current_scope;
   }
 
+  private _apply_saved_selected_object_style_to_local_data(
+    params: XStudioSelectedObjectApplyViewEditParams,
+  ) {
+    if (!this._selected_object_data) return;
+    const has_single_style = typeof params._style_property === "string" && params._style_property.trim();
+    const has_style_batch = params._edit_action === "set-styles" && is_obj(params._styles);
+    if (!has_single_style && !has_style_batch) return;
+
+    const style_target = params._style_object_path && this._selected_object_owner_data
+      ? this._read_semantic_path(this._selected_object_owner_data, params._style_object_path)
+      : this._selected_object_data._style;
+    const current_style = is_obj(style_target)
+      ? { ...(style_target as Record<string, any>) }
+      : {};
+
+    if (params._edit_action === "remove-style") {
+      delete current_style[params._style_property as string];
+    } else if (params._edit_action === "set-style") {
+      current_style[params._style_property as string] = params._style_value ?? "";
+    } else if (params._edit_action === "set-styles" && is_obj(params._styles)) {
+      for (const [key, value] of Object.entries(params._styles)) {
+        current_style[key] = value;
+      }
+    } else {
+      return;
+    }
+
+    if (params._style_object_path && this._selected_object_owner_data) {
+      if (Object.keys(current_style).length > 0) {
+        this._write_semantic_path(this._selected_object_owner_data, params._style_object_path, current_style);
+      } else {
+        this._delete_semantic_path(this._selected_object_owner_data, params._style_object_path);
+      }
+      return;
+    }
+
+    if (Object.keys(current_style).length > 0) {
+      this._selected_object_data._style = current_style;
+    } else {
+      delete this._selected_object_data._style;
+    }
+  }
+
+  private _apply_saved_selected_object_property_to_local_data(
+    params: XStudioSelectedObjectApplyViewEditParams,
+  ) {
+    if (!this._selected_object_data) return;
+    if (typeof params._property_path === "string" && this._selected_object_owner_data) {
+      this._write_semantic_path(
+        this._selected_object_owner_data,
+        params._property_path,
+        params._property_value,
+      );
+      return;
+    }
+
+    if (typeof params._property_name === "string") {
+      this._selected_object_data[params._property_name] = params._property_value;
+    }
+  }
+
+  private _apply_saved_selected_object_inspector_edits_to_local_data(
+    edits: XStudioSelectedObjectInspectorEdit[],
+  ) {
+    if (!this._selected_object_data) return;
+
+    for (const edit of edits) {
+      if (
+        typeof edit._params._property_name === "string" ||
+        typeof edit._params._property_path === "string"
+      ) {
+        this._apply_saved_selected_object_property_to_local_data(edit._params);
+      } else if (
+        typeof edit._params._style_property === "string" ||
+        edit._params._edit_action === "set-styles"
+      ) {
+        this._apply_saved_selected_object_style_to_local_data(edit._params);
+      } else if (edit._interaction) {
+        this._apply_saved_selected_object_interaction_to_local_data(edit._params);
+      }
+    }
+
+    this._selected_object_json = this._safe_selected_json_preview(this._selected_object_data);
+  }
+
+  private _complete_selected_object_inspector_transaction_steps(
+    completed_steps: XStudioSelectedObjectInspectorTransactionStep[],
+    next_draft: XStudioSelectedObjectInspectorDraft,
+  ) {
+    const completed_edits = completed_steps.flatMap(step => step._edits);
+    this._apply_saved_selected_object_inspector_edits_to_local_data(completed_edits);
+
+    const completed_field_edits = completed_edits.filter(edit => edit._interaction !== true);
+    if (completed_field_edits.length > 0) {
+      this._selected_object_inspector_draft = {
+        ...this._selected_object_inspector_draft,
+        ...Object.fromEntries(
+          completed_field_edits.map(edit => [edit._field, next_draft[edit._field] ?? ""]),
+        ),
+      };
+    }
+
+    if (completed_edits.some(edit => edit._interaction)) {
+      this._selected_object_click_interaction_original = {
+        ...this._selected_object_click_interaction_draft,
+      };
+    }
+  }
+
   private async _save_selected_object_inspector_fields() {
     this._log("inspector save requested", {
       _field_count: this._selected_object_inspector_fields.length,
@@ -20674,11 +24343,7 @@ export class XStudioModule extends XModule {
       return;
     }
 
-    const edits: {
-      _field: XStudioSelectedObjectInspectorField;
-      _params: XStudioSelectedObjectApplyViewEditParams;
-      _interaction?: boolean;
-    }[] = [];
+    const edits: XStudioSelectedObjectInspectorEdit[] = [];
 
     for (const field of changed_fields) {
       const edit_result = this._build_selected_object_inspector_edit_params(
@@ -20720,9 +24385,13 @@ export class XStudioModule extends XModule {
     }
 
     if (edits.length === 0) {
+      this._selected_object_inspector_dirty = false;
+      this._refresh_selected_object_inspector_action_controls();
       this._write_studio_status("No selected object changes to save");
       return;
     }
+
+    const transaction = this._build_selected_object_inspector_transaction(edits, app_id, env);
 
     this._write_studio_status(
       edits.length === 1
@@ -20730,38 +24399,47 @@ export class XStudioModule extends XModule {
         : `Saving ${edits.length} selected object edits...`,
     );
 
-    for (const edit of edits) {
-      const ok = await this._apply_selected_object_inspector_edit(
-        edit._field,
-        this._selected_object,
-        edit._params,
-      );
-      if (!ok) {
-        return;
-      }
+    this._selected_object_inspector_save_in_progress = true;
+    this._selected_object_inspector_deferred_refresh = false;
+
+    const apply_result = await this._apply_selected_object_inspector_transaction(transaction);
+    const completed_steps = apply_result._completed_steps;
+    this._complete_selected_object_inspector_transaction_steps(completed_steps, next_draft);
+
+    const saved_all = apply_result._ok === true && completed_steps.length === transaction._steps.length;
+    if (saved_all) {
+      this._selected_object_inspector_draft = next_draft;
+      this._selected_object_click_interaction_original = {
+        ...this._selected_object_click_interaction_draft,
+      };
     }
 
-    if (this._selected_object_data) {
-      for (const edit of edits) {
-        if (typeof edit._params._property_name === "string") {
-          this._selected_object_data[edit._params._property_name] =
-            edit._params._property_value;
-        } else if (edit._interaction) {
-          this._apply_saved_selected_object_interaction_to_local_data(edit._params);
-        }
-      }
-      this._selected_object_json = this._safe_selected_json_preview(this._selected_object_data);
-    }
+    this._selected_object_inspector_dirty =
+      this._changed_selected_object_inspector_fields(
+        this._selected_object_inspector_draft,
+        next_draft,
+      ).length > 0 ||
+      this._selected_object_click_interaction_changed();
 
-    this._selected_object_inspector_draft = next_draft;
-    this._selected_object_click_interaction_original = {
-      ...this._selected_object_click_interaction_draft,
-    };
     this._write_selected_object_inspector_draft(
       this._selected_object_inspector_draft,
       "xstudio-selected-object-inspector",
     );
-    this._set_selected_object_inspector_controls(this._selected_object_inspector_draft, true);
+    this._set_selected_object_inspector_controls(
+      saved_all ? this._selected_object_inspector_draft : next_draft,
+      true,
+    );
+
+    this._selected_object_inspector_save_in_progress = false;
+    const should_refresh_after_save = saved_all && this._selected_object_inspector_deferred_refresh;
+    this._selected_object_inspector_deferred_refresh = false;
+    if (should_refresh_after_save) {
+      this._refresh_object_tree_for_current_view();
+    }
+
+    if (!saved_all) {
+      return;
+    }
 
     if (edits.some(edit => edit._interaction)) {
       this._log("interaction saved", {
@@ -20792,6 +24470,7 @@ export class XStudioModule extends XModule {
     this._selected_object_click_interaction_draft = {
       ...this._selected_object_click_interaction_original,
     };
+    this._selected_object_inspector_dirty = false;
     this._set_selected_object_inspector_controls(this._selected_object_inspector_draft, true);
     this._write_selected_object_inspector_draft(
       this._selected_object_inspector_draft,
@@ -21319,7 +24998,7 @@ export class XStudioModule extends XModule {
 
     this._selected_object = selected;
     this._selected_object_json = this._safe_selected_json_preview(node._object);
-    this._populate_selected_object_inspector_draft(node._object);
+    this._populate_selected_object_inspector_draft(node._object, node._owner_object ?? null);
     _xd.set(_XD_KEYS.STUDIO_SELECTED_OBJECT, selected, { source: "xstudio-object-tree" });
     this._log_selected_object_persisted_metadata(selected);
     this._mark_selected_tree_row(row_id);
@@ -21397,13 +25076,25 @@ export class XStudioModule extends XModule {
       const dom_status = this._apply_selected_canvas_highlight(next_selected_node._meta);
       this._selected_object = { ...next_selected_node._meta, _dom_status: dom_status };
       this._selected_object_json = this._safe_selected_json_preview(next_selected_node?._object ?? null);
-      this._populate_selected_object_inspector_draft(next_selected_node?._object ?? null);
+      this._populate_selected_object_inspector_draft(
+        next_selected_node?._object ?? null,
+        next_selected_node?._owner_object ?? null,
+      );
       _xd.set(_XD_KEYS.STUDIO_SELECTED_OBJECT, this._selected_object, { source: "xstudio-object-tree" });
       this._log_selected_object_persisted_metadata(this._selected_object);
     }
 
     this._render_cached_object_tree_nodes();
     this._update_selected_object_inspector();
+  }
+
+  private _refresh_object_tree_for_current_view_or_defer() {
+    if (this._selected_object_inspector_save_in_progress) {
+      this._selected_object_inspector_deferred_refresh = true;
+      return;
+    }
+
+    this._refresh_object_tree_for_current_view();
   }
 
   private _log(...args: any[]) {
@@ -21444,7 +25135,7 @@ export class XStudioModule extends XModule {
     const req_id = ++this._cmd_seq;
     this._debug_log(`-> ${_module}.${_op}`, {
       _req_id: req_id,
-      _params,
+      _params: options._debug_params ?? _params,
       ...(typeof options._timeout_ms === "number" ? { _timeout_ms: options._timeout_ms } : {}),
     });
     if ((_module === "server-xvm" || _module === "xvibe" || _module === "planning") && !this._server_ready()) {
@@ -21457,13 +25148,18 @@ export class XStudioModule extends XModule {
       this._debug_log(`<- ${_module}.${_op} result`, { _req_id: req_id, _result: result });
       return result;
     } catch (err: any) {
-      this._error(`xx ${_module}.${_op} failed`, { _req_id: req_id, _error: to_err(err) });
+      const error_payload = options._debug_params ? this._xapp_debug_details(err) || to_err(err) : to_err(err);
+      this._error(`xx ${_module}.${_op} failed`, { _req_id: req_id, _error: error_payload });
       throw err;
     }
   }
 
-  private _send_server_xvm_command(_op: string, _params: Record<string, any>) {
-    return this._send_command("server-xvm", _op, _params);
+  private _send_server_xvm_command(
+    _op: string,
+    _params: Record<string, any>,
+    options: XStudioSendCommandOptions = {},
+  ) {
+    return this._send_command("server-xvm", _op, _params, options);
   }
 
   private _send_studio_command(_op: string, _params: Record<string, any>) {

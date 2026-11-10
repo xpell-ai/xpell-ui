@@ -5,7 +5,10 @@ import Wormholes from "../Wormholes/Wormholes";
 import { XDB } from "../XDB/XDBClient";
 import { XVM, type XVMApp } from "./XVM";
 import { XUI } from "../XUI/XUI";
-import { XStudioModule } from "../XStudio/XStudioModule";
+import {
+  XStudioModule,
+  runtime_skill_compact_snapshot,
+} from "../XStudio/XStudioModule";
 import {
   _XD_KEYS,
   is_obj,
@@ -74,6 +77,7 @@ export type XVMClientOptions = {
   _app_id: string;
   _env: string;
   _edit?: boolean;
+  _allow_edit?: boolean;
   _wormhole_url: string;
   _region?: string;
   _fallback_view_id?: string;
@@ -107,6 +111,21 @@ const to_result = (raw: any) => {
   return raw;
 };
 
+const stable_json_stringify = (value: any): string => {
+  if (Array.isArray(value)) {
+    return `[${value.map((item) => stable_json_stringify(item)).join(",")}]`;
+  }
+
+  if (is_obj(value)) {
+    return `{${Object.keys(value)
+      .sort()
+      .map((key) => `${JSON.stringify(key)}:${stable_json_stringify(value[key])}`)
+      .join(",")}}`;
+  }
+
+  return JSON.stringify(value);
+};
+
 
 export class XVMClient {
   _app_id: string;
@@ -137,14 +156,21 @@ export class XVMClient {
   _theme?: string | Record<string, string>;
   _cache_key_app: string;
   _cache_key_version: string;
-  _edit_mode = true;
-  _xstudio: XStudioModule;
+  _edit_mode = false;
+  _allow_edit_mode = false;
+  _xstudio: XStudioModule | null = null;
   _pending_structured_view_edits: PendingStructuredViewEdit[] = [];
   _load_server_app_token = 0;
+  _runtime_skill_sync_keys: Map<string, string> = new Map();
+  _runtime_skill_server_identity = "";
+  _runtime_skill_reconnect_sync: Promise<any> | null = null;
+  _bootstrap_inflight = false;
+  _load_server_app_inflight = false;
 
   constructor(opts: XVMClientOptions) {
     this._app_id = opts._app_id;
     this._env = opts._env;
+    this._allow_edit_mode = opts._allow_edit === true;
     this._edit_mode = this._resolve_edit_mode(opts._app_id, opts._edit);
     this._wormhole_url = opts._wormhole_url;
     this._region_override = typeof opts._region === "string" && opts._region.trim() ? opts._region.trim() : undefined;
@@ -175,7 +201,6 @@ export class XVMClient {
       }
     );
     this._set_server_xvm_subscription_ready(false, "constructor");
-    this._xstudio = new XStudioModule(this);
     _xem.fire("xvm:view-resolver-ready", {
       resolver: (view_id: string) => this.get_view(view_id)
     });
@@ -431,6 +456,227 @@ export class XVMClient {
       _env: env,
       _source: source,
     });
+  }
+
+  _runtime_skill_scope_key(app_id = this._app_id, env = this._env, mode = "runtime") {
+    return `${env}::${app_id}::${mode}`;
+  }
+
+  _collect_runtime_skill_snapshot() {
+    const get_skills = (_x as any).getSkills;
+    const raw_skills =
+      typeof get_skills === "function"
+        ? get_skills.call(_x)
+        : {};
+    return runtime_skill_compact_snapshot(raw_skills)._runtime_skills;
+  }
+
+  _runtime_skill_snapshot_hash(snapshot_key: string) {
+    let hash = 2166136261;
+    for (let i = 0; i < snapshot_key.length; i += 1) {
+      hash ^= snapshot_key.charCodeAt(i);
+      hash = Math.imul(hash, 16777619);
+    }
+    return (hash >>> 0).toString(16).padStart(8, "0");
+  }
+
+  _runtime_skill_object_count(skills: any) {
+    let count = Array.isArray(skills?._objects) ? skills._objects.length : 0;
+    if (Array.isArray(skills?._modules)) {
+      for (const module_skill of skills._modules) {
+        if (Array.isArray(module_skill?._objects)) {
+          count += module_skill._objects.length;
+        }
+      }
+    }
+    return count;
+  }
+
+  _read_runtime_skill_server_identity() {
+    const facade_identity = typeof (Wormholes as any)._server_identity === "string"
+      ? (Wormholes as any)._server_identity.trim()
+      : "";
+    if (facade_identity) {
+      this._runtime_skill_server_identity = facade_identity;
+      return facade_identity;
+    }
+    return this._runtime_skill_server_identity || "unknown-server";
+  }
+
+  _note_runtime_skill_server_hello(payload: any) {
+    const server_identity = typeof payload?._node === "string" && payload._node.trim()
+      ? payload._node.trim()
+      : "";
+    if (!server_identity) return;
+
+    const previous = this._runtime_skill_server_identity;
+    this._runtime_skill_server_identity = server_identity;
+    if (previous !== server_identity) {
+      this._log("runtime skill server identity updated", {
+        _server_identity: server_identity,
+        ...(previous ? { _previous_server_identity: previous } : {}),
+      });
+    }
+  }
+
+  _runtime_skill_sync_cache_key(input: {
+    _server_identity: string;
+    _app_id: string;
+    _env: string;
+    _mode: string;
+    _snapshot_hash: string;
+  }) {
+    return [
+      input._server_identity,
+      input._env,
+      input._app_id,
+      input._mode,
+      input._snapshot_hash,
+    ].join("::");
+  }
+
+  async _sync_runtime_skills(source: string, app_id = this._app_id, env = this._env) {
+    const scoped_app_id = typeof app_id === "string" ? app_id.trim() : "";
+    const scoped_env = typeof env === "string" && env.trim() ? env.trim() : "default";
+    const mode = "runtime";
+    if (!scoped_app_id) return { _ok: false, _skipped: true, _reason: "missing app_id" };
+
+    let skills: any;
+    let snapshot_key = "";
+    let snapshot_hash = "";
+    try {
+      skills = this._collect_runtime_skill_snapshot();
+      snapshot_key = stable_json_stringify(skills);
+      snapshot_hash = this._runtime_skill_snapshot_hash(snapshot_key);
+    } catch (err) {
+      this._error("runtime skill snapshot failed", {
+        _app_id: scoped_app_id,
+        _env: scoped_env,
+        _mode: mode,
+        _source: source,
+        _error: to_err(err),
+      });
+      return { _ok: false, _skipped: true, _reason: "snapshot failed" };
+    }
+
+    const server_identity = this._read_runtime_skill_server_identity();
+    const scope_key = this._runtime_skill_scope_key(scoped_app_id, scoped_env, mode);
+    const sync_cache_key = this._runtime_skill_sync_cache_key({
+      _server_identity: server_identity,
+      _app_id: scoped_app_id,
+      _env: scoped_env,
+      _mode: mode,
+      _snapshot_hash: snapshot_hash,
+    });
+    const object_count = this._runtime_skill_object_count(skills);
+    const skills_count = Array.isArray(skills?._modules) ? skills._modules.length : 0;
+
+    if (this._runtime_skill_sync_keys.get(scope_key) === sync_cache_key) {
+      this._log("runtime skill sync skipped unchanged", {
+        _app_id: scoped_app_id,
+        _env: scoped_env,
+        _mode: mode,
+        _server_identity: server_identity,
+        _snapshot_hash: snapshot_hash,
+        _object_count: object_count,
+        _source: source,
+      });
+      return { _ok: true, _skipped: true, _reason: "unchanged" };
+    }
+
+    try {
+      this._log("runtime skill sync sent", {
+        _app_id: scoped_app_id,
+        _env: scoped_env,
+        _mode: mode,
+        _server_identity: server_identity,
+        _snapshot_hash: snapshot_hash,
+        _object_count: object_count,
+        _skills_count: skills_count,
+        _source: source,
+      });
+      const out = await this.sendXcmd({
+        _module: "studio",
+        _op: "sync-client-skills",
+        _params: {
+          _app_id: scoped_app_id,
+          _env: scoped_env,
+          _mode: mode,
+          _skills: skills,
+        },
+      });
+      const result = to_result(out);
+      if (!is_obj(result) || result._synced !== true) {
+        throw new Error(to_err((result as any)?._error ?? (result as any)?._reason ?? result));
+      }
+      this._runtime_skill_sync_keys.set(scope_key, sync_cache_key);
+      this._log("runtime skill sync confirmed", {
+        _app_id: scoped_app_id,
+        _env: scoped_env,
+        _mode: mode,
+        _server_identity: server_identity,
+        _snapshot_hash: snapshot_hash,
+        _object_count: object_count,
+        _source: source,
+        _skills_count: skills_count,
+      });
+      return { _ok: true, _result: result, _skills_count: skills_count, _object_count: object_count };
+    } catch (err) {
+      this._error("runtime skill sync failed", {
+        _app_id: scoped_app_id,
+        _env: scoped_env,
+        _mode: mode,
+        _server_identity: server_identity,
+        _snapshot_hash: snapshot_hash,
+        _object_count: object_count,
+        _source: source,
+        _skills_count: skills_count,
+        _error: to_err(err),
+      });
+      return { _ok: false, _skipped: true, _reason: "sync failed" };
+    }
+  }
+
+  async _resubscribe_runtime_after_reconnect(source: string) {
+    if (this._bootstrap_inflight || this._load_server_app_inflight) return;
+    if (!this._app || !this._app_mounted) return;
+    if (!this.isWormholeReady()) return;
+
+    if (this._runtime_skill_reconnect_sync) {
+      return this._runtime_skill_reconnect_sync;
+    }
+
+    this._runtime_skill_reconnect_sync = (async () => {
+      try {
+        const app_id = this._app_id;
+        const env = this._env;
+        const server_identity = this._read_runtime_skill_server_identity();
+        this._log("runtime reconnect resubscribe", {
+          _app_id: app_id,
+          _env: env,
+          _mode: "runtime",
+          _server_identity: server_identity,
+          _source: source,
+        });
+        await this._send_cmd("subscribe", { _app_id: app_id, _env: env });
+        this._subscribed = true;
+        this._set_server_xvm_subscription_ready(true, source);
+        await this._sync_runtime_skills(source, app_id, env);
+      } catch (err) {
+        this._error("runtime reconnect sync failed", {
+          _app_id: this._app_id,
+          _env: this._env,
+          _mode: "runtime",
+          _server_identity: this._read_runtime_skill_server_identity(),
+          _source: source,
+          _error: to_err(err),
+        });
+      } finally {
+        this._runtime_skill_reconnect_sync = null;
+      }
+    })();
+
+    return this._runtime_skill_reconnect_sync;
   }
 
   _on_mount_command_count(view: any): number {
@@ -863,8 +1109,16 @@ export class XVMClient {
 
   _resolve_edit_mode(app_id: string, edit?: boolean) {
     if (app_id === "vibe-system") return false;
+    if (!this._allow_edit_mode) return false;
     if (typeof edit === "boolean") return edit;
-    return true;
+    return false;
+  }
+
+  _ensure_xstudio() {
+    if (!this._xstudio) {
+      this._xstudio = new XStudioModule(this);
+    }
+    return this._xstudio;
   }
 
   _set_app_scope(app_id: string, env: string, edit?: boolean) {
@@ -878,6 +1132,9 @@ export class XVMClient {
     _xd.set(_XD_KEYS.XVM_APP_ID, app_id, { source: "xvm-client" });
     _xd.set(_XD_KEYS.XVM_ENV, env, { source: "xvm-client" });
     this._set_server_xvm_subscription_ready(false, "app-scope-change");
+    if (this.is_edit_mode_enabled()) {
+      this._ensure_xstudio().bind_events();
+    }
   }
 
   _reset_app_state_for_switch() {
@@ -893,7 +1150,10 @@ export class XVMClient {
     this._has_rendered_view = false;
     this._subscribed = false;
     this._set_server_xvm_subscription_ready(false, "reset-app-state");
-    this._xstudio.clear_active_generation();
+    this._xstudio?.clear_active_generation();
+    if (!this.is_edit_mode_enabled()) {
+      this._xstudio = null;
+    }
   }
 
   _log_load_server_app_failure(
@@ -1126,7 +1386,9 @@ export class XVMClient {
       },
     };
 
-    return this._xstudio.extend_runtime_app(base_app, {
+    if (!this.is_edit_mode_enabled()) return base_app;
+
+    return this._ensure_xstudio().extend_runtime_app(base_app, {
       _region: region,
       _container_id: default_container_id,
       _fallback_view_id: fallback_view_id,
@@ -1652,7 +1914,9 @@ export class XVMClient {
         XDB.saveString(this._cache_key_version, String(next_version));
       }
 
-      this._xstudio.handle_xvm_update(upd);
+      if (this.is_edit_mode_enabled()) {
+        this._ensure_xstudio().handle_xvm_update(upd);
+      }
 
       this._log(
         `update applied source='${source_evt}' view='${upd._view_id}' version=${next_version || this._current_version} active='${this._current_view_id}'`
@@ -1739,6 +2003,11 @@ export class XVMClient {
       this._set_connection_status("connected", "wormhole-open");
     });
 
+    _xem.on("wormhole-hello", (payload: any) => {
+      this._note_runtime_skill_server_hello(payload);
+      void this._resubscribe_runtime_after_reconnect("wormhole-hello");
+    });
+
     _xem.on("wormhole-close", () => {
       this._set_connection_status("disconnected", "wormhole-close");
     });
@@ -1751,7 +2020,9 @@ export class XVMClient {
       void this._handle_xvm_update_payload(payload, EVT_XVM_UPDATE);
     });
 
-    this._xstudio.bind_events();
+    if (this.is_edit_mode_enabled()) {
+      this._ensure_xstudio().bind_events();
+    }
 
   }
 
@@ -1762,6 +2033,7 @@ export class XVMClient {
     });
     this._bind_events();
     const used_cache = await this._render_cached_boot_view();
+    this._bootstrap_inflight = true;
 
     try {
       this._ensure_connected();
@@ -1810,6 +2082,7 @@ export class XVMClient {
       this._subscribed = true;
       this._set_server_xvm_subscription_ready(true, "subscribe");
       this._set_connection_status("connected", "subscribe");
+      await this._sync_runtime_skills("bootstrap");
       this._log(
         `boot complete cache=${used_cache ? "yes" : "no"} server_version=${app_apply._version || 0} current=${this._current_version} entry='${entry}'`
       );
@@ -1823,6 +2096,8 @@ export class XVMClient {
       } else {
         this._log("offline: using cached rendered view");
       }
+    } finally {
+      this._bootstrap_inflight = false;
     }
   }
 
@@ -1869,6 +2144,8 @@ export class XVMClient {
       _current_app_id: previous_app_id,
       _current_env: previous_env,
     });
+
+    this._load_server_app_inflight = true;
 
     try {
       stage = "get-app";
@@ -1953,6 +2230,7 @@ export class XVMClient {
       this._subscribed = true;
       this._set_server_xvm_subscription_ready(true, "load-server-app");
       this._set_connection_status("connected", "load-server-app");
+      await this._sync_runtime_skills("load-server-app", target_app_id, target_env);
       this._log("load_server_app subscribed", {
         _app_id: target_app_id,
         _env: target_env,
@@ -1969,6 +2247,8 @@ export class XVMClient {
     } catch (err) {
       this._log_load_server_app_failure(stage, target_app_id, target_env, previous_app_id, previous_env, err);
       throw err;
+    } finally {
+      this._load_server_app_inflight = false;
     }
   }
 }

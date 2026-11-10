@@ -11,13 +11,14 @@ import XUIObject from "../XUIObject";
 export class XInput extends XUIObject {
     static _xtype = "input"
 
-    static _skill: XpellSkill = {
+    static _skill: XpellSkill & { _capabilities: string[] } = {
         _id: "input",
         _title: "XInput",
         _version: "1.0.0",
         _active: true,
         _type: "view-skill",
         _requires: ["xuiobject"],
+        _capabilities: ["typography", "spacing", "layout", "appearance"],
 
         _description:
             "Generic HTML input field base object for text, password, checkbox, radio, and other input types.",
@@ -275,16 +276,226 @@ export class XInput extends XUIObject {
     }
 }
 
+export class XFileInput extends XInput {
+    static _xtype = "file-input";
+
+    static _skill: XpellSkill & { _capabilities: string[] } = {
+        _id: "file-input",
+        _title: "XFileInput",
+        _version: "1.0.0",
+        _active: true,
+        _type: "view-skill",
+        _requires: ["input", "xuiobject"],
+        _capabilities: ["typography", "spacing", "layout", "appearance"],
+
+        _description:
+            "Native browser file selection input rendered as an HTML input element with type='file'.",
+
+        _fields: {
+            _accept: "Native file accept filter, e.g. .csv,application/pdf.",
+            _multiple: "Allow selecting multiple files.",
+            _disabled: "Disable file selection.",
+            name: "Input/form name.",
+            required: "Native required flag.",
+            _data_output:
+                "Optional XData key to write this input value to when the change event fires.",
+            _update_data_source_event:
+                "DOM event used for _data_output updates. Defaults to change."
+        },
+
+        _core_rules: [
+            "Use file-input for native file selection.",
+            "Use _accept for native accept filters.",
+            "Use _multiple:true only when multiple files may be selected.",
+            "Handle selected files through _on.change and $event.target.files.",
+            "Do not use file-input as an upload abstraction."
+        ],
+
+        _canonical_examples: [
+            {
+                _type: "file-input",
+                _id: "example-file-input",
+                _accept: ".csv,application/pdf",
+                _multiple: false,
+                _disabled: false,
+                _on: {
+                    change: {
+                        _op: "select-files",
+                        _params: {
+                            files: "$event.target.files"
+                        }
+                    }
+                }
+            }
+        ],
+
+        _design: {
+            _inspector: {
+                _fields: [
+                    { _key: "_accept", _label: "Accept", _input: "text" },
+                    { _key: "_multiple", _label: "Multiple", _input: "checkbox" },
+                    { _key: "_disabled", _label: "Disabled", _input: "checkbox" },
+                    { _key: "name", _label: "Name", _input: "text" },
+                    { _key: "required", _label: "Required", _input: "checkbox" },
+                    { _key: "_data_output", _label: "Data Output", _input: "text" },
+                    { _key: "_update_data_source_event", _label: "Update Event", _input: "text" }
+                ]
+            },
+            _children: {
+                _allowed: false,
+                _insert_modes: ["before", "after"]
+            },
+            _palette: {
+                _title: "File Input",
+                _category: "Input",
+                _icon: "file-up",
+                _default_object: {
+                    _type: "file-input",
+                    _accept: "",
+                    _multiple: false,
+                    _disabled: false
+                }
+            }
+        }
+    };
+
+    _accept?: string;
+    _multiple?: boolean;
+    _disabled?: boolean;
+
+    constructor(data: XObjectData) {
+        const defaults = {
+            _type: XFileInput._xtype,
+            type: "file",
+            class: "x" + XFileInput._xtype,
+            _html_tag: "input",
+            _update_data_source_event: "change"
+        };
+
+        super(data, defaults, true);
+        this.parse(data);
+        this.projectFileInputAttributes();
+        this.enableAutoDataBinding();
+    }
+
+    override getDOMObject(): HTMLElement {
+        const dom = super.getDOMObject();
+        this.projectFileInputAttributes();
+        return dom;
+    }
+
+    override update(next: XObjectData) {
+        if (!next) return;
+
+        const normalized = { ...next };
+
+        if (Object.prototype.hasOwnProperty.call(normalized, "_accept")) {
+            const accept = (normalized as any)._accept;
+            if (typeof accept === "string" && accept.length > 0) {
+                (normalized as any).accept = accept;
+            } else {
+                delete (this as any).accept;
+            }
+        }
+
+        if (Object.prototype.hasOwnProperty.call(normalized, "_multiple")) {
+            (normalized as any).multiple = (normalized as any)._multiple === true;
+        }
+
+        if (Object.prototype.hasOwnProperty.call(normalized, "_disabled")) {
+            (normalized as any).disabled = (normalized as any)._disabled === true;
+        }
+
+        super.update(normalized);
+        this.parseFileInputRuntimeFields(next);
+        this.projectFileInputAttributes();
+    }
+
+    getFiles(): FileList | null {
+        return (this.dom as HTMLInputElement).files;
+    }
+
+    private parseFileInputRuntimeFields(data: XObjectData) {
+        if (Object.prototype.hasOwnProperty.call(data, "_accept")) {
+            const accept = (data as any)._accept;
+            this._accept = typeof accept === "string" ? accept : undefined;
+        }
+
+        if (Object.prototype.hasOwnProperty.call(data, "_multiple")) {
+            this._multiple = (data as any)._multiple === true;
+        }
+
+        if (Object.prototype.hasOwnProperty.call(data, "_disabled")) {
+            this._disabled = (data as any)._disabled === true;
+        }
+    }
+
+    private projectFileInputAttributes() {
+        (this as any).type = "file";
+
+        const hasAccept =
+            Object.prototype.hasOwnProperty.call(this, "_accept");
+        const hasMultiple =
+            Object.prototype.hasOwnProperty.call(this, "_multiple");
+        const hasDisabled =
+            Object.prototype.hasOwnProperty.call(this, "_disabled");
+
+        if (hasAccept && typeof this._accept === "string" && this._accept.length > 0) {
+            (this as any).accept = this._accept;
+        } else if (hasAccept) {
+            delete (this as any).accept;
+        }
+
+        if (hasMultiple) {
+            (this as any).multiple = this._multiple === true;
+        }
+
+        if (hasDisabled) {
+            (this as any).disabled = this._disabled === true;
+        }
+
+        const dom = this._dom_object as HTMLInputElement | undefined | null;
+        if (!(dom instanceof HTMLElement)) return;
+
+        dom.type = "file";
+
+        if (hasAccept && typeof this._accept === "string" && this._accept.length > 0) {
+            dom.accept = this._accept;
+            dom.setAttribute("accept", this._accept);
+        } else if (hasAccept) {
+            dom.accept = "";
+            dom.removeAttribute("accept");
+        }
+
+        if (hasMultiple && this._multiple === true) {
+            dom.multiple = true;
+            dom.setAttribute("multiple", "");
+        } else if (hasMultiple) {
+            dom.multiple = false;
+            dom.removeAttribute("multiple");
+        }
+
+        if (hasDisabled && this._disabled === true) {
+            dom.disabled = true;
+            dom.setAttribute("disabled", "");
+        } else if (hasDisabled) {
+            dom.disabled = false;
+            dom.removeAttribute("disabled");
+        }
+    }
+}
+
 
 export class XTextField extends XInput {
     static _xtype = "text"
-    static _skill: XpellSkill = {
+    static _skill: XpellSkill & { _capabilities: string[] } = {
         _id: "text",
         _title: "XTextField",
         _version: "1.0.0",
         _active: true,
         _type: "view-skill",
         _requires: ["xuiobject", "input"],
+        _capabilities: ["typography", "spacing", "layout", "appearance"],
 
         _description:
             "Single-line text input rendered as an HTML input element.",
@@ -379,13 +590,14 @@ export class XTextField extends XInput {
 
 export class XPassword extends XInput {
     static _xtype = "password"
-    static _skill: XpellSkill = {
+    static _skill: XpellSkill & { _capabilities: string[] } = {
         _id: "password",
         _title: "XPassword",
         _version: "1.0.0",
         _active: true,
         _type: "view-skill",
         _requires: ["text", "input"],
+        _capabilities: ["typography", "spacing", "layout", "appearance"],
 
         _description:
             "Password input rendered as an HTML input element with type='password'.",
@@ -472,13 +684,14 @@ export class XTextArea extends XInput {
 
     static _xtype = "textarea";
 
-    static _skill: XpellSkill = {
+    static _skill: XpellSkill & { _capabilities: string[] } = {
         _id: "textarea",
         _title: "XTextArea",
         _version: "1.0.0",
         _active: true,
         _type: "view-skill",
         _requires: ["input", "xuiobject"],
+        _capabilities: ["typography", "spacing", "layout", "appearance"],
 
         _description:
             "Multiline text input rendered as an HTML textarea element.",
@@ -589,13 +802,14 @@ export type XSelectOption = {
 export class XSelect extends XInput {
     static _xtype = "select";
 
-    static _skill: XpellSkill = {
+    static _skill: XpellSkill & { _capabilities: string[] } = {
         _id: "select",
         _title: "XSelect",
         _version: "1.0.0",
         _active: true,
         _type: "view-skill",
         _requires: ["input", "xuiobject"],
+        _capabilities: ["typography", "spacing", "layout", "appearance"],
 
         _description:
             "Dropdown/select input rendered as an HTML select element.",

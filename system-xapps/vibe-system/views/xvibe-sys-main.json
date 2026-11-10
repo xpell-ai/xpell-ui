@@ -1,0 +1,1103 @@
+{
+  "_id": "xvibe-sys-main",
+  "_type": "view",
+  "_theme": "terminal",
+  "_children": [
+    {
+      "_type": "style-sheet",
+      "_href": "",
+      "_classes": {}
+    },
+    {
+      "_type": "stack",
+      "class": "page-shell",
+      "_gap": 0,
+      "_children": [
+        {
+          "_type": "stack",
+          "class": "home-container",
+          "_gap": 0,
+          "_children": [
+            {
+              "_type": "xvm-view",
+              "_view_id": "page-toolbar"
+            },
+            {
+              "_type": "grid",
+              "class": "home-content-grid",
+              "_children": [
+                {
+                  "_id": "generated-apps-panel",
+                  "_type": "stack",
+                  "class": "panel apps-panel",
+                  "_gap": 0,
+                  "_children": [
+                    {
+                      "_type": "stack",
+                      "class": "panel-header apps-panel-header",
+                      "_children": [
+                        {
+                          "_type": "stack",
+                          "class": "panel-heading",
+                          "_children": [
+                            {
+                              "_type": "label",
+                              "_text": "Your Apps",
+                              "class": "panel-title apps-panel-title"
+                            },
+                            {
+                              "_type": "label",
+                              "_text": "Open, edit, export, and manage the apps you build in Visual Xpell.",
+                              "class": "panel-subtitle"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "_type": "stack",
+                      "class": "actions-row",
+                      "_children": [
+                        {
+                          "_type": "button",
+                          "_text": "Refresh",
+                          "_variant": "secondary",
+                          "_on": {
+                            "click": {
+                              "_module": "vibe-system",
+                              "_op": "refresh-apps",
+                              "_params": {
+                                "_env": "default",
+                                "_include_system": false,
+                                "_output": "system.apps"
+                              }
+                            }
+                          }
+                        },
+                        {
+                          "_type": "button",
+                          "_text": "Import App",
+                          "_variant": "secondary",
+                          "_on": {
+                            "click": {
+                              "_module": "vibe-system",
+                              "_op": "open-import-app"
+                            }
+                          }
+                        },
+                        {
+                          "_type": "button",
+                          "_text": "+ New App",
+                          "_on": {
+                            "click": {
+                              "_op": "open-object",
+                              "_params": {
+                                "_id": "generate-app-modal"
+                              }
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "_type": "label",
+                      "_id": "package-status-label",
+                      "_text": "",
+                      "class": "package-status-label"
+                    },
+                    {
+                      "_type": "stack",
+                      "class": "default-app-control-row",
+                      "_gap": 10,
+                      "_children": [
+                        {
+                          "_type": "label",
+                          "_text": "Default server app",
+                          "class": "default-app-label"
+                        },
+                        {
+                          "_type": "select",
+                          "_id": "default-server-app-select",
+                          "class": "default-app-select",
+                          "_options": [
+                            {
+                              "label": "Loading apps...",
+                              "value": "",
+                              "disabled": true,
+                              "selected": true
+                            }
+                          ],
+                          "_on": {
+                            "change": {
+                              "_module": "vibe-system",
+                              "_op": "set-default-app",
+                              "_params": {
+                                "_selected_app_id": "$event.target.value",
+                                "_env": "default"
+                              }
+                            }
+                          }
+                        },
+                        {
+                          "_type": "label",
+                          "_id": "default-server-app-status",
+                          "_text": "Default server app: available",
+                          "class": "default-app-status"
+                        }
+                      ]
+                    },
+                    {
+                      "_type": "label",
+                      "_text": "Create an app from a starter to begin, then open it in Visual Xpell.",
+                      "class": "empty-projects-helper"
+                    },
+                    {
+                      "_type": "table",
+                      "_id": "apps-table",
+                      "class": "apps-table",
+                      "_data_source": "system.apps",
+                      "_row_key": "_app_id",
+                      "_on": {
+                        "_wormhole-open": {
+                          "_module": "vibe-system",
+                          "_op": "refresh-apps",
+                          "_params": {
+                            "_env": "default",
+                            "_include_system": false,
+                            "_output": "system.apps"
+                          }
+                        }
+                      },
+                      "_columns": [
+                        {
+                          "_key": "_app_id",
+                          "_title": "App"
+                        },
+                        {
+                          "_key": "_env",
+                          "_title": "Env"
+                        },
+                        {
+                          "_key": "actions",
+                          "_title": "Actions",
+                          "_type": "actions",
+                          "_actions": [
+                            {
+                              "_type": "button",
+                              "_text": "Edit",
+                              "_variant": "primary",
+                              "_on": {
+                                "click": {
+                                  "_module": "xvm",
+                                  "_op": "load-server-app",
+                                  "_params": {
+                                    "_app_id": "$row._app_id",
+                                    "_env": "$row._env",
+                                    "_edit": true
+                                  }
+                                }
+                              }
+                            },
+                            {
+                              "_type": "button",
+                              "_text": "⋯",
+                              "_variant": "secondary",
+                              "class": "app-row-more-action",
+                              "title": "More actions",
+                              "_menu_trigger": true,
+                              "_on": {
+                                "click": {
+                                  "_module": "vibe-system",
+                                  "_op": "open-app-actions",
+                                  "_params": {
+                                    "_row_app_id": "$row._app_id",
+                                    "_row_env": "$row._env"
+                                  }
+                                }
+                              }
+                            }
+                          ],
+                          "_secondary_actions": [
+                            {
+                              "_type": "button",
+                              "_text": "Open",
+                              "_variant": "primary",
+                              "_on": {
+                                "click": {
+                                  "_module": "xvm",
+                                  "_op": "load-server-app",
+                                  "_params": {
+                                    "_app_id": "$row._app_id",
+                                    "_env": "$row._env",
+                                    "_edit": false
+                                  }
+                                }
+                              }
+                            },
+                            {
+                              "_type": "button",
+                              "_text": "Export",
+                              "_variant": "secondary",
+                              "_on": {
+                                "click": {
+                                  "_module": "vibe-system",
+                                  "_op": "export-app",
+                                  "_params": {
+                                    "_row_app_id": "$row._app_id",
+                                    "_row_env": "$row._env"
+                                  }
+                                }
+                              }
+                            },
+                            {
+                              "_type": "button",
+                              "_text": "Move to Trash",
+                              "_variant": "secondary",
+                              "_on": {
+                                "click": {
+                                  "_module": "vibe-system",
+                                  "_op": "trash-app",
+                                  "_params": {
+                                    "_row_app_id": "$row._app_id",
+                                    "_row_env": "$row._env"
+                                  }
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      ],
+                      "_empty_text": "No apps yet",
+                      "_striped": true,
+                      "_hover": true,
+                      "_bordered": true
+                    }
+                  ]
+                },
+                {
+                  "_type": "stack",
+                  "class": "home-side-rail",
+                  "_gap": 24,
+                  "_children": [
+                    {
+                      "_id": "visual-xpell-status-panel",
+                      "_type": "stack",
+                      "class": "panel status-panel",
+                      "_gap": 0,
+                      "_on_mount": [
+                        {
+                          "_module": "xai-client",
+                          "_op": "get-provider-status",
+                          "_params": {
+                            "_provider": "aime",
+                            "_debug": true
+                          },
+                          "_output": {
+                            "_target": "xdata",
+                            "_key": "ai.connection",
+                            "_path": "_result"
+                          }
+                        },
+                        {
+                          "_module": "vibe-system",
+                          "_op": "refresh-mcp-access"
+                        }
+                      ],
+                      "_children": [
+                        {
+                          "_type": "label",
+                          "_text": "Status",
+                          "class": "panel-title status-panel-title"
+                        },
+                        {
+                          "_type": "stack",
+                          "class": "status-list",
+                          "_children": [
+                            {
+                              "_type": "stack",
+                              "class": "status-item",
+                              "_children": [
+                                {
+                                  "_type": "label",
+                                  "_text": "Runtime",
+                                  "class": "status-label"
+                                },
+                                {
+                                  "_id": "runtime-status-value",
+                                  "_type": "label",
+                                  "_data_source": "system.ready.wormhole",
+                                  "_text": "● Available",
+                                  "class": "status-value status-value-neutral",
+                                  "_on_data": [
+                                    {
+                                      "_op": "set-text",
+                                      "_params": {
+                                        "text": "● Available"
+                                      }
+                                    },
+                                    {
+                                      "_op": "set-text-from-data",
+                                      "_params": {
+                                        "data": "$data",
+                                        "map": {
+                                          "true": "● Online",
+                                          "false": "● Available"
+                                        }
+                                      }
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "_type": "stack",
+                              "class": "status-item",
+                              "_children": [
+                                {
+                                  "_type": "label",
+                                  "_text": "AI",
+                                  "class": "status-label"
+                                },
+                                {
+                                  "_id": "ai-status-value",
+                                  "_type": "label",
+                                  "_data_source": "ai.connection",
+                                  "_text": "● Available",
+                                  "class": "status-value status-value-neutral",
+                                  "_on_data": [
+                                    {
+                                      "_op": "set-text",
+                                      "_params": {
+                                        "text": "● Available"
+                                      }
+                                    },
+                                    {
+                                      "_op": "set-text-from-data",
+                                      "_params": {
+                                        "data": "$data",
+                                        "path": "_connected",
+                                        "map": {
+                                          "true": "● Connected",
+                                          "false": "● Not Connected"
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "_op": "set-text-from-data",
+                                      "_params": {
+                                        "data": "$data",
+                                        "path": "_metadata.connected",
+                                        "map": {
+                                          "true": "● Connected",
+                                          "false": "● Not Connected"
+                                        }
+                                      }
+                                    }
+                                  ]
+                                },
+                                {
+                                  "_type": "label",
+                                  "_data_source": "ai.connection",
+                                  "_text": "Aime AI",
+                                  "class": "status-meta-label",
+                                  "_on_data": [
+                                    {
+                                      "_op": "set-text",
+                                      "_params": {
+                                        "text": "Aime AI"
+                                      }
+                                    },
+                                    {
+                                      "_op": "set-text-from-data",
+                                      "_params": {
+                                        "data": "$data",
+                                        "path": "_provider",
+                                        "pattern": "$data"
+                                      }
+                                    },
+                                    {
+                                      "_op": "set-text-from-data",
+                                      "_params": {
+                                        "data": "$data",
+                                        "path": "_metadata.provider",
+                                        "pattern": "$data"
+                                      }
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "_type": "stack",
+                              "class": "status-item",
+                              "_children": [
+                                {
+                                  "_type": "label",
+                                  "_text": "Agents",
+                                  "class": "status-label"
+                                },
+                                {
+                                  "_id": "mcp-status-value",
+                                  "_type": "label",
+                                  "_text": "● Available",
+                                  "class": "status-value mcp-status-label"
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "_id": "ai-settings-panel",
+                      "_type": "xhtml",
+                      "_html_tag": "details",
+                      "class": "panel config-panel ai-settings-panel",
+                      "_children": [
+                        {
+                          "_type": "xhtml",
+                          "_html_tag": "summary",
+                          "class": "config-summary",
+                          "_text": "AI Settings"
+                        },
+                        {
+                          "_type": "label",
+                          "_text": "Configure the Aime AI provider used by Guide, Conversation, generation, and runtime evolution.",
+                          "class": "panel-subtitle ai-card-description"
+                        },
+                        {
+                          "_type": "stack",
+                          "class": "actions-row ai-card-actions",
+                          "_children": [
+                            {
+                              "_type": "button",
+                              "_text": "Open Settings",
+                              "_variant": "secondary",
+                              "_on": {
+                                "click": {
+                                  "_op": "open-object",
+                                  "_params": {
+                                    "_id": "api-key-modal"
+                                  }
+                                }
+                              }
+                            },
+                            {
+                              "_type": "link",
+                              "_text": "Get KEY",
+                              "target": "_blank",
+                              "rel": "noopener noreferrer",
+                              "_data_source": "env.dev_console_url",
+                              "_on_data": {
+                                "_op": "set-xattribute",
+                                "_params": {
+                                  "_key": "_href",
+                                  "_value": "$data"
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "_id": "mcp-access-panel",
+                      "_type": "xhtml",
+                      "_html_tag": "details",
+                      "class": "panel config-panel mcp-access-panel",
+                      "_children": [
+                        {
+                          "_type": "xhtml",
+                          "_html_tag": "summary",
+                          "class": "config-summary",
+                          "_text": "Connect an Agent"
+                        },
+                        {
+                          "_type": "stack",
+                          "class": "mcp-meta-group",
+                          "_children": [
+                            {
+                              "_id": "mcp-endpoint-value",
+                              "_type": "label",
+                              "_text": "Endpoint: /mcp",
+                              "class": "mcp-meta-label mcp-endpoint-label"
+                            },
+                            {
+                              "_id": "mcp-token-expires",
+                              "_type": "label",
+                              "_text": "Expires: Not generated",
+                              "class": "mcp-meta-label"
+                            },
+                            {
+                              "_id": "mcp-generation-status",
+                              "_type": "label",
+                              "_text": "",
+                              "class": "mcp-meta-label mcp-generation-status",
+                              "aria-live": "polite"
+                            },
+                            {
+                              "_id": "mcp-disabled-help",
+                              "_type": "label",
+                              "_text": "",
+                              "class": "mcp-meta-label mcp-disabled-help"
+                            }
+                          ]
+                        },
+                        {
+                          "_type": "stack",
+                          "class": "actions-row mcp-card-actions",
+                          "_children": [
+                            {
+                              "_id": "mcp-generate-token",
+                              "_type": "button",
+                              "_text": "Generate Token",
+                              "_variant": "primary",
+                              "disabled": true,
+                              "_on": {
+                                "click": {
+                                  "_module": "vibe-system",
+                                  "_op": "generate-mcp-token"
+                                }
+                              }
+                            },
+                            {
+                              "_id": "mcp-copy-token",
+                              "_type": "button",
+                              "_text": "Copy Token",
+                              "_variant": "secondary",
+                              "_visible": false,
+                              "disabled": true,
+                              "_on": {
+                                "click": {
+                                  "_module": "vibe-system",
+                                  "_op": "copy-mcp-token"
+                                }
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "_id": "mcp-token-group",
+                          "_type": "stack",
+                          "class": "mcp-token-group",
+                          "_gap": 8,
+                          "_visible": false,
+                          "_children": [
+                            {
+                              "_type": "label",
+                              "_text": "Token",
+                              "class": "mcp-meta-label"
+                            },
+                            {
+                              "_id": "mcp-token-value",
+                              "_type": "input",
+                              "type": "text",
+                              "readonly": true,
+                              "autocomplete": "off",
+                              "spellcheck": false,
+                              "value": "",
+                              "class": "mcp-token-input"
+                            }
+                          ]
+                        },
+                        {
+                          "_type": "label",
+                          "_text": "Codex",
+                          "class": "mcp-setup-title"
+                        },
+                        {
+                          "_id": "mcp-setup-snippet",
+                          "_type": "textarea",
+                          "readonly": true,
+                          "autocomplete": "off",
+                          "spellcheck": false,
+                          "class": "mcp-setup-snippet",
+                          "value": "export XPELL_MCP_TOKEN=\"<generated token>\"\n\ncodex mcp add xpell \\\n  --url /mcp \\\n  --bearer-token-env-var XPELL_MCP_TOKEN"
+                        }
+                      ]
+                    },
+                    {
+                      "_id": "getting-started-panel",
+                      "_type": "xhtml",
+                      "_html_tag": "details",
+                      "class": "panel config-panel getting-started-panel",
+                      "_children": [
+                        {
+                          "_type": "xhtml",
+                          "_html_tag": "summary",
+                          "_text": "Getting Started",
+                          "class": "config-summary"
+                        },
+                        {
+                          "_type": "label",
+                          "_text": "A short path from starter to running app.",
+                          "class": "panel-subtitle getting-started-subtitle"
+                        },
+                        {
+                          "_type": "stack",
+                          "class": "getting-started-list",
+                          "_children": [
+                            {
+                              "_type": "label",
+                              "_text": "01  Create an app from a starter.",
+                              "class": "getting-started-item"
+                            },
+                            {
+                              "_type": "label",
+                              "_text": "02  Open it in Visual Xpell.",
+                              "class": "getting-started-item"
+                            },
+                            {
+                              "_type": "label",
+                              "_text": "03  Set a focus in Guide.",
+                              "class": "getting-started-item"
+                            },
+                            {
+                              "_type": "label",
+                              "_text": "04  Use Do It to continue.",
+                              "class": "getting-started-item"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "_type": "modal",
+          "_id": "import-app-modal",
+          "_open": false,
+          "_title": "Import App",
+          "_size": "lg",
+          "_closable": true,
+          "_close_on_backdrop": false,
+          "_children": [
+            {
+              "_id": "import-app-panel",
+              "_type": "stack",
+              "class": "panel apps-panel import-app-panel",
+              "_gap": 16,
+              "_children": [
+                {
+                  "_type": "label",
+                  "_text": "Import App",
+                  "class": "panel-title"
+                },
+                {
+                  "_type": "label",
+                  "_text": "Choose a .xapp package. The package will be uploaded, inspected, previewed, and imported only after confirmation.",
+                  "class": "panel-subtitle"
+                },
+                {
+                  "_type": "field",
+                  "_label": "Package",
+                  "_control": {
+                    "_type": "input",
+                    "_id": "import-app-file",
+                    "class": "import-app-file-input",
+                    "type": "file",
+                    "accept": ".xapp",
+                    "_on": {
+                      "change": {
+                        "_module": "vibe-system",
+                        "_op": "select-import-file",
+                        "_params": {
+                          "_event_target": "$event.target"
+                        }
+                      }
+                    }
+                  }
+                },
+                {
+                  "_type": "stack",
+                  "class": "import-app-details",
+                  "_gap": 8,
+                  "_children": [
+                    {
+                      "_type": "label",
+                      "_id": "import-app-selected-label",
+                      "_text": "No package selected.",
+                      "class": "package-status-label"
+                    },
+                    {
+                      "_type": "label",
+                      "_id": "import-app-upload-label",
+                      "_text": "",
+                      "class": "package-status-label"
+                    },
+                    {
+                      "_type": "label",
+                      "_id": "import-app-package-label",
+                      "_text": "",
+                      "class": "package-status-label"
+                    },
+                    {
+                      "_type": "label",
+                      "_id": "import-app-source-label",
+                      "_text": "",
+                      "class": "package-status-label"
+                    },
+                    {
+                      "_type": "label",
+                      "_id": "import-app-counts-label",
+                      "_text": "",
+                      "class": "package-status-label"
+                    },
+                    {
+                      "_type": "label",
+                      "_id": "import-app-target-label",
+                      "_text": "",
+                      "class": "package-status-label"
+                    },
+                    {
+                      "_type": "label",
+                      "_id": "import-app-replace-label",
+                      "_text": "",
+                      "class": "package-status-label import-app-replace-note"
+                    }
+                  ]
+                },
+                {
+                  "_type": "table",
+                  "_id": "import-app-preview-table",
+                  "class": "apps-table import-app-preview-table",
+                  "_rows": [],
+                  "_row_key": "_label",
+                  "_columns": [
+                    {
+                      "_key": "_label",
+                      "_title": "Area"
+                    },
+                    {
+                      "_key": "_added",
+                      "_title": "Added"
+                    },
+                    {
+                      "_key": "_modified",
+                      "_title": "Modified"
+                    },
+                    {
+                      "_key": "_deleted",
+                      "_title": "Deleted"
+                    }
+                  ],
+                  "_empty_text": "Preview appears after selecting a package.",
+                  "_striped": true,
+                  "_hover": false,
+                  "_bordered": true
+                }
+              ]
+            }
+          ],
+          "_actions": [
+            {
+              "_type": "button",
+              "_text": "Cancel",
+              "_variant": "secondary",
+              "_on": {
+                "click": {
+                  "_module": "vibe-system",
+                  "_op": "close-import-app"
+                }
+              }
+            },
+            {
+              "_type": "button",
+              "_text": "Import App",
+              "_variant": "primary",
+              "_on": {
+                "click": {
+                  "_module": "vibe-system",
+                  "_op": "confirm-import-app"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "_type": "modal",
+          "_id": "app-actions-modal",
+          "_open": false,
+          "_title": "App Actions",
+          "_size": "sm",
+          "_closable": true,
+          "_close_on_backdrop": true,
+          "_children": [
+            {
+              "_type": "stack",
+              "class": "panel app-actions-panel",
+              "_gap": 12,
+              "_children": [
+                {
+                  "_type": "label",
+                  "_text": "Manage App",
+                  "class": "panel-title"
+                },
+                {
+                  "_type": "label",
+                  "_id": "app-actions-selected-label",
+                  "_text": "",
+                  "class": "panel-subtitle"
+                },
+                {
+                  "_type": "label",
+                  "_id": "app-actions-status-label",
+                  "_text": "",
+                  "class": "package-status-label"
+                }
+              ]
+            }
+          ],
+          "_actions": [
+            {
+              "_type": "button",
+              "_text": "Close",
+              "_variant": "secondary",
+              "_on": {
+                "click": {
+                  "_module": "vibe-system",
+                  "_op": "close-app-actions"
+                }
+              }
+            },
+            {
+              "_type": "button",
+              "_text": "Open",
+              "_variant": "primary",
+              "_on": {
+                "click": {
+                  "_module": "vibe-system",
+                  "_op": "open-selected-app"
+                }
+              }
+            },
+            {
+              "_type": "button",
+              "_text": "Export",
+              "_variant": "secondary",
+              "_on": {
+                "click": {
+                  "_module": "vibe-system",
+                  "_op": "export-app"
+                }
+              }
+            },
+            {
+              "_type": "button",
+              "_text": "Move to Trash",
+              "_variant": "secondary",
+              "_on": {
+                "click": {
+                  "_module": "vibe-system",
+                  "_op": "trash-app"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "_type": "modal",
+          "_id": "generate-app-modal",
+          "_open": false,
+          "_title": "New App",
+          "_size": "lg",
+          "_closable": true,
+          "_close_on_backdrop": true,
+          "_children": [
+            {
+              "_id": "create-app-panel",
+              "_type": "stack",
+              "class": "panel apps-panel",
+              "_children": [
+                {
+                  "_type": "label",
+                  "_text": "Create New App",
+                  "class": "panel-title"
+                },
+                {
+                  "_type": "label",
+                  "_text": "Choose a starter. You can continue building with Guide and Conversation after creation.",
+                  "class": "panel-subtitle"
+                },
+                {
+                  "_type": "label",
+                  "_text": "Start small. Guide will help you decide the next step.",
+                  "class": "panel-subtitle"
+                },
+                {
+                  "_type": "stack",
+                  "class": "form-layout",
+                  "_gap": 18,
+                  "_children": [
+                    {
+                      "_type": "field",
+                      "_label": "App ID",
+                      "_control": {
+                        "_type": "text",
+                        "_id": "app-id",
+                        "placeholder": "studio-tool, agent-demo, game-test...",
+                        "_text": ""
+                      },
+                      "_data_output": "vibe._app_id",
+                      "_update_data_source_event": "input"
+                    },
+                    {
+                      "_type": "grid",
+                      "class": "card-grid",
+                      "_children": [
+                        {
+                          "_type": "card",
+                          "class": "card",
+                          "_hide_image": true,
+                          "_title": "Operations",
+                          "_text": "Admin-style app with overview, KPI cards, table area and settings shell.",
+                          "_actions": [
+                            {
+                              "_type": "button",
+                              "_text": "Create Operations App",
+                              "_variant": "primary",
+                              "_on": {
+                                "click": [
+                                  {
+                                    "_module": "flow-client",
+                                    "_op": "trigger",
+                                    "_params": {
+                                      "_flow_id": "flow-create-app-from-starter",
+                                      "_event_payload": {
+                                        "_starter_id": "dashboard",
+                                        "_app_id": "$xdata:vibe._app_id"
+                                      }
+                                    }
+                                  }
+                                ]
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "_type": "card",
+                          "class": "card",
+                          "_hide_image": true,
+                          "_title": "List / Tracker",
+                          "_text": "A clean reusable foundation for lists, trackers, checklists, and lightweight record-management apps.",
+                          "_actions": [
+                            {
+                              "_type": "button",
+                              "_text": "Create List / Tracker App",
+                              "_variant": "primary",
+                              "_on": {
+                                "click": [
+                                  {
+                                    "_module": "flow-client",
+                                    "_op": "trigger",
+                                    "_params": {
+                                      "_flow_id": "flow-create-app-from-starter",
+                                      "_event_payload": {
+                                        "_starter_id": "list",
+                                        "_app_id": "$xdata:vibe._app_id"
+                                      }
+                                    }
+                                  }
+                                ]
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "_type": "card",
+                          "class": "card",
+                          "_hide_image": true,
+                          "_title": "🧱 Empty",
+                          "_text": "Minimal valid Xpell app with a clean main view, ready for live mutation.",
+                          "_actions": [
+                            {
+                              "_type": "button",
+                              "_text": "Create Empty App",
+                              "_variant": "primary",
+                              "_on": {
+                                "click": [
+                                  {
+                                    "_module": "flow-client",
+                                    "_op": "trigger",
+                                    "_params": {
+                                      "_flow_id": "flow-create-app-from-starter",
+                                      "_event_payload": {
+                                        "_starter_id": "empty",
+                                        "_app_id": "$xdata:vibe._app_id"
+                                      }
+                                    }
+                                  }
+                                ]
+                              }
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "_type": "modal",
+          "_id": "api-key-modal",
+          "_open": false,
+          "_title": "Developer Console API Key",
+          "_size": "md",
+          "_closable": true,
+          "_close_on_backdrop": true,
+          "_children": [
+            {
+              "_type": "field",
+              "_label": "API Key",
+              "_control": {
+                "_type": "text",
+                "_data_output": "settings.xpell_api_key"
+              }
+            }
+          ],
+          "_actions": [
+            {
+              "_type": "button",
+              "_text": "Save",
+              "_on": {
+                "click": [
+                  {
+                    "_module": "xai-client",
+                    "_op": "set-api-key",
+                    "_params": {
+                      "_provider": "aime",
+                      "_xdata_key": "settings.xpell_api_key",
+                      "_result_key": "ai.connection",
+                      "_error_key": "ai.error"
+                    }
+                  },
+                  {
+                    "_module": "xai-client",
+                    "_op": "get-provider-status",
+                    "_params": {
+                      "_provider": "aime",
+                      "_result_key": "ai.connection"
+                    }
+                  },
+                  {
+                    "_op": "close-object",
+                    "_params": {
+                      "_id": "api-key-modal"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

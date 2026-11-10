@@ -233,7 +233,7 @@
               "_id": "xstudio-selected-object-panel",
               "_type": "xvm-view",
               "_view_id": "xstudio-selected-object-panel",
-              "class": "xstudio-portlet xstudio-selected-object-panel"
+              "class": "xstudio-selected-object-panel"
             }
           ]
         },
@@ -603,6 +603,15 @@
               ]
             },
             {
+              "_id": "xstudio-object-palette-id-input",
+              "_type": "text",
+              "class": "xstudio-object-palette-id-input",
+              "autocomplete": "off",
+              "spellcheck": "false",
+              "placeholder": "Object ID (optional)",
+              "aria-label": "Object ID"
+            },
+            {
               "_id": "xstudio-object-palette-search",
               "_type": "text",
               "class": "xstudio-object-palette-search",
@@ -620,6 +629,30 @@
               "_type": "view",
               "class": "xstudio-object-palette-results",
               "role": "listbox",
+              "_children": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "_id": "xstudio-import-app-dialog",
+      "_type": "view",
+      "class": "xstudio-selected-object-delete-dialog xstudio-import-app-dialog xstudio-scrollable",
+      "_visible": false,
+      "role": "dialog",
+      "aria-modal": "true",
+      "aria-hidden": "true",
+      "aria-labelledby": "xstudio-import-app-title",
+      "_children": [
+        {
+          "_type": "view",
+          "class": "xstudio-selected-object-delete-card xstudio-import-app-card",
+          "_children": [
+            {
+              "_id": "xstudio-import-app-body",
+              "_type": "view",
+              "class": "xstudio-import-app-body",
               "_children": []
             }
           ]

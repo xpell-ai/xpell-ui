@@ -157,6 +157,7 @@ export type { XVMViewData, XVMViewResolver, XVMViewSupportOptions } from "./XVM/
 
 export { XStudioModule, showObjectPalette } from "./XStudio/XStudioModule";
 export type { XStudioObjectPaletteOptions } from "./XStudio/XStudioModule";
+export { VibeSystemModule, VibeSystem } from "./XStudio/VibeSystemModule";
 export {
   CAPABILITY_GUIDANCE_ARTIFACT_TYPE,
   MUTATION_PLAN_ARTIFACT_TYPE,
@@ -212,5 +213,19 @@ export {
   ProjectMemory,
   _project_memory,
 } from "./XProjectMemory/ProjectMemoryClient";
+export {
+  FILE_CLIENT_MODULE_ID,
+  FILE_CLIENT_OPS,
+  FILE_CLIENT_SKILL,
+  FileClientModule,
+  createFileClientModule,
+} from "@xpell/file-service/client";
+export type {
+  FileClientModuleOptions,
+  FileClientUploadState,
+  FileClientUploadStatus,
+  FileClientSendXcmd,
+  XpellBrowserFileLike,
+} from "@xpell/file-service/client";
 export { XUIRuntime ,type XUIRuntimeOptions, type XUIRuntimeAppOptions} from "./XUI/XUIRuntime";
 export * from "./XUI/CoreObjects/index";

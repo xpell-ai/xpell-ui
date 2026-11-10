@@ -45,6 +45,8 @@ type XFlowUiState = {
 
 /* -------------------------------------------------------------------------- */
 
+const STARTER_CREATION_FLOW_ID = "flow-create-app-from-starter";
+
 type XFlowCommandContext = {
     flow?: any;
     event?: any;
@@ -88,6 +90,54 @@ const resolve_flow_value = (
     }
 
     return value;
+};
+
+const safe_flow_display_text = (value: any, fallback = "Flow failed"): string => {
+    if (value === undefined || value === null || value === "") return fallback;
+    if (typeof value === "string") return value;
+    if (typeof value === "number" || typeof value === "boolean") return String(value);
+    if (value instanceof Error) return value.message || fallback;
+    if (value && typeof value === "object") {
+        const candidates = [
+            value._message,
+            value.message,
+            value._code,
+            value.code,
+            value._error?._message,
+            value._error?.message,
+            value._error?._code,
+            value._error?.code,
+        ];
+        for (const candidate of candidates) {
+            if (typeof candidate === "string" && candidate.trim()) {
+                return candidate.trim();
+            }
+        }
+        try {
+            const json = JSON.stringify(value);
+            if (json) return json.length > 180 ? `${json.slice(0, 177)}...` : json;
+        } catch {
+            return fallback;
+        }
+    }
+    return fallback;
+};
+
+const read_event_object_id = (params: Record<string, any>): string | undefined => {
+    if (typeof params._object_id === "string" && params._object_id.trim()) {
+        return params._object_id.trim();
+    }
+    const event = params._event;
+    const candidates = [
+        event?.currentTarget?.id,
+        event?.target?.id,
+        event?.currentTarget?.getAttribute?.("id"),
+        event?.target?.getAttribute?.("id"),
+    ];
+    const match = candidates.find((candidate) =>
+        typeof candidate === "string" && candidate.trim()
+    );
+    return typeof match === "string" ? match.trim() : undefined;
 };
 
 const run_command_or_list = async (
@@ -302,7 +352,7 @@ export class FlowManagerClient extends XModule {
             _flow_id: _xu.ensure_string(params._flow_id, "_flow_id"),
             _event_name: typeof params._event_name === "string" ? params._event_name : undefined,
             _event_payload: typeof params._event_payload === "object" && params._event_payload !== null ? params._event_payload : {},
-            _object_id: typeof params._object_id === "string" ? params._object_id : undefined,
+            _object_id: read_event_object_id(params),
             _success_view: typeof params._success_view === "string" ? params._success_view : undefined,
             _app_id: typeof params._app_id === "string" ? params._app_id : undefined,
             _env: typeof params._env === "string" ? params._env : undefined,
@@ -359,7 +409,7 @@ export class FlowManagerClient extends XModule {
     private set_ui_flow_state(
         obj: any,
         state: "running" | "success" | "error",
-        error?: string
+        error?: any
     ) {
         if (!obj?.dom) return;
 
@@ -397,7 +447,7 @@ export class FlowManagerClient extends XModule {
         }
 
         if (state === "error") {
-            const message = error || "Flow failed";
+            const message = safe_flow_display_text(error, "Flow failed");
             dom.removeAttribute("data-xflow-success");
             dom.setAttribute("data-xflow-error", message);
             dom.setAttribute("aria-invalid", "true");
@@ -413,8 +463,7 @@ export class FlowManagerClient extends XModule {
         if (original._title) dom.setAttribute("title", original._title);
         else dom.removeAttribute("title");
         dom.setAttribute("data-xflow-success", "Saved");
-        dom.setAttribute("title", original._title || "Saved");
-        if (button) obj.setText?.("Saved");
+        if (button) obj.setText?.(original._text);
         this.apply_ui_flow_classes(dom, state);
         this.set_ui_flow_status(statusNode, "Saved");
     }
@@ -501,7 +550,7 @@ export class FlowManagerClient extends XModule {
         state: XFlowUiState | null,
         status: "success" | "error",
         client?: any,
-        error?: string
+        error?: any
     ) {
         if (!state) return;
         this._ui_flows_in_flight.delete(state._key);
@@ -636,11 +685,13 @@ export class FlowManagerClient extends XModule {
                         res?._result?._ok === false ||
                         flow?._last?._ok === false;
                     const failure_message =
-                        flow?._last?._error?._message ??
-                        flow?._last?._result?._message ??
-                        res?._error?._message ??
-                        res?._result?._error?._message ??
-                        "Flow failed";
+                        safe_flow_display_text(
+                            flow?._last?._error ??
+                                flow?._last?._result ??
+                                res?._error ??
+                                res?._result?._error,
+                            "Flow failed"
+                        );
 
                     const flow_definition =
                         client?._flows?.get(
@@ -652,6 +703,17 @@ export class FlowManagerClient extends XModule {
 
                     const generated_app_id =
                         flow?._last?._result?._app_id;
+                    const generated_app_env =
+                        typeof flow?._last?._result?._env === "string" &&
+                            flow._last._result._env.trim()
+                            ? flow._last._result._env.trim()
+                            : undefined;
+                    const open_generated_app_in_edit =
+                        this.should_open_generated_app_in_edit_mode(
+                            normalized._flow_id,
+                            normalized._event_payload,
+                            flow_definition
+                        );
 
                     const handler_context = {
                         flow,
@@ -753,13 +815,11 @@ export class FlowManagerClient extends XModule {
                         generated_app_id !== app_id
                     ) {
                         const target_app_id = generated_app_id.trim();
-                        const target_env = env ?? "default";
+                        const target_env = generated_app_env ?? env ?? "default";
                         log_debug("[flow-client] generated app detected", {
-                            _app_id: target_app_id
-                        });
-
-                        _xd.set("xvibe.active_app", target_app_id, {
-                            source: "flow-client"
+                            _app_id: target_app_id,
+                            _env: target_env,
+                            _edit: open_generated_app_in_edit
                         });
 
                         if (
@@ -769,7 +829,10 @@ export class FlowManagerClient extends XModule {
                             try {
                                 await client.load_server_app(
                                     target_app_id,
-                                    target_env
+                                    target_env,
+                                    open_generated_app_in_edit
+                                        ? { _edit: true }
+                                        : undefined
                                 );
                                 return;
                             } catch (error) {
@@ -782,7 +845,8 @@ export class FlowManagerClient extends XModule {
 
                         _xem.fire("studio:open-app", {
                             _app_id: target_app_id,
-                            _env: target_env
+                            _env: target_env,
+                            ...(open_generated_app_in_edit ? { _edit: true } : {})
                         });
                     }
 
@@ -828,6 +892,21 @@ export class FlowManagerClient extends XModule {
             _flow_id:
                 normalized._flow_id
         };
+    }
+
+    private should_open_generated_app_in_edit_mode(
+        flow_id: string,
+        event_payload: any,
+        flow_definition: any
+    ) {
+        if (flow_definition?._open_created_app_in_edit === true) return true;
+        if (flow_id === STARTER_CREATION_FLOW_ID) return true;
+        return Boolean(
+            event_payload &&
+            typeof event_payload === "object" &&
+            typeof event_payload._starter_id === "string" &&
+            event_payload._starter_id.trim()
+        );
     }
 
     async _trigger(xcmd: XCommand) {

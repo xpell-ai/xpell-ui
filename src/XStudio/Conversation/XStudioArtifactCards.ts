@@ -12,6 +12,7 @@ export type XStudioArtifactRequestDetail = {
 export type XStudioArtifactRequestView = {
   _key: string;
   _message_id: string;
+  _conversation_id?: string;
   _title: string;
   _operation: string;
   _artifact_type: string;
@@ -26,6 +27,7 @@ export type XStudioArtifactRequestView = {
 export type XStudioArtifactRequestEventPayload = {
   _request_key: string;
   _message_id: string;
+  _conversation_id?: string;
   _artifact_type: string;
   _operation: string;
   _artifact_name: string;
@@ -84,11 +86,26 @@ function artifact_request_error_source(error: any, result: any) {
   if (is_obj(result?.error)) return result.error;
   if (is_obj(result?._result?._error)) return result._result._error;
   if (is_obj(result?.result?.error)) return result.result.error;
+  if (is_obj(result?._result) && (
+    artifact_request_string_value(result._result._code) ||
+    artifact_request_string_value(result._result.code) ||
+    artifact_request_string_value(result._result._message) ||
+    artifact_request_string_value(result._result.message)
+  )) return result._result;
+  if (is_obj(result) && (
+    artifact_request_string_value(result._code) ||
+    artifact_request_string_value(result.code) ||
+    artifact_request_string_value(result._message) ||
+    artifact_request_string_value(result.message)
+  )) return result;
   return null;
 }
 
 function artifact_request_error_message(error: any, result: any) {
   const source = artifact_request_error_source(error, result);
+  const code = source
+    ? artifact_request_string_value(source._code ?? source.code)
+    : "";
   const message = source
     ? artifact_request_string_value(
       source._message ??
@@ -99,6 +116,8 @@ function artifact_request_error_message(error: any, result: any) {
       source.reason,
     )
     : artifact_request_string_value(error);
+  if (code && message) return `${code}: ${message}`;
+  if (code) return code;
   if (message) return message;
 
   return artifact_request_string_value(
@@ -367,6 +386,7 @@ export function create_xstudio_artifact_request_view(
   options: {
     _key: string;
     _message_id: string;
+    _conversation_id?: string;
   },
 ) {
   const intent = is_obj(message._intent) ? message._intent : null;
@@ -454,6 +474,9 @@ export function create_xstudio_artifact_request_view(
   return {
     _key: options._key,
     _message_id: options._message_id,
+    ...(typeof options._conversation_id === "string" && options._conversation_id.trim()
+      ? { _conversation_id: options._conversation_id.trim() }
+      : {}),
     _title: artifact_request_title(operation, artifact_type),
     _operation: operation,
     _artifact_type: artifact_type,
@@ -474,6 +497,9 @@ export function normalize_xstudio_artifact_request_event_payload(payload?: any) 
   return {
     _request_key: request_key,
     _message_id: typeof payload._message_id === "string" ? payload._message_id.trim() : "",
+    ...(typeof payload._conversation_id === "string" && payload._conversation_id.trim()
+      ? { _conversation_id: payload._conversation_id.trim() }
+      : {}),
     _artifact_type: typeof payload._artifact_type === "string" ? payload._artifact_type.trim() : "",
     _operation: typeof payload._operation === "string" ? payload._operation.trim() : "",
     _artifact_name: typeof payload._artifact_name === "string" ? payload._artifact_name.trim() : "",
@@ -493,6 +519,7 @@ export function xstudio_artifact_request_event_payload(request: XStudioArtifactR
   return {
     _request_key: request._key,
     _message_id: request._message_id,
+    ...(request._conversation_id ? { _conversation_id: request._conversation_id } : {}),
     _artifact_type: request._artifact_type,
     _operation: request._operation,
     _artifact_name: request._artifact_name,
@@ -1320,6 +1347,59 @@ function project_plan_result_source(request: XStudioArtifactRequestView, result:
       is_obj(candidate._project_plan)
     )
   ) ?? candidates.find((candidate): candidate is Record<string, any> => is_obj(candidate)) ?? null;
+}
+
+function project_plan_display_source(
+  request: XStudioArtifactRequestView,
+  result: any,
+) {
+  const result_source = project_plan_result_source(request, result);
+  const result_plan =
+    result_source && is_obj(project_plan_field(result_source, "planning"))
+      ? project_plan_field(result_source, "planning")
+      : result_source && is_obj(project_plan_field(result_source, "project_plan"))
+        ? project_plan_field(result_source, "project_plan")
+        : null;
+  return result_plan ?? result_source ?? project_plan_source(request);
+}
+
+function project_plan_runtime_lifecycle(
+  source: Record<string, any>,
+  result: any,
+) {
+  const result_source = is_obj(result)
+    ? (is_obj(result._result) ? result._result : result)
+    : null;
+  const candidates = [
+    project_plan_field(source, "runtime_lifecycle"),
+    project_plan_field(source, "initial_planning_lifecycle"),
+    result_source ? project_plan_field(result_source, "runtime_lifecycle") : null,
+    result_source && is_obj(project_plan_field(result_source, "planning"))
+      ? project_plan_field(project_plan_field(result_source, "planning"), "runtime_lifecycle")
+      : null,
+  ];
+  return candidates.find((candidate): candidate is Record<string, any> => is_obj(candidate)) ?? null;
+}
+
+function project_plan_is_manual_ended(
+  source: Record<string, any>,
+  result: any,
+) {
+  const lifecycle = project_plan_runtime_lifecycle(source, result);
+  const lifecycle_status = artifact_request_string_value(
+    lifecycle?._status ?? project_plan_field(source, "lifecycle_status"),
+  ).toLowerCase();
+  const lifecycle_phase = artifact_request_string_value(
+    lifecycle?._phase ?? project_plan_field(source, "lifecycle_phase"),
+  ).toLowerCase();
+  const result_source = is_obj(result)
+    ? (is_obj(result._result) ? result._result : result)
+    : null;
+  const operation = artifact_request_string_value(
+    result_source?._operation ?? project_plan_field(source, "operation"),
+  ).toLowerCase();
+  return operation === "end-planning" ||
+    (lifecycle_status === "completed" && lifecycle_phase === "manual");
 }
 
 function project_plan_readiness_source(
@@ -3303,6 +3383,74 @@ function project_plan_action_button(
   };
 }
 
+function project_plan_end_button(
+  request: XStudioArtifactRequestView,
+  options: {
+    _message_index: number;
+    _running?: boolean;
+  },
+) {
+  const disabled = options._running === true;
+  return {
+    _type: "button",
+    _id: `xstudio-project-plan-end-${options._message_index}`,
+    type: "button",
+    class: "xstudio-intent-action-button xstudio-intent-action-dismiss xstudio-project-plan-end",
+    _text: disabled ? "Ending Planning" : "End Planning",
+    title: disabled
+      ? "Ending planning"
+      : "End planning and continue manually",
+    "aria-label": disabled
+      ? "Ending planning"
+      : "End planning and continue manually",
+    ...(disabled ? { disabled: true, "aria-disabled": "true" } : {}),
+    ...(!disabled ? {
+      _on: {
+        click: {
+          _module: "xem",
+          _op: "fire",
+          _params: {
+            event: "studio:project-plan-end",
+            data: xstudio_artifact_request_event_payload(request),
+          },
+        },
+      },
+    } : {}),
+  };
+}
+
+function project_plan_resume_button(
+  request: XStudioArtifactRequestView,
+  options: {
+    _message_index: number;
+    _running?: boolean;
+  },
+) {
+  const disabled = options._running === true;
+  return {
+    _type: "button",
+    _id: `xstudio-project-plan-resume-${options._message_index}`,
+    type: "button",
+    class: "xstudio-intent-action-button xstudio-intent-action-dismiss xstudio-project-plan-resume",
+    _text: disabled ? "Resuming" : "Resume Planning",
+    title: disabled ? "Resuming planning" : "Resume planning",
+    "aria-label": disabled ? "Resuming planning" : "Resume planning",
+    ...(disabled ? { disabled: true, "aria-disabled": "true" } : {}),
+    ...(!disabled ? {
+      _on: {
+        click: {
+          _module: "xem",
+          _op: "fire",
+          _params: {
+            event: "studio:project-plan-resume",
+            data: xstudio_artifact_request_event_payload(request),
+          },
+        },
+      },
+    } : {}),
+  };
+}
+
 function project_plan_confirm_button(
   request: XStudioArtifactRequestView,
   options: {
@@ -4858,13 +5006,15 @@ function create_project_plan_card(
   const is_done = status === ARTIFACT_REQUEST_STATUS_DONE;
   const error = options._error || request._error || "";
   const result = options._result ?? request._result;
-  const source = project_plan_source(request);
+  const source = project_plan_display_source(request, result);
+  const manual_ended = project_plan_is_manual_ended(source, result);
+  const is_confirmed = is_done && !manual_ended;
   const readiness = project_plan_readiness_source(request, source, result);
   const summary_source = project_plan_summary_source(request, source, result);
-  const question = project_plan_current_question(request);
+  const question = manual_ended ? null : project_plan_current_question(request);
   const question_text = question ? project_plan_question_text(question) : "";
   const is_complete = project_plan_is_complete(request, source);
-  const has_active_question = Boolean(question && question_text && !is_done && !is_complete);
+  const has_active_question = Boolean(question && question_text && !is_done && !is_complete && !manual_ended);
   const suggestions = question ? project_plan_question_suggestions(question) : [];
   const question_type = question ? project_plan_question_type(question) : "";
   const question_key = question ? project_plan_question_key(options._message_index, question) : "";
@@ -4913,7 +5063,7 @@ function create_project_plan_card(
       _goal: goal,
       _summary: description,
       _is_complete: is_complete,
-      _is_done: is_done,
+      _is_done: is_confirmed,
       _is_ready: is_ready,
       _blockers: blockers,
       _warnings: warnings,
@@ -4922,13 +5072,13 @@ function create_project_plan_card(
       _has_genuine_blocker: has_genuine_blocker,
       _has_active_question: has_active_question,
       _compact: has_active_question,
-      _hide_status_badge: is_done,
+      _hide_status_badge: is_confirmed,
     })
-    : is_done
+    : is_done && !manual_ended
       ? null
       : project_plan_compact_review(request, {
       _message_index: options._message_index,
-      _is_done: is_done,
+      _is_done: is_confirmed,
       _is_ready: is_ready,
       _blockers: blockers,
       _has_active_question: has_active_question,
@@ -4949,7 +5099,9 @@ function create_project_plan_card(
   const display_status_class = status === ARTIFACT_REQUEST_STATUS_FAILED && !has_genuine_blocker
     ? ARTIFACT_REQUEST_STATUS_SUGGESTED
     : status_class;
-  const plan_state_class = has_genuine_blocker || malformed
+  const plan_state_class = manual_ended
+    ? "xstudio-project-plan-card-manual"
+    : has_genuine_blocker || malformed
     ? "xstudio-project-plan-card-blocked"
     : is_ready
       ? "xstudio-project-plan-card-ready"
@@ -4982,11 +5134,11 @@ function create_project_plan_card(
                 _type: "label",
                 class: "xstudio-project-plan-state-note",
                 role: "status",
-                _text: "Confirmation is in progress.",
+                _text: "Planning action is in progress.",
               },
             ]
             : []),
-          ...(is_done
+          ...(is_confirmed
             ? [
               {
                 _type: "label",
@@ -4997,6 +5149,20 @@ function create_project_plan_card(
                 _type: "label",
                 class: "xstudio-project-plan-state-note xstudio-project-plan-guide-ready-note",
                 _text: "Your build guide is ready.",
+              },
+            ]
+            : []),
+          ...(manual_ended
+            ? [
+              {
+                _type: "label",
+                class: "xstudio-artifact-request-success xstudio-project-plan-success xstudio-project-plan-manual-success",
+                _text: "Planning ended",
+              },
+              {
+                _type: "label",
+                class: "xstudio-project-plan-state-note xstudio-project-plan-manual-note",
+                _text: "The current plan is kept. Conversation is ready for normal editing.",
               },
             ]
             : []),
@@ -5037,13 +5203,24 @@ function create_project_plan_card(
             : []),
         ],
       },
-      ...(has_active_question
-        ? []
-        : [
+      ...[
           {
             _type: "view",
             class: "xstudio-artifact-request-buttons xstudio-project-plan-buttons",
-            _children: is_done
+            _children: manual_ended
+              ? [
+                ...(!project_plan_expanded ? [
+                  project_plan_review_toggle_button(request, {
+                    _message_index: options._message_index,
+                    _expanded: false,
+                  }),
+                ] : []),
+                project_plan_resume_button(request, {
+                  _message_index: options._message_index,
+                  _running: is_running,
+                }),
+              ]
+              : is_confirmed
               ? [
                 ...(!project_plan_expanded ? [
                   project_plan_review_toggle_button(request, {
@@ -5055,11 +5232,18 @@ function create_project_plan_card(
                   _message_index: options._message_index,
                 }),
               ]
-              : [
+              : has_active_question
+                ? [
+                  project_plan_end_button(request, {
+                    _message_index: options._message_index,
+                    _running: is_running,
+                  }),
+                ]
+                : [
               project_plan_confirm_button(request, {
                 _message_index: options._message_index,
                 _running: is_running,
-                _confirmed: is_done,
+                _confirmed: is_confirmed,
                 _disabled: !is_ready,
                 _disabled_reason: confirm_disabled_reason,
               }),
@@ -5089,9 +5273,13 @@ function create_project_plan_card(
                   }),
                 ]
                 : []),
+              project_plan_end_button(request, {
+                _message_index: options._message_index,
+                _running: is_running,
+              }),
               ],
           },
-        ]),
+        ],
     ],
   };
 }

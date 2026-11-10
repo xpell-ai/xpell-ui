@@ -297,6 +297,14 @@ export  class WormholesV1Adapter implements WormholesClientAPI {
     return this._sid_value;
   }
 
+  get _hello(): undefined {
+    return undefined;
+  }
+
+  get _server_identity(): string | undefined {
+    return this._wid_value;
+  }
+
   open(opts: WormholesOpenOptions): void {
     // v1 signature: open(url: string)
     this._v1.open(opts._url);

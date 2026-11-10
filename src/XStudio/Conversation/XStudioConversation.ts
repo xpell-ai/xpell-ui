@@ -237,6 +237,31 @@ function conversation_debug_value(value: any) {
   return _xu.safe_compact_inline_json(value, 4000) || String(value);
 }
 
+function conversation_display_text(value: any, fallback = ""): string {
+  if (value === undefined || value === null || value === "") return fallback;
+  if (typeof value === "string") return value;
+  if (typeof value === "number" || typeof value === "boolean") return String(value);
+  if (value instanceof Error) return value.message || fallback;
+  if (is_obj(value)) {
+    const candidates = [
+      value._message,
+      value.message,
+      value._code,
+      value.code,
+      value._error?._message,
+      value._error?.message,
+      value._error?._code,
+      value._error?.code,
+    ];
+    for (const candidate of candidates) {
+      if (typeof candidate === "string" && candidate.trim()) return candidate.trim();
+    }
+    const compact = _xu.safe_compact_inline_json(value, 240);
+    return compact || fallback;
+  }
+  return fallback;
+}
+
 function conversation_debug_json(value: any) {
   if (value === undefined || value === null || value === "") return "-";
   try {
@@ -382,11 +407,16 @@ export function create_xstudio_crud_recommendation_card(
       .map((item) => conversation_crud_recommendation_artifact_label(item))
       .filter((item) => item.length > 0)
     : [];
-  const badge = action._recommendation_badge ||
-    (action._recommended === true ? "Recommended" : action._recommendation_order || "Option");
-  const button_label = action._recommendation_button_label ||
-    action._title ||
-    "Build CRUD foundation";
+  const badge = conversation_display_text(
+    action._recommendation_badge ||
+      (action._recommended === true ? "Recommended" : action._recommendation_order || "Option"),
+    "Option",
+  );
+  const button_label = conversation_display_text(
+    action._recommendation_button_label ||
+      action._title,
+    "Build CRUD foundation",
+  );
   const button_text = is_running
     ? "Building..."
     : is_done
@@ -396,7 +426,10 @@ export function create_xstudio_crud_recommendation_card(
         : button_label;
   const disabled_reason =
     !is_running && !is_done && !execute_state._can_execute
-      ? execute_state._disabled_reason || action._execution_payload_error || "Missing executable payload."
+      ? conversation_display_text(
+        execute_state._disabled_reason || action._execution_payload_error,
+        "Missing executable payload.",
+      )
       : "";
   const missing_payload =
     !is_running &&
@@ -439,33 +472,33 @@ export function create_xstudio_crud_recommendation_card(
       },
       {
         _type: "label",
-        class: "xstudio-crud-recommendation-title",
-        _text: action._title || "Build CRUD foundation",
-      },
-      ...(action._description
-        ? [
-          {
-            _type: "label",
-            class: "xstudio-crud-recommendation-explanation",
-            _text: action._description,
+            class: "xstudio-crud-recommendation-title",
+            _text: conversation_display_text(action._title, "Build CRUD foundation"),
           },
-        ]
-        : []),
-      ...(action._recommendation_entity_name
+          ...(conversation_display_text(action._description)
+            ? [
+              {
+                _type: "label",
+                class: "xstudio-crud-recommendation-explanation",
+                _text: conversation_display_text(action._description),
+              },
+            ]
+            : []),
+      ...(conversation_display_text(action._recommendation_entity_name)
         ? [
           {
             _type: "label",
             class: "xstudio-crud-recommendation-entity",
-            _text: `Data: ${action._recommendation_entity_name}`,
+            _text: `Data: ${conversation_display_text(action._recommendation_entity_name)}`,
           },
         ]
         : []),
-      ...(action._recommendation_dependency
+      ...(conversation_display_text(action._recommendation_dependency)
         ? [
           {
             _type: "label",
             class: "xstudio-crud-recommendation-dependency",
-            _text: action._recommendation_dependency,
+            _text: conversation_display_text(action._recommendation_dependency),
           },
         ]
         : []),
@@ -629,15 +662,15 @@ function conversation_intent_action_card(
   const action_payload = intent_action_event_payload(action);
   const apply_text = is_running ? "Running" : is_done ? "✓ Applied" : is_failed ? "Retry" : "Apply";
   const disabled_reason = action._executable === false && is_apply_disabled && !is_running && !is_done
-    ? execute_state._disabled_reason
+    ? conversation_display_text(execute_state._disabled_reason)
     : "";
   const apply_title = is_running
     ? "Action is running"
     : is_done
       ? "Action completed"
       : is_failed
-        ? execute_state._disabled_reason || "Retry action"
-        : execute_state._disabled_reason || "Execute approved action";
+        ? conversation_display_text(execute_state._disabled_reason, "Retry action")
+        : conversation_display_text(execute_state._disabled_reason, "Execute approved action");
   const result_report = is_done ? intent_action_fix_project_views_report(action) : null;
 
   if (is_done) {
@@ -649,7 +682,7 @@ function conversation_intent_action_card(
         {
           _type: "label",
           class: "xstudio-intent-action-success",
-          _text: `✓ Applied${action._title ? `: ${action._title}` : ""}`,
+          _text: `✓ Applied${conversation_display_text(action._title) ? `: ${conversation_display_text(action._title)}` : ""}`,
         },
         ...(result_report ? [result_report] : []),
       ],
@@ -712,23 +745,23 @@ function conversation_intent_action_card(
           {
             _type: "label",
             class: "xstudio-intent-action-title",
-            _text: action._title,
+            _text: conversation_display_text(action._title, "Action"),
           },
-          ...(action._description
+          ...(conversation_display_text(action._description)
             ? [
               {
                 _type: "label",
                 class: "xstudio-intent-action-description",
-                _text: action._description,
+                _text: conversation_display_text(action._description),
               },
             ]
             : []),
-          ...(action._error
+          ...(conversation_display_text(action._error)
             ? [
               {
                 _type: "label",
                 class: "xstudio-intent-action-error",
-                _text: action._error,
+                _text: conversation_display_text(action._error),
               },
             ]
             : []),

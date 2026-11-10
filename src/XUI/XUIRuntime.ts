@@ -7,9 +7,12 @@ import { XVMClient, type XVMClientOptions } from "../XVM/XVMClient";
 import { EntityClient } from "../XDB/EntityClient";
 import { XDBClientModule } from "../XDB/XDBModule";
 import { XAuth } from "../XAuth/XAuthClient";
-import {XStudioModule} from "../XStudio/XStudioModule";
+import { XStudioModule } from "../XStudio/XStudioModule";
+import { VibeSystem } from "../XStudio/VibeSystemModule";
 import {_xai} from "../XAI/XAIClient";
 import { _project_memory } from "../XProjectMemory/ProjectMemoryClient";
+import Wormholes from "../Wormholes/Wormholes";
+import { createFileClientModule } from "@xpell/file-service/client";
 
 /* -------------------------------------------------------------------------- */
 
@@ -22,6 +25,7 @@ export type XUIRuntimeOptions = {
   _load_studio?: boolean;
   _load_xai_client?: boolean;
   _load_project_memory_client?: boolean;
+  _load_file_client?: boolean;
 };
 
 export type XUIRuntimeAppOptions = XVMClientOptions & {
@@ -50,9 +54,10 @@ export class XUIRuntime {
       _load_xvm: load_xvm = true,
       _load_auth_client: load_auth_client = true,
       _load_entity_client: load_entity_client = true,
-      _load_studio: load_studio = true,
+      _load_studio: load_studio = false,
       _load_xai_client: load_xai_client = true,
-      _load_project_memory_client: load_project_memory_client = true
+      _load_project_memory_client: load_project_memory_client = true,
+      _load_file_client: load_file_client = true
     } = opts;
 
     await _x.loadModuleAsync(XUI);
@@ -86,6 +91,12 @@ export class XUIRuntime {
       await _x.loadModuleAsync(_project_memory);
     }
 
+    if (load_file_client) {
+      await _x.loadModuleAsync(createFileClientModule({
+        _send_xcmd: (xcmd) => Wormholes.sendXcmd(xcmd)
+      }));
+    }
+
     if (auto_start) {
       _x.start();
     }
@@ -106,6 +117,10 @@ export class XUIRuntime {
     await this.loadModules(opts._runtime);
     const { registerXVMViewSupport } = await import("../XVM/XVMView");
     await registerXVMViewSupport();
+
+    if (!_x.getModule("vibe-system")) {
+      await _x.loadModuleAsync(VibeSystem);
+    }
 
     if (Array.isArray(opts._modules)) {
 
@@ -134,6 +149,8 @@ export class XUIRuntime {
     const client = new XVMClient({
       _app_id: opts._app_id,
       _env: opts._env ?? "default",
+      _edit: opts._edit,
+      _allow_edit: opts._allow_edit,
       _wormhole_url: opts._wormhole_url,
 
       _region: opts._region,

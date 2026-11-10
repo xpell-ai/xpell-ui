@@ -32,7 +32,7 @@
  */
 
 import { XUIObject, type XUIObjectData } from "../XUIObject";
-import { _x, _xd, type XObjectData, XObjectPack, _xlog, XObject, createNanoCommandWithSkill } from "@xpell/core";
+import { _x, _xd, type XObjectData, XObjectPack, _xlog, XObject, createNanoCommandWithSkill, XCommandRuntime } from "@xpell/core";
 import { _xem } from "../../XEM/XEventManager"
 import type {
     XpellSkill,
@@ -40,20 +40,21 @@ import type {
     XNanoCommand
 } from "@xpell/core";
 
-import { XInput, XPassword, XTextArea, XTextField, XSelect } from "./XInput";
+import { XInput, XPassword, XTextArea, XTextField, XSelect, XFileInput } from "./XInput";
 import { XSVG, XSVGCircle, XSVGEllipse, XSVGLine, XSVGPath, XSVGPolygon, XSVGPolyline, XSVGRect } from "./SVGObjects";
 import { XStyleSheet } from "./XStyleSheet";
 export class XView extends XUIObject {
 
     static _xtype = "view";
 
-    static _skill: XpellSkill = {
+    static _skill: XpellSkill & { _capabilities: string[] } = {
         _id: "view",
         _title: "XView",
         _version: "1.0.0",
         _active: true,
         _type: "view-skill",
         _requires: ["xuiobject"],
+        _capabilities: ["spacing", "layout", "appearance"],
         _description:
             "Basic XUI container view. Used as a generic layout/root container for child UI objects.",
         _fields: {
@@ -72,7 +73,22 @@ export class XView extends XUIObject {
                 _id: "main",
                 _children: []
             }
-        ]
+        ],
+        _design: {
+            _children: {
+                _allowed: true,
+                _insert_modes: ["inside", "before", "after"]
+            },
+            _palette: {
+                _title: "View",
+                _category: "Basic",
+                _icon: "square",
+                _default_object: {
+                    _type: "view",
+                    _children: []
+                }
+            }
+        }
     };
 
     constructor(data: XUIObjectData) {
@@ -90,13 +106,14 @@ export class XView extends XUIObject {
 
 export class XForm extends XUIObject {
     static _xtype = "form"
-    static _skill: XpellSkill = {
+    static _skill: XpellSkill & { _capabilities: string[] } = {
         _id: "form",
         _title: "XForm",
         _version: "1.0.0",
         _active: true,
         _type: "view-skill",
         _requires: ["xuiobject"],
+        _capabilities: ["spacing", "layout", "appearance"],
 
         _description:
             "Semantic HTML form container for grouping input fields and submit actions.",
@@ -547,13 +564,14 @@ export class XWebcam extends XUIObject {
 export class XLink extends XUIObject {
     static _xtype = "link"
 
-    static _skill: XpellSkill = {
+    static _skill: XpellSkill & { _capabilities: string[] } = {
         _id: "link",
         _title: "XLink",
         _version: "1.0.0",
         _active: true,
         _type: "view-skill",
         _requires: ["xuiobject"],
+        _capabilities: ["typography", "spacing", "layout", "appearance"],
 
         _description:
             "Hyperlink UI object rendered as an HTML anchor element.",
@@ -671,13 +689,14 @@ export class XLink extends XUIObject {
 
 export class XLabel extends XUIObject {
     static _xtype = "label"
-    static _skill: XpellSkill = {
+    static _skill: XpellSkill & { _capabilities: string[] } = {
         _id: "label",
         _title: "XLabel",
         _version: "1.0.0",
         _active: true,
         _type: "view-skill",
         _requires: ["xuiobject"],
+        _capabilities: ["typography", "spacing", "layout", "appearance"],
 
         _description:
             "Text label UI object rendered as an HTML label element.",
@@ -739,13 +758,14 @@ export class XLabel extends XUIObject {
 
 export class XButton extends XUIObject {
     static _xtype = "button"
-    static _skill: XpellSkill = {
+    static _skill: XpellSkill & { _capabilities: string[] } = {
         _id: "button",
         _title: "XButton",
         _version: "1.0.0",
         _active: true,
         _type: "view-skill",
         _requires: ["xuiobject"],
+        _capabilities: ["typography", "spacing", "layout", "appearance"],
 
         _description:
             "Clickable button UI object rendered as an HTML button element.",
@@ -831,13 +851,14 @@ export class XButton extends XUIObject {
 export class XHTML extends XUIObject {
     static _xtype = "xhtml";
 
-    static _skill: XpellSkill = {
+    static _skill: XpellSkill & { _capabilities: string[] } = {
         _id: "xhtml",
         _title: "XHTML",
         _version: "1.0.0",
         _active: true,
         _type: "view-skill",
         _requires: ["xuiobject"],
+        _capabilities: ["spacing", "layout", "appearance"],
 
         _description:
             "Generic raw HTML wrapper object for unsupported or custom HTML tags.",
@@ -916,6 +937,10 @@ type XTableColumn = {
     label?: string;
     _title?: string;
     title?: string;
+    _type?: string;
+    _actions?: XObjectData[];
+    _menu_actions?: XObjectData[];
+    _secondary_actions?: XObjectData[];
 };
 
 export class XTable extends XUIObject {
@@ -985,7 +1010,7 @@ export class XTable extends XUIObject {
         void this.loadEntityDataSource();
     }
 
-    private normalizeColumns(): Array<{ key: string; label: string }> {
+    private normalizeColumns(): Array<{ key: string; label: string; type?: string; actions?: XObjectData[]; menuActions?: XObjectData[] }> {
         const columns = (this as any)._columns;
         if (!Array.isArray(columns)) return [];
 
@@ -1000,9 +1025,17 @@ export class XTable extends XUIObject {
                     key
                 ).trim();
 
-                return key ? { key, label: label || key } : null;
+                return key ? {
+                    key,
+                    label: label || key,
+                    type: typeof column?._type === "string" ? column._type : undefined,
+                    actions: Array.isArray(column?._actions) ? column._actions : undefined,
+                    menuActions: Array.isArray(column?._menu_actions)
+                        ? column._menu_actions
+                        : (Array.isArray(column?._secondary_actions) ? column._secondary_actions : undefined)
+                } : null;
             })
-            .filter(Boolean) as Array<{ key: string; label: string }>;
+            .filter(Boolean) as Array<{ key: string; label: string; type?: string; actions?: XObjectData[]; menuActions?: XObjectData[] }>;
     }
 
     private normalizeRows(value: any): any[] {
@@ -1036,6 +1069,122 @@ export class XTable extends XUIObject {
             res?.records ??
             res
         );
+    }
+
+    override async onData(data: any) {
+        await super.onData(data);
+        this._table_rows = this.normalizeRows(data);
+        (this as any)._rows = this._table_rows;
+        this.renderTable();
+    }
+
+    private actionLabel(action: any) {
+        return String(action?._text ?? action?.text ?? action?._label ?? action?.label ?? "Action");
+    }
+
+    private actionVariant(action: any) {
+        const variant = String(action?._variant ?? action?.variant ?? "").trim();
+        return variant ? `xbutton--variant-${variant}` : "";
+    }
+
+    private async runRowAction(action: any, row: any) {
+        const handler = action?._on?.click ?? action?._on;
+        if (!handler) return;
+
+        const previousContext = (this as any)._context;
+        (this as any)._context = {
+            ...(previousContext && typeof previousContext === "object" ? previousContext : {}),
+            row,
+        };
+
+        try {
+            if (handler && typeof handler === "object" && !Array.isArray(handler)) {
+                await this.checkAndRunInternalFunction({
+                    ...handler,
+                    _params: XCommandRuntime.resolveParams(
+                        handler._params ?? {},
+                        {
+                            _context: {
+                                row,
+                            }
+                        }
+                    )
+                });
+                return;
+            }
+
+            await this.checkAndRunInternalFunction(handler);
+        } finally {
+            (this as any)._context = previousContext;
+        }
+    }
+
+    private renderActionButton(action: any, row: any, className: string) {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = [
+            "xbutton",
+            this.actionVariant(action),
+            typeof action?.class === "string" ? action.class : "",
+            className
+        ].filter(Boolean).join(" ");
+        button.textContent = this.actionLabel(action);
+        button.addEventListener("click", (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            void this.runRowAction(action, row);
+        });
+        return button;
+    }
+
+    private renderActionsCell(
+        td: HTMLTableCellElement,
+        actions: XObjectData[] | undefined,
+        menuActions: XObjectData[] | undefined,
+        row: any
+    ) {
+        const allActions = Array.isArray(actions) ? actions : [];
+        const primaryAction = allActions[0];
+        const secondaryActions = Array.isArray(menuActions) ? menuActions : allActions.slice(1);
+        td.classList.add("xtable-actions-cell");
+
+        const wrap = document.createElement("div");
+        wrap.className = "xtable-actions";
+
+        if (primaryAction) {
+            wrap.appendChild(
+                this.renderActionButton(primaryAction, row, "xtable-action-primary")
+            );
+        }
+
+        if (secondaryActions.length > 0) {
+            const menu = document.createElement("details");
+            menu.className = "xtable-action-menu";
+
+            const summary = document.createElement("summary");
+            summary.className = "xtable-action-menu-trigger";
+            summary.textContent = "⋯";
+            summary.setAttribute("aria-label", "More actions");
+            menu.appendChild(summary);
+
+            const menuBody = document.createElement("div");
+            menuBody.className = "xtable-action-menu-body";
+            menuBody.setAttribute("role", "menu");
+
+            for (const action of secondaryActions) {
+                const button = this.renderActionButton(action, row, "xtable-action-menu-item");
+                button.setAttribute("role", "menuitem");
+                button.addEventListener("click", () => {
+                    menu.removeAttribute("open");
+                });
+                menuBody.appendChild(button);
+            }
+
+            menu.appendChild(menuBody);
+            wrap.appendChild(menu);
+        }
+
+        td.appendChild(wrap);
     }
 
     private logDataSourceDiagnostics() {
@@ -1165,8 +1314,12 @@ export class XTable extends XUIObject {
 
             for (const column of columns) {
                 const td = document.createElement("td");
-                const value = row?.[column.key];
-                td.textContent = value == null ? "" : String(value);
+                if (column.type === "actions") {
+                    this.renderActionsCell(td, column.actions, column.menuActions, row);
+                } else {
+                    const value = row?.[column.key];
+                    td.textContent = value == null ? "" : String(value);
+                }
                 tr.appendChild(td);
             }
 
@@ -1213,6 +1366,7 @@ export class XUIObjectPack extends XObjectPack {
             [XTextField._xtype]: XTextField, //"text"
             [XPassword._xtype]: XPassword, //"password"
             [XInput._xtype]: XInput, //"input"
+            [XFileInput._xtype]: XFileInput, //"file-input"
             [XTextArea._xtype]: XTextArea, //"textarea"
             [XSelect._xtype]: XSelect, //"select"
             [XVideo._xtype]: XVideo, //"video"

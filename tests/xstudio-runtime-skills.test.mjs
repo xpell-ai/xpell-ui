@@ -144,6 +144,21 @@ function runtimeSkillById(runtimeSkills, id) {
   return runtimeSkillObjects(runtimeSkills).find(skill => skill?._id === id) ?? null;
 }
 
+function duplicateRuntimeObjectIds(runtimeSkills) {
+  const locations = new Map();
+  for (const skill of runtimeSkills?._objects ?? []) {
+    if (skill?._id) locations.set(skill._id, [...(locations.get(skill._id) ?? []), "root"]);
+  }
+  for (const moduleItem of runtimeSkills?._modules ?? []) {
+    for (const skill of moduleItem?._objects ?? []) {
+      if (skill?._id) {
+        locations.set(skill._id, [...(locations.get(skill._id) ?? []), moduleItem._name ?? "module"]);
+      }
+    }
+  }
+  return Array.from(locations.entries()).filter(([, refs]) => refs.length > 1);
+}
+
 const originalGetSkills = _x.getSkills;
 const verboseFields = {};
 for (let index = 0; index < 80; index += 1) {
@@ -267,8 +282,9 @@ try {
   assert.equal(fakePanel._exports._xui_objects.includes("runtime-presentation-panel-alias"), true);
   assert.equal(runtimeSkills._skills.some(skill => skill._id === "runtime-base-skill"), true);
   assert.equal(runtimeSkills._modules.some(item => item._name === "existing-module"), true);
-  assert.equal(xuiModule._objects.filter(skill => skill._id === "xgallery").length, 1);
+  assert.equal((xuiModule._objects ?? []).filter(skill => skill._id === "xgallery").length, 0);
   assert.equal(runtimeSkills._objects.filter(skill => skill._id === "xgallery").length, 1);
+  assert.deepEqual(duplicateRuntimeObjectIds(runtimeSkills), []);
 
   const source = readFileSync(new URL("../src/XStudio/XStudioModule.ts", import.meta.url), "utf8");
   assert.equal(source.includes('=== "xgallery"'), false);

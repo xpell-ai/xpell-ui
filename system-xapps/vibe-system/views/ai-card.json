@@ -1,0 +1,139 @@
+{
+  "_id": "ai-card",
+  "_type": "view",
+  "class": "panel ai-card",
+  "_children": [
+    {
+      "_type": "stack",
+      "class": "ai-card-header",
+      "_children": [
+        {
+          "_type": "label",
+          "_text": "AI",
+          "class": "panel-title"
+        },
+        {
+          "_type": "label",
+          "_text": "Aime AI provider status for Guide, Conversation, generation, and runtime evolution.",
+          "class": "panel-subtitle ai-card-description"
+        }
+      ]
+    },
+    {
+      "_type": "stack",
+      "class": "ai-status-row",
+      "_children": [
+        {
+          "_type": "label",
+          "_data_source": "ai.connection",
+          "_text": "● Available",
+          "class": "ai-status-label",
+          "_on_data": [
+            {
+              "_op": "set-text",
+              "_params": {
+                "text": "● Available"
+              }
+            },
+            {
+              "_op": "set-text-from-data",
+              "_params": {
+                "data": "$data",
+                "path": "_connected",
+                "map": {
+                  "true": "● Connected",
+                  "false": "● Not Connected"
+                }
+              }
+            },
+            {
+              "_op": "set-text-from-data",
+              "_params": {
+                "data": "$data",
+                "path": "_metadata.connected",
+                "map": {
+                  "true": "● Connected",
+                  "false": "● Not Connected"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "_type": "stack",
+      "class": "ai-meta-group",
+      "_children": [
+        {
+          "_type": "label",
+          "_data_source": "ai.connection",
+          "_text": "Provider: aime",
+          "class": "ai-meta-label",
+          "_on_data": [
+            {
+              "_op": "set-text",
+              "_params": {
+                "text": "Provider: aime"
+              }
+            },
+            {
+              "_op": "set-text-from-data",
+              "_params": {
+                "data": "$data",
+                "path": "_provider",
+                "pattern": "Provider: $data"
+              }
+            },
+            {
+              "_op": "set-text-from-data",
+              "_params": {
+                "data": "$data",
+                "path": "_metadata.provider",
+                "pattern": "Provider: $data"
+              }
+            }
+          ]
+        },
+        {
+          "_type": "label",
+          "_text": "Settings are available when the provider needs configuration.",
+          "class": "ai-meta-label"
+        }
+      ]
+    },
+    {
+      "_type": "stack",
+      "class": "actions-row ai-card-actions",
+      "_children": [
+        {
+          "_type": "button",
+          "_text": "Open Settings",
+          "_variant": "secondary",
+          "_on": {
+            "click": {
+              "_op": "open-object",
+              "_params": {
+                "_id": "api-key-modal"
+              }
+            }
+          }
+        },
+        {
+          "_type": "link",
+          "_text": "Get KEY",
+          "target": "_blank",
+          "rel": "noopener noreferrer",
+          "_data_source": "env.dev_console_url",
+          "_on_data": {
+            "_op": "set-xattribute",
+            "_params": {
+              "_key": "_href",
+              "_value": "$data"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -9,6 +9,7 @@
   "files": [
     "dist",
     "docs",
+    "system-xapps",
     "README.md",
     "LICENSE",
     "CHANGELOG.md"
@@ -23,13 +24,14 @@
       "require": "./dist/xpell-ui.cjs.js"
     },
     "./xui.css": "./dist/style.css",
+    "./system-xapps/manifest.json": "./system-xapps/manifest.json",
     "./package.json": "./package.json"
   },
   "scripts": {
     "dev": "vite",
     "build": "vite build && pnpm run build:types",
     "build:types": "tsc --project tsconfig.types.json",
-    "test": "pnpm build && node tests/xuiobject-dom-projection.test.mjs && node tests/xselect-theme-startup.test.mjs",
+    "test": "pnpm build && node tests/xauth-client-session.test.mjs && node tests/file-client-registration.test.mjs && node tests/xvm-runtime-skill-sync.test.mjs && node tests/xuiobject-dom-projection.test.mjs && node tests/xselect-theme-startup.test.mjs && node tests/xui-design-foundation.test.mjs && node tests/xstudio-theme-isolation.test.mjs && node tests/system-xapps-package.test.mjs",
     "docs": "typedoc --options ./typedoc.json --tsconfig ./",
     "publish-alpha-next": "pnpm version prerelease --preid=alpha  && pnpm publish --tag alpha",
     "check:xdata-legacy": "sh -c 'rg -n \"_xd\\._o\\[\" src && { echo \"Legacy XData write detected\" >&2; exit 1; } || true'"
@@ -133,8 +135,11 @@
     "url": "git+https://github.com/xpell-ai/xpell-ui.git"
   },
   "peerDependencies": {
-    "@xpell/core": "^2.0.7",
+    "@xpell/core": "workspace:*",
     "animate.css": "^4.1.1"
+  },
+  "dependencies": {
+    "@xpell/file-service": "workspace:*"
   },
   "devDependencies": {
     "@typescript/typescript6": "^6.0.2",

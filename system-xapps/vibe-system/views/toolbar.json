@@ -1,0 +1,84 @@
+{
+    "_id": "page-toolbar",
+    "_type": "view",
+    "class": "page-toolbar",
+    "_children": [
+        {
+            "_type": "stack",
+            "class": "page-toolbar__left",
+            "_children": [
+                {
+                    "_type": "label",
+                    "_text": "Visual Xpell",
+                    "class": "page-title",
+                    "_id": "label-1"
+                },
+                {
+                    "_type": "label",
+                    "_text": "Build apps while they run.",
+                    "class": "page-tagline",
+                    "_id": "label-2"
+                }
+            ],
+            "_id": "stack-2"
+        },
+        {
+            "_type": "stack",
+            "class": "page-toolbar__right",
+            "_children": [
+                {
+                    "_type": "select",
+                    "_id": "home-theme-select",
+                    "class": "toolbar-theme-select",
+                    "_data_source": "settings.theme",
+                    "_data_output": "settings.theme",
+                    "_update_data_source_event": "change",
+                    "_persist": {
+                        "_store": "xdb-client",
+                        "_key": "settings.theme",
+                        "_default": "terminal"
+                    },
+                    "_options": [
+                        {
+                            "value": "terminal",
+                            "label": "Terminal"
+                        },
+                        {
+                            "value": "dark",
+                            "label": "Dark"
+                        },
+                        {
+                            "value": "light",
+                            "label": "Light"
+                        }
+                    ],
+                    "_on_data": [
+                        {
+                            "_op": "select-value",
+                            "_params": {
+                                "value": "$data"
+                            }
+                        },
+                        {
+                            "_module": "xui",
+                            "_op": "set-theme",
+                            "_params": {
+                                "_theme": "$data"
+                            }
+                        }
+                    ],
+                    "_on": {
+                        "change": {
+                            "_module": "xui",
+                            "_op": "set-theme",
+                            "_params": {
+                                "_theme": "$event.target.value"
+                            }
+                        }
+                    }
+                }
+            ],
+            "_id": "stack-3"
+        }
+    ]
+}

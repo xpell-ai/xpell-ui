@@ -1,0 +1,12 @@
+{
+  "_schema": "xpell-ui-system-xapps.v1",
+  "_owner_package": "@xpell/ui",
+  "_apps": [
+    {
+      "_app_id": "vibe-system",
+      "_type": "system_app",
+      "_path": "vibe-system",
+      "_entry": "app.json"
+    }
+  ]
+}

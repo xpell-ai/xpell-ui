@@ -1,0 +1,28 @@
+{
+  "_id": "flow-generate-app",
+  "_on_success": [
+    {
+      "_module": "xvm",
+      "_op": "load_app",
+      "_params": {
+        "_app_id": "$flow._last._result._app_id",
+        "_env": "$flow._last._result._env"
+      }
+    }
+  ],
+  "_steps": [
+    {
+      "_id": "generate-app",
+      "_command": {
+        "_module": "xvibe",
+        "_op": "generate_app",
+        "_params": {
+          "_env": "default",
+          "_prompt": "$event._prompt",
+          "_app_id": "$event._app_id",
+          "_debug": true
+        }
+      }
+    }
+  ]
+}

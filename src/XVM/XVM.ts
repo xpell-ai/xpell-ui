@@ -70,7 +70,7 @@
  */
 
 
-import { XModule, _xlog, _xd, type XObjectData, XParams, _xu, _x } from "@xpell/core";
+import { XModule, _xlog, _xd, type XObjectData, XParams, _xu } from "@xpell/core";
 import type {
   XpellSkill,
   XpellSkillCommand
@@ -331,6 +331,15 @@ class _XVM extends XModule {
         _app_id: "Target app id.",
         _env: "Optional environment. Defaults to current client env.",
         _edit: "Optional edit-mode flag. true opens in XStudio, false opens in run mode."
+      }
+    },
+    "set-default-app": {
+      _name: "set-default-app",
+      _scope: "module",
+      _description: "Set the server-owned production default app for an environment.",
+      _params: {
+        _app_id: "Target app id.",
+        _env: "Optional environment. Defaults to current client env."
       }
     },
 
@@ -1572,33 +1581,24 @@ class _XVM extends XModule {
     const app_id =
       _xu.ensure_string(params._app_id, "_app_id");
 
+    const client = (window as any)?.__xvm_client;
+    if (!client || typeof client.sendServerXVMCommand !== "function") {
+      throw new Error("xvm set-default-app: missing __xvm_client.sendServerXVMCommand");
+    }
+
     const env =
       _xu.read_optional_string(params._env, "_env") ||
-      this._env ||
+      client._env ||
       "default";
 
-    const value = {
+    const result = await client.sendServerXVMCommand("set-default-app", {
       _app_id: app_id,
-      _env: env,
-      _ts: Date.now()
-    };
-
-    await _x.execute({
-      "_module": "xdb-client",
-      "_op": "save_string",
-      "_params": {
-        "_key": "xvibe.active_app",
-        "_value": app_id,
-      }
+      _env: env
     });
-
-   
-
-    _xd.set("xvibe.active_app", app_id, { source: "xvm:set_default_app" });
 
     return {
       _ok: true,
-      _default_app: value
+      _result: result
     };
   }
 }

@@ -56,6 +56,8 @@ export class WormholesV2 implements WormholesClientAPI {
 
   private __wid?: string;
   private __sid?: string;
+  private __hello?: WHHelloPayload;
+  private __server_identity?: string;
 
   private _opts?: WormholesOpenOptions;
   private _waiters: WaitersPack = {};
@@ -77,6 +79,12 @@ export class WormholesV2 implements WormholesClientAPI {
   }
   get _sid() {
     return this.__sid;
+  }
+  get _hello() {
+    return this.__hello ? { ...this.__hello } : undefined;
+  }
+  get _server_identity() {
+    return this.__server_identity;
   }
 
   open(opts: WormholesOpenOptions) {
@@ -144,6 +152,11 @@ export class WormholesV2 implements WormholesClientAPI {
         // tolerate wid inside HELLO payload
         if (env._kind === "HELLO") {
           const hp: any = env._payload ?? {};
+          this.__hello = hp;
+          const server_identity = typeof hp?._node === "string" && hp._node.trim()
+            ? hp._node.trim()
+            : "";
+          this.__server_identity = server_identity || undefined;
           if (hp?._wid && !this.__wid) this.__wid = hp._wid;
         }
         // _xlog.debug(

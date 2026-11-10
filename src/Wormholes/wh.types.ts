@@ -220,4 +220,6 @@ export type WormholesClientAPI = {
   get _ready(): boolean;
   get _wid(): string | undefined;
   get _sid(): string | undefined;
+  get _hello(): WHHelloPayload | undefined;
+  get _server_identity(): string | undefined;
 };
