@@ -1,6 +1,6 @@
 {
   "name": "@xpell/ui",
-  "version": "2.0.7",
+  "version": "2.0.8",
   "description": "Xpell UI JS Framework",
   "publishConfig": {
     "access": "public"
@@ -15,15 +15,15 @@
     "CHANGELOG.md"
   ],
   "module": "./dist/xpell-ui.es.js",
-  "main": "./dist/xpell-ui.cjs.js",
+  "main": "./dist/xpell-ui.cjs",
   "types": "./dist/types/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/types/index.d.ts",
       "import": "./dist/xpell-ui.es.js",
-      "require": "./dist/xpell-ui.cjs.js"
+      "require": "./dist/xpell-ui.cjs"
     },
-    "./xui.css": "./dist/style.css",
+    "./xui.css": "./dist/ui.css",
     "./system-xapps/manifest.json": "./system-xapps/manifest.json",
     "./package.json": "./package.json"
   },
