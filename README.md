@@ -1,5 +1,11 @@
 # @xpell/ui
 
+## 2.0.8 release candidate
+
+Target publication date: **13 November 2026**; this candidate has not been published.
+Use the coordinated 2.0.8 runtime dependencies. See [CHANGELOG](./CHANGELOG.md)
+for package changes and qualification limits; [LICENSE](./LICENSE) contains the MIT terms.
+
 Xpell 2 Alpha --- Real-Time Runtime UI Framework
 
 `@xpell/ui` is the browser-based UI runtime of the Xpell 2 platform.

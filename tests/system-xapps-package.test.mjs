@@ -27,6 +27,9 @@ function walkFiles(root, out = []) {
 }
 
 const packageJson = readJson(path.join(packageRoot, "package.json"));
+assert.equal(packageJson.exports["./xui.css"], "./dist/ui.css");
+assert.ok(fs.statSync(path.join(packageRoot, packageJson.exports["./xui.css"])).size > 0,
+  "The public stylesheet export must resolve to the built CSS asset");
 const manifest = readJson(path.join(systemRoot, "manifest.json"));
 const vibeApp = readJson(path.join(vibeSystemRoot, "app.json"));
 const xuiCss = readText(path.join(packageRoot, "src", "XUI", "Style", "xui.css"));

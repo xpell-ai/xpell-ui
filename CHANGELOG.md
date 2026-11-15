@@ -1,5 +1,18 @@
 # Changelog
 
+## [2.0.8] — 2026-11-13 (unreleased candidate)
+
+- Emit the CommonJS bundle with a .cjs extension and align main/require exports, so ESM package metadata does not misclassify it.
+- Compared with public 2.0.7 declarations: add XFileInput and File Client runtime loading, Wormholes hello/server identity and scoped runtime skill synchronization.
+- Compatibility review: XVM._set_default_app reports _result rather than the old declared _default_app shape; XVMClient._xstudio is nullable when edit mode is unavailable. Review consumers of these members.
+- Fix the public @xpell/ui/xui.css export to reference the generated dist/ui.css.
+- Retain the existing typed browser entrypoint, File Service client and system-xapps manifest/assets.
+- Verify the stylesheet target exists and is nonempty alongside the system-xapps package checks.
+
+Compatibility: internal workspace specifications are retained. No public API redesign, PostgreSQL backend, persistence migration or automatic SQLite activation is introduced by this preparation.
+
+Validation: package builds and available tests are recorded in the coordinated Gate 2 report. Gate 3 must verify the exact packed artifacts and clean-consumer compatibility before publication. These entries describe verified checked-out capabilities and release-preparation deltas; they do not claim that every capability is new relative to the last npm artifact.
+
 All notable changes to **xpell-ui** will be documented in this file.
 
 This project follows **Semantic Versioning** with pre-release tags (`alpha`, `beta`).

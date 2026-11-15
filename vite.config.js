@@ -13,7 +13,7 @@ export default defineConfig(() => {
         entry: "./src/index.ts",
         name: "XpellUI",
         formats: ["es", "cjs"], // drop UMD unless you really need it
-        fileName: (format) => `xpell-ui.${format}.js`,
+        fileName: (format) => format === "cjs" ? "xpell-ui.cjs" : `xpell-ui.${format}.js`,
       },
       target: "es2022",
       minify: true,
